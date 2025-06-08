@@ -1,9 +1,10 @@
 import axios, { type AxiosInstance, type AxiosRequestConfig } from "axios";
 import Cookies from "js-cookie";
 import type { AuthTokens, RefreshTokenResponse } from "~/types/auth";
+import { env } from "./env-config";
 
 // Constants
-const API_BASE_URL = "https://backend.bracelquette.workers.dev/api/v1";
+const API_BASE_URL = env.VITE_API_BASE_URL;
 const TOKEN_KEY = "auth_tokens";
 const USER_KEY = "auth_user";
 
