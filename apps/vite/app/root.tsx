@@ -40,12 +40,12 @@ export function Layout({ children }: { children: React.ReactNode }) {
       </head>
       <body>
         <QueryClientProvider client={queryClient}>
-          <AuthErrorBoundary>
-            <AuthProvider>
+          <AuthProvider>
+            <AuthErrorBoundary>
               {children}
               <Toaster />
-            </AuthProvider>
-          </AuthErrorBoundary>
+            </AuthErrorBoundary>
+          </AuthProvider>
           {import.meta.env.DEV && <ReactQueryDevtools initialIsOpen={false} />}
         </QueryClientProvider>
         <ScrollRestoration />
