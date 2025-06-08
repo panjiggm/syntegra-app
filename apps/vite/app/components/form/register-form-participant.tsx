@@ -23,7 +23,7 @@ import {
   Users,
 } from "lucide-react";
 import { toast } from "sonner";
-import { useUsers } from "~/hooks/useUsers";
+import { useUsers } from "~/hooks/use-users";
 
 // Participant registration validation schema
 const participantRegistrationSchema = z.object({

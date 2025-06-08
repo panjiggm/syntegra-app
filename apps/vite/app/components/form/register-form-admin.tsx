@@ -20,7 +20,7 @@ import {
   Lock,
 } from "lucide-react";
 import { toast } from "sonner";
-import { useUsers } from "~/hooks/useUsers";
+import { useUsers } from "~/hooks/use-users";
 
 // Admin registration validation schema
 const adminRegistrationSchema = z
