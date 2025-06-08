@@ -11,6 +11,7 @@ export default [
 
   // Auth routes (public only - redirect if authenticated)
   route("/admin/login", "routes/admin.login.tsx"),
+  route("/admin/register", "routes/admin.register.tsx"),
   route("/participant/login", "routes/participant.login.tsx"),
 
   // Admin routes (protected - admin only)
