@@ -20,6 +20,7 @@ import {
   Lock,
 } from "lucide-react";
 import { toast } from "sonner";
+import { useUsers } from "~/hooks/useUsers";
 
 // Admin registration validation schema
 const adminRegistrationSchema = z
@@ -65,6 +66,8 @@ export function RegisterFormAdmin({
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const navigate = useNavigate();
+  const { useCreateAdmin } = useUsers();
+  const createAdminMutation = useCreateAdmin();
 
   const {
     register,
@@ -111,26 +114,11 @@ export function RegisterFormAdmin({
         role: "admin" as const, // Force admin role
       };
 
-      // Simulate API call - replace with actual API integration
-      await new Promise((resolve, reject) => {
-        setTimeout(() => {
-          // Simulate success or error response
-          const mockSuccess = Math.random() > 0.3; // 70% success rate for demo
-
-          if (mockSuccess) {
-            resolve({ success: true, message: "Admin berhasil didaftarkan" });
-          } else {
-            // Simulate different error scenarios
-            const errors = [
-              { message: "Email already exists" },
-              { message: "Admin limit reached" },
-              { message: "Password validation failed" },
-            ];
-            const randomError =
-              errors[Math.floor(Math.random() * errors.length)];
-            reject(new Error(randomError.message));
-          }
-        }, 2000);
+      // Real API call to create admin
+      await createAdminMutation.mutateAsync({
+        name: registrationData.name,
+        email: registrationData.email,
+        password: registrationData.password,
       });
 
       // Dismiss loading toast
