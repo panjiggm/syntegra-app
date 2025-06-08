@@ -1,0 +1,1 @@
+ALTER TABLE "auth_sessions" ADD COLUMN "updated_at" timestamp NOT NULL;

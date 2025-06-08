@@ -1,0 +1,44 @@
+{
+  "name": "syntegra-app",
+  "version": "1.0.0",
+  "description": "",
+  "keywords": [],
+  "scripts": {
+    "dev": "pnpm --parallel run dev",
+    "dev:frontend": "pnpm --filter frontend run dev",
+    "dev:backend": "pnpm --filter backend run dev",
+    "dev:shared": "pnpm --filter shared-types run dev",
+    "build": "pnpm run build:shared && pnpm --recursive run build",
+    "build:shared": "pnpm --filter shared-types run build",
+    "build:frontend": "pnpm --filter frontend run build",
+    "build:backend": "pnpm --filter backend run build",
+    "deploy": "pnpm run build && pnpm --recursive run deploy",
+    "deploy:frontend": "pnpm --filter frontend run deploy",
+    "deploy:backend": "pnpm --filter backend run deploy",
+    "lint": "pnpm --recursive run lint",
+    "lint:fix": "pnpm --recursive run lint:fix",
+    "type-check": "pnpm --recursive run type-check",
+    "db:generate": "pnpm --filter backend run db:generate",
+    "db:migrate": "pnpm --filter backend run db:migrate",
+    "db:push": "pnpm --filter backend run db:push",
+    "db:studio": "pnpm --filter backend run db:studio",
+    "clean": "pnpm --recursive run clean && rm -rf node_modules",
+    "test": "pnpm --recursive run test"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.24",
+    "@typescript-eslint/eslint-plugin": "^8.33.0",
+    "@typescript-eslint/parser": "^8.33.0",
+    "eslint": "^9.27.0",
+    "eslint-config-prettier": "^10.1.5",
+    "prettier": "^3.5.3",
+    "typescript": "^5.8.3"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=10.0.0"
+  },
+  "author": "Oknum Studio",
+  "license": "ISC",
+  "packageManager": "pnpm@10.11.0"
+}

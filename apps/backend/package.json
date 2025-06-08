@@ -1,0 +1,38 @@
+{
+  "name": "backend",
+  "scripts": {
+    "build": "wrangler deploy --dry-run --outdir dist",
+    "build:types": "wrangler types --env-interface CloudflareBindings",
+    "prebuild": "npm run build:types && npm run db:generate",
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy --minify",
+    "deploy:staging": "wrangler deploy --env staging",
+    "deploy:production": "wrangler deploy --env production --minify",
+    "cf-typegen": "wrangler types --env-interface CloudflareBindings",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "db:push": "drizzle-kit push",
+    "db:studio": "drizzle-kit studio",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist .wrangler"
+  },
+  "dependencies": {
+    "@hono/zod-validator": "^0.7.0",
+    "@neondatabase/serverless": "^1.0.0",
+    "bcrypt": "^6.0.0",
+    "dotenv": "^16.5.0",
+    "drizzle-orm": "^0.44.1",
+    "drizzle-zod": "^0.8.2",
+    "hono": "^4.7.10",
+    "jsonwebtoken": "^9.0.2",
+    "shared-types": "workspace:*",
+    "zod": "^3.25.46"
+  },
+  "devDependencies": {
+    "@types/bcrypt": "^5.0.2",
+    "@types/jsonwebtoken": "^9.0.9",
+    "drizzle-kit": "^0.31.1",
+    "tsx": "^4.19.4",
+    "wrangler": "^4.4.0"
+  }
+}
