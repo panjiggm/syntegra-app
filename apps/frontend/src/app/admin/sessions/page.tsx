@@ -10,7 +10,7 @@ import { CardAnalyticSessions } from "./_components/CardAnalyticSessions";
 import { TableSessions } from "./_components/TableSessions";
 import { MiniCalendar } from "./_components/MiniCalendar";
 import { UpcomingSessions } from "./_components/UpComingSessions";
-import { CreateSessionDialog } from "./_components/CreateSessionDialog";
+// import { CreateSessionDialog } from "./_components/CreateSessionDialog";
 
 // Hooks
 import { useSessions, sessionHelpers } from "@/hooks/useSessions";
@@ -32,19 +32,12 @@ export default function SessionsPage() {
   });
 
   // Use sessions hook
-  const { useGetSessions, useGetSessionStats } = useSessions();
-  const {
-    data: sessionsResponse,
-    isLoading: sessionsLoading,
-    error: sessionsError,
-    refetch: refetchSessions,
-  } = useGetSessions(filters);
-
-  const {
-    data: statsResponse,
-    isLoading: statsLoading,
-    error: statsError,
-  } = useGetSessionStats();
+  const sessionsLoading = false;
+  const statsLoading = false;
+  const sessionsResponse: any = { success: true, data: [] };
+  const statsResponse: any = { success: true, data: { summary: {} } };
+  const sessionsError = null;
+  const statsError = null;
 
   // Handle filter changes
   const updateFilter = (key: keyof GetSessionsRequest, value: any) => {
@@ -90,7 +83,7 @@ export default function SessionsPage() {
 
     const selectedDateString = selectedDate.toISOString().split("T")[0];
 
-    return sessionsResponse.data.filter((session) => {
+    return sessionsResponse.data.filter((session: any) => {
       const sessionDate = new Date(session.start_time)
         .toISOString()
         .split("T")[0];
@@ -138,10 +131,7 @@ export default function SessionsPage() {
   return (
     <div className="flex flex-1 flex-col gap-4">
       {/* Header Section */}
-      <HeaderSessions
-        isLoading={sessionsLoading}
-        onRefresh={() => refetchSessions()}
-      />
+      <HeaderSessions isLoading={sessionsLoading} onRefresh={() => {}} />
 
       {/* Statistics Cards */}
       <CardAnalyticSessions stats={stats} isLoading={statsLoading} />
@@ -160,7 +150,7 @@ export default function SessionsPage() {
             error={sessionsError}
             selectedDate={selectedDate}
             sessionsResponse={sessionsResponse}
-            onRefetch={() => refetchSessions()}
+            onRefetch={() => {}}
             onNewSession={openCreateSession}
             onPageChange={handlePageChange}
             onEdit={handleEdit}
@@ -186,7 +176,7 @@ export default function SessionsPage() {
       </div>
 
       {/* Create Session Dialog */}
-      <CreateSessionDialog />
+      {/* <CreateSessionDialog /> */}
     </div>
   );
 }
