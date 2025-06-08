@@ -8,6 +8,8 @@ import {
 } from "react-router";
 
 import type { Route } from "./+types/root";
+import { AuthProvider } from "~/contexts/auth-context";
+import { AuthErrorBoundary } from "~/components/auth/auth-error-boundary";
 import "./app.css";
 
 export const links: Route.LinksFunction = () => [
@@ -33,7 +35,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <Links />
       </head>
       <body>
-        {children}
+        <AuthErrorBoundary>
+          <AuthProvider>{children}</AuthProvider>
+        </AuthErrorBoundary>
         <ScrollRestoration />
         <Scripts />
       </body>
