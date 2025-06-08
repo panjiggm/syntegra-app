@@ -1,0 +1,403 @@
+# Syntegra App - Vite React Router Project Rules
+
+You are an expert in TypeScript, React, Vite, React Router v7, TailwindCSS, and modern web development.
+
+## Tech Stack
+
+- **Framework**: React 19 + TypeScript
+- **Routing**: React Router v7 (file-based routing)
+- **Build Tool**: Vite
+- **Styling**: TailwindCSS v4 + shadcn/ui components
+- **Forms**: React Hook Form + Zod validation
+- **HTTP Client**: Axios
+- **State Management**: Built-in React state + custom hooks
+- **Icons**: Lucide React
+
+## Project Structure & Co-location Pattern
+
+### Route Organization (Co-location Pattern)
+
+```
+apps/vite/app/routes/
+├── home.tsx                    # Simple file route
+├── admin.sessions/             # Complex route with components
+│   ├── route.tsx              # Main route component (export default)
+│   ├── components/            # Route-specific components
+│   │   ├── HeaderSessions.tsx
+│   │   ├── FilterSessions.tsx
+│   │   ├── TableSessions.tsx
+│   │   └── CreateSessionDialog.tsx
+│   ├── hooks/                 # Route-specific hooks (optional)
+│   │   └── useSessionFilters.ts
+│   └── types.ts              # Route-specific types (optional)
+├── admin.participants/
+│   ├── route.tsx
+│   ├── components/
+│   │   ├── TableUser.tsx
+│   │   ├── UserDetailDrawer.tsx
+│   │   └── FilterUser.tsx
+│   └── utils.ts              # Route-specific utilities
+└── _admin.tsx                 # Layout route (starts with _)
+```
+
+### Global Structure
+
+```
+apps/vite/app/
+├── components/                # Shared components
+│   ├── ui/                   # shadcn/ui components
+│   ├── auth/                 # Authentication components
+│   └── layout/               # Layout components
+├── hooks/                    # Global hooks
+├── lib/                      # Utilities & configurations
+├── types/                    # Global types
+└── routes/                   # Route components
+```
+
+## File Naming Conventions
+
+### Routes
+
+- **File routes**: `kebab-case.tsx` (e.g., `admin.sessions.tsx`)
+- **Folder routes**: `kebab-case/route.tsx` (e.g., `admin.sessions/route.tsx`)
+- **Layout routes**: `_kebab-case.tsx` (e.g., `_admin.tsx`)
+- **Dynamic routes**: `$param.tsx` (e.g., `admin.users.$id.tsx`)
+
+### Components
+
+- **Components**: `PascalCase.tsx` (e.g., `HeaderSessions.tsx`)
+- **Hooks**: `camelCase.ts` starting with `use` (e.g., `useSessionFilters.ts`)
+- **Types**: `camelCase.ts` or `types.ts`
+- **Utils**: `camelCase.ts` (e.g., `sessionHelpers.ts`)
+
+## Code Patterns & Best Practices
+
+### Route Components
+
+```tsx
+// routes/admin.sessions/route.tsx
+import type { Route } from "./+types/route";
+import { HeaderSessions } from "./components/HeaderSessions";
+import { FilterSessions } from "./components/FilterSessions";
+
+export function meta({}: Route.MetaArgs) {
+  return [
+    { title: "Sessions Management - Syntegra" },
+    { name: "description", content: "Manage psychological test sessions" },
+  ];
+}
+
+export default function AdminSessionsPage() {
+  return (
+    <div className="flex flex-1 flex-col gap-4">
+      <HeaderSessions />
+      <FilterSessions />
+    </div>
+  );
+}
+```
+
+### Component Structure
+
+```tsx
+// routes/admin.sessions/components/HeaderSessions.tsx
+import { Button } from "~/components/ui/button";
+import { Plus, RefreshCw } from "lucide-react";
+
+interface HeaderSessionsProps {
+  isLoading?: boolean;
+  onRefresh?: () => void;
+}
+
+export function HeaderSessions({ isLoading, onRefresh }: HeaderSessionsProps) {
+  return (
+    <div className="flex items-center justify-between">
+      <div>
+        <h1 className="text-3xl font-bold tracking-tight">Sessions</h1>
+        <p className="text-muted-foreground">
+          Manage psychological test sessions
+        </p>
+      </div>
+      <div className="flex gap-2">
+        <Button variant="outline" onClick={onRefresh} disabled={isLoading}>
+          <RefreshCw className="size-4 mr-2" />
+          Refresh
+        </Button>
+        <Button>
+          <Plus className="size-4 mr-2" />
+          New Session
+        </Button>
+      </div>
+    </div>
+  );
+}
+```
+
+### API Integration Pattern (Future TanStack Query)
+
+```tsx
+// hooks/useSessions.ts (Global hook)
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useApi } from "./useApi";
+
+export function useSessions() {
+  const { apiCall } = useApi();
+  const queryClient = useQueryClient();
+
+  const useGetSessions = (params?: GetSessionsRequest) => {
+    return useQuery({
+      queryKey: ["sessions", params],
+      queryFn: () => apiCall<GetSessionsResponse>(`/sessions?${queryParams}`),
+      staleTime: 5 * 60 * 1000, // 5 minutes
+    });
+  };
+
+  const useCreateSession = () => {
+    return useMutation({
+      mutationFn: (data: CreateSessionRequest) =>
+        apiCall<CreateSessionResponse>("/sessions", {
+          method: "POST",
+          body: JSON.stringify(data),
+        }),
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ["sessions"] });
+      },
+    });
+  };
+
+  return { useGetSessions, useCreateSession };
+}
+```
+
+### Form Patterns
+
+```tsx
+// components/forms using React Hook Form + Zod
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+} from "~/components/ui/form";
+
+const formSchema = z.object({
+  name: z.string().min(1, "Name is required"),
+  email: z.string().email("Invalid email address"),
+});
+
+type FormData = z.infer<typeof formSchema>;
+
+export function UserForm() {
+  const form = useForm<FormData>({
+    resolver: zodResolver(formSchema),
+    defaultValues: { name: "", email: "" },
+  });
+
+  const onSubmit = (data: FormData) => {
+    console.log(data);
+  };
+
+  return (
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        <FormField
+          control={form.control}
+          name="name"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Name</FormLabel>
+              <FormControl>
+                <Input placeholder="Enter name" {...field} />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+      </form>
+    </Form>
+  );
+}
+```
+
+## Import Patterns
+
+### Route-specific imports (Co-located)
+
+```tsx
+// From same route folder
+import { HeaderSessions } from "./components/HeaderSessions";
+import { useSessionFilters } from "./hooks/useSessionFilters";
+import type { SessionFilters } from "./types";
+```
+
+### Global imports
+
+```tsx
+// Global components
+import { Button } from "~/components/ui/button";
+import { AuthWrapper } from "~/components/auth/AuthWrapper";
+
+// Global hooks
+import { useApi } from "~/hooks/useApi";
+import { useSessions } from "~/hooks/useSessions";
+
+// Global types
+import type { User, Session } from "~/types/api";
+```
+
+### External libraries
+
+```tsx
+import { useState, useEffect } from "react";
+import { Link, useNavigate } from "react-router";
+import { Plus, Edit, Trash2 } from "lucide-react";
+import { z } from "zod";
+```
+
+## TypeScript Patterns
+
+### Component Props
+
+```tsx
+interface ComponentProps {
+  // Required props
+  id: string;
+  title: string;
+
+  // Optional props
+  description?: string;
+  isLoading?: boolean;
+
+  // Callbacks
+  onEdit?: (id: string) => void;
+  onDelete?: (id: string) => Promise<void>;
+
+  // Children
+  children?: React.ReactNode;
+}
+```
+
+### API Types (shared-types package)
+
+```tsx
+// Use types from shared-types package when available
+import type {
+  User,
+  Session,
+  GetUsersRequest,
+  GetUsersResponse,
+} from "shared-types";
+```
+
+## Styling Guidelines
+
+### TailwindCSS Classes
+
+- Use semantic spacing: `gap-4`, `space-y-4`, `p-4`, `m-4`
+- Use design system colors: `bg-background`, `text-foreground`, `text-muted-foreground`
+- Use responsive prefixes: `md:col-span-8`, `lg:grid-cols-4`
+- Use state variants: `hover:bg-accent`, `disabled:opacity-50`
+
+### Component Styling
+
+```tsx
+// Good - semantic classes with proper spacing
+<div className="flex flex-1 flex-col gap-4 p-6">
+  <div className="flex items-center justify-between">
+    <h1 className="text-3xl font-bold tracking-tight">Title</h1>
+    <Button variant="outline" size="sm">
+      Action
+    </Button>
+  </div>
+</div>
+```
+
+### shadcn/ui Usage
+
+- Always use shadcn/ui components from `~/components/ui/`
+- Follow the component API patterns
+- Use proper variant and size props
+- Combine with custom classes using `cn()` utility
+
+## File Organization Rules
+
+### When to Co-locate vs Global
+
+**Co-locate when**:
+
+- Component is used by single route
+- Hook is specific to one feature
+- Type is route-specific
+- Utility is feature-specific
+
+**Global when**:
+
+- Component is shared across routes
+- Hook is used by multiple features
+- Type is shared across features
+- Utility is generic/shared
+
+### Folder Structure Decisions
+
+```
+✅ Good - Co-located
+routes/admin.sessions/components/HeaderSessions.tsx
+
+✅ Good - Global shared
+components/ui/button.tsx
+hooks/useApi.ts
+
+❌ Bad - Overly nested
+routes/admin.sessions/components/tables/sessions/HeaderSessions.tsx
+
+❌ Bad - Everything global
+components/admin/sessions/HeaderSessions.tsx (when only used in one route)
+```
+
+## Error Handling
+
+### Component Error Boundaries
+
+```tsx
+// Use React Router's built-in error handling
+export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
+  return (
+    <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
+      <h2 className="text-xl font-semibold">Something went wrong</h2>
+      <p className="text-muted-foreground">{error.message}</p>
+    </div>
+  );
+}
+```
+
+### API Error Handling
+
+```tsx
+// Consistent error handling in hooks
+const { data, error, isLoading } = useGetSessions();
+
+if (error) {
+  return <ErrorMessage message={error.message} />;
+}
+```
+
+## Performance Best Practices
+
+- Use React.memo() for expensive components
+- Implement proper key props for lists
+- Use useCallback/useMemo appropriately
+- Lazy load heavy components with React.lazy()
+- Optimize bundle with proper imports
+
+## Security Best Practices
+
+- Validate all inputs with Zod schemas
+- Sanitize user-generated content
+- Use proper authentication checks
+- Implement CSRF protection
+- Use secure headers
+
+Remember: This is a psychological testing platform (Syntegra) handling sensitive user data. Always prioritize security, accessibility, and user experience.
