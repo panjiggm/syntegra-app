@@ -78,4 +78,11 @@ export const queryKeys = {
     user: ["auth", "user"] as const,
     permissions: ["auth", "permissions"] as const,
   },
+
+  // Dashboard-related queries
+  dashboard: {
+    admin: (userId?: string) => ["dashboard", "admin", userId] as const,
+    participant: (userId?: string) =>
+      ["dashboard", "participant", userId] as const,
+  },
 } as const;
