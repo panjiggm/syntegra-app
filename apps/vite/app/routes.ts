@@ -13,6 +13,7 @@ export default [
   route("/admin/login", "routes/admin.login.tsx"),
   route("/admin/register", "routes/admin.register.tsx"),
   route("/participant/login", "routes/participant.login.tsx"),
+  route("/participant/register", "routes/participant.register.tsx"),
 
   // Admin routes (protected - admin only)
   layout("routes/_admin.tsx", [
@@ -31,6 +32,6 @@ export default [
   // Participant routes (protected - participant only)
   layout("routes/_participant.tsx", [
     route("/participant/dashboard", "routes/participant.dashboard.tsx"),
-    //   route("/participant/test", "routes/participant.test.tsx"),
+    route("/participant/tests", "routes/participant.tests.tsx"),
   ]),
 ] satisfies RouteConfig;

@@ -8,9 +8,12 @@ import {
 } from "react-router";
 
 import type { Route } from "./+types/root";
+import { QueryClientProvider } from "@tanstack/react-query";
+import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { AuthProvider } from "~/contexts/auth-context";
 import { AuthErrorBoundary } from "~/components/auth/auth-error-boundary";
 import { Toaster } from "~/components/ui/sonner";
+import { queryClient } from "~/lib/query-client";
 import "./app.css";
 
 export const links: Route.LinksFunction = () => [
@@ -36,12 +39,15 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <Links />
       </head>
       <body>
-        <AuthErrorBoundary>
-          <AuthProvider>
-            {children}
-            <Toaster />
-          </AuthProvider>
-        </AuthErrorBoundary>
+        <QueryClientProvider client={queryClient}>
+          <AuthErrorBoundary>
+            <AuthProvider>
+              {children}
+              <Toaster />
+            </AuthProvider>
+          </AuthErrorBoundary>
+          {import.meta.env.DEV && <ReactQueryDevtools initialIsOpen={false} />}
+        </QueryClientProvider>
         <ScrollRestoration />
         <Scripts />
       </body>
