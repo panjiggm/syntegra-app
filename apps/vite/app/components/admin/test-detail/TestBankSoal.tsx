@@ -20,26 +20,14 @@ import {
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu";
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "~/components/ui/alert-dialog";
-import {
   Plus,
   Search,
   Filter,
   MoreHorizontal,
   Edit,
   Trash2,
-  Copy,
   Eye,
   Clock,
-  Hash,
   FileText,
   Image,
   Volume2,
@@ -111,7 +99,7 @@ export function TestBankSoal({ testId, test }: TestBankSoalProps) {
   const [questionTypeFilter, setQuestionTypeFilter] = useState<string>("all");
   const [isRequiredFilter, setIsRequiredFilter] = useState<string>("all");
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
+  const [itemsPerPage, setItemsPerPage] = useState(10);
   const {
     openCreateDialog,
     openEditDialog,
@@ -145,6 +133,12 @@ export function TestBankSoal({ testId, test }: TestBankSoalProps) {
   // Reset pagination when filters change
   const handleFilterChange = () => {
     setCurrentPage(1);
+  };
+
+  // Handle limit change
+  const handleLimitChange = (newLimit: number) => {
+    setItemsPerPage(newLimit);
+    setCurrentPage(1); // Reset to first page
   };
 
   // Format date
@@ -332,6 +326,25 @@ export function TestBankSoal({ testId, test }: TestBankSoalProps) {
                       <SelectItem value="all">Semua Status</SelectItem>
                       <SelectItem value="true">Wajib</SelectItem>
                       <SelectItem value="false">Opsional</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="w-full md:w-32">
+                  <Label>Per Halaman</Label>
+                  <Select
+                    value={itemsPerPage.toString()}
+                    onValueChange={(value) => {
+                      handleLimitChange(Number(value));
+                    }}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="5">5</SelectItem>
+                      <SelectItem value="10">10</SelectItem>
+                      <SelectItem value="20">20</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

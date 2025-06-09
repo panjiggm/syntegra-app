@@ -39,8 +39,11 @@ export async function getQuestionsListHandler(
     // Get query parameters (already validated by zValidator)
     const queryParams = c.req.query() as unknown as GetQuestionsRequest;
 
+    // Parse and validate numeric parameters
+    const page = parseInt(queryParams.page?.toString() || "1") || 1;
+    const limit = parseInt(queryParams.limit?.toString() || "20") || 20;
+
     // Get database connection
-    const env = getEnv(c);
     const db = getDbFromEnv(c.env);
 
     // Get authenticated admin user
@@ -163,8 +166,6 @@ export async function getQuestionsListHandler(
     const orderDirection = queryParams.sort_order === "desc" ? desc : asc;
 
     // Calculate pagination
-    const page = queryParams.page || 1;
-    const limit = queryParams.limit || 20;
     const offset = (page - 1) * limit;
 
     // Get total count for pagination
@@ -275,10 +276,6 @@ export async function getQuestionsListHandler(
       filters,
       timestamp: new Date().toISOString(),
     };
-
-    console.log(
-      `✅ Questions list retrieved for test ${targetTest.name} by admin: ${auth.user.email} (${total} questions, page ${page})`
-    );
 
     return c.json(response, 200);
   } catch (error) {
