@@ -24,10 +24,37 @@ interface CreateUserRequest {
   postal_code?: string;
 }
 
+interface User {
+  id: string;
+  nik: string | null;
+  name: string;
+  role: string;
+  email: string;
+  gender: string | null;
+  phone: string | null;
+  birth_place: string | null;
+  birth_date: Date | null;
+  religion: string | null;
+  education: string | null;
+  address: string | null;
+  province: string | null;
+  regency: string | null;
+  district: string | null;
+  village: string | null;
+  postal_code: string | null;
+  profile_picture_url: string | null;
+  is_active: boolean;
+  email_verified: boolean;
+  created_at: Date;
+  updated_at: Date;
+  created_by: Date;
+  updated_by: Date;
+}
+
 interface CreateUserResponse {
   success: boolean;
   message: string;
-  data?: any;
+  data?: User;
   timestamp: string;
 }
 
@@ -49,17 +76,17 @@ interface GetUsersRequest {
   created_to?: string;
 }
 
-interface GetUsersResponse {
+export interface GetUsersResponse {
   success: boolean;
   message: string;
-  data: {
-    users: any[];
-    pagination: {
-      page: number;
-      limit: number;
-      total: number;
-      totalPages: number;
-    };
+  data: User[];
+  meta: {
+    current_page: number;
+    per_page: number;
+    total: number;
+    total_pages: number;
+    has_next_page: boolean;
+    has_prev_page: boolean;
   };
   timestamp: string;
 }
@@ -101,7 +128,7 @@ export function useUsers() {
           throw new Error(response.message || "Failed to fetch users");
         }
 
-        return response.data;
+        return response;
       },
       enabled: true,
     });
