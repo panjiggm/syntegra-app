@@ -38,6 +38,7 @@ import {
 } from "lucide-react";
 import type { GetUsersResponse } from "~/hooks/use-users";
 import { Link } from "react-router";
+import { useUsersStore } from "~/stores/use-users-store";
 
 interface User {
   id: string;
@@ -50,11 +51,6 @@ interface User {
   province?: string;
   is_active: boolean;
   created_at: Date;
-}
-
-interface Pagination {
-  total: number;
-  totalPages: number;
 }
 
 interface TableUserProps {
@@ -86,6 +82,7 @@ export function TableUser({
   onPageSizeChange,
   onRefetch,
 }: TableUserProps) {
+  const { openDeleteUserModal } = useUsersStore();
   const formatDate = (date: Date) => {
     return new Date(date).toLocaleDateString("id-ID", {
       day: "2-digit",
@@ -240,12 +237,19 @@ export function TableUser({
                                   Lihat Detail
                                 </Link>
                               </DropdownMenuItem>
-                              <DropdownMenuItem>
-                                <Edit className="size-4 mr-2" />
-                                Edit User
+                              <DropdownMenuItem asChild>
+                                <Link to={`/admin/users/${user.id}/edit`}>
+                                  <Edit className="size-4 mr-2" />
+                                  Edit User
+                                </Link>
                               </DropdownMenuItem>
                               <DropdownMenuSeparator />
-                              <DropdownMenuItem className="text-red-600">
+                              <DropdownMenuItem
+                                className="text-red-600 cursor-pointer"
+                                onClick={() =>
+                                  openDeleteUserModal(user.id, user.name)
+                                }
+                              >
                                 <Trash2 className="size-4 mr-2" />
                                 Hapus User
                               </DropdownMenuItem>

@@ -13,17 +13,24 @@ import {
   MoreVertical,
   Eye,
   FileText,
+  Trash2,
 } from "lucide-react";
 
 interface HeaderUserDetailProps {
   onBack: () => void;
   onRefresh: () => void;
+  onDelete?: (userId: string, userName: string) => void;
+  userId?: string;
+  userName?: string;
   isLoading?: boolean;
 }
 
 export function HeaderUserDetail({
   onBack,
   onRefresh,
+  onDelete,
+  userId,
+  userName,
   isLoading,
 }: HeaderUserDetailProps) {
   return (
@@ -52,6 +59,21 @@ export function HeaderUserDetail({
           />
           Refresh
         </Button>
+
+        {/* Test Delete Button */}
+        {onDelete && userId && userName && (
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={() => {
+              console.log("Test delete button clicked");
+              onDelete(userId, userName);
+            }}
+          >
+            <Trash2 className="size-4 mr-2" />
+            Test Delete
+          </Button>
+        )}
         <Button variant="outline">
           <Edit className="size-4 mr-2" />
           Edit User
@@ -63,18 +85,26 @@ export function HeaderUserDetail({
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem>
-              <Eye className="size-4 mr-2" />
-              View Profile
-            </DropdownMenuItem>
-            <DropdownMenuItem>
+            {/* <DropdownMenuItem>
               <FileText className="size-4 mr-2" />
               Generate Report
-            </DropdownMenuItem>
+            </DropdownMenuItem> */}
             <DropdownMenuSeparator />
-            <DropdownMenuItem className="text-red-600">
-              Reset Password
-            </DropdownMenuItem>
+            {onDelete && userId && userName && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  className="text-red-600"
+                  onClick={() => {
+                    console.log("Delete button clicked:", userId, userName);
+                    onDelete(userId, userName);
+                  }}
+                >
+                  <Trash2 className="size-4 mr-2" />
+                  Hapus Peserta
+                </DropdownMenuItem>
+              </>
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
       </div>

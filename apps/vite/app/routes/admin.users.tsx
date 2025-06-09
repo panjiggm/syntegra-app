@@ -6,6 +6,7 @@ import { CardAnalyticUser } from "~/components/admin/users/CardAnalyticUser";
 import { FilterUser } from "~/components/admin/users/FilterUser";
 import { TableUser } from "~/components/admin/users/TableUser";
 import { useNavigate } from "react-router";
+import { DialogDeleteUser } from "~/components/admin/users/DialogDeleteUser";
 
 export function meta() {
   return [
@@ -142,6 +143,8 @@ export default function AdminUsersPage() {
         }}
         onRefetch={refetch}
       />
+
+      <DialogDeleteUser />
     </>
   );
 }

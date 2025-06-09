@@ -22,6 +22,7 @@ export default [
     route("/admin/tests", "routes/admin.tests.tsx"),
     route("/admin/users/new", "routes/admin.users.new.tsx"),
     route("/admin/users/:userId", "routes/admin.users.$userId.tsx"),
+    route("/admin/users/:userId/edit", "routes/admin.users.$userId.edit.tsx"),
     //   route("/admin/tests", "routes/admin.tests.tsx"),
     //   route("/admin/tests/new", "routes/admin.tests.new.tsx"),
     //   route("/admin/tests/edit", "routes/admin.tests.edit.tsx"),

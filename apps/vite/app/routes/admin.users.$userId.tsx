@@ -10,6 +10,8 @@ import { HeaderUserDetail } from "~/components/admin/users-detail/HeaderUserDeta
 import { ProfileHeaderCard } from "~/components/admin/users-detail/ProfileHeaderCard";
 import { TabNavigation } from "~/components/admin/users-detail/TabNavigation";
 import { TabContent } from "~/components/admin/users-detail/TabContent";
+import { DialogDeleteUser } from "~/components/admin/users/DialogDeleteUser";
+import { useUsersStore } from "~/stores/use-users-store";
 import type { Route } from "./+types/admin.users.$userId";
 
 // Types based on API response
@@ -131,7 +133,8 @@ export function meta({ params }: Route.MetaArgs) {
 export default function AdminUserDetailPage() {
   const { userId } = useParams();
   const navigate = useNavigate();
-  const { user: currentUser, hasRole } = useAuth();
+  const { hasRole } = useAuth();
+  const { openDeleteUserModal } = useUsersStore();
   const [activeTab, setActiveTab] = useState<"profile" | "tests" | "analysis">(
     "profile"
   );
@@ -203,6 +206,9 @@ export default function AdminUserDetailPage() {
       <HeaderUserDetail
         onBack={() => navigate("/admin/users")}
         onRefresh={() => refetch()}
+        onDelete={(userId, userName) => openDeleteUserModal(userId, userName)}
+        userId={profile.id}
+        userName={profile.name}
         isLoading={isLoading}
       />
 
@@ -222,6 +228,9 @@ export default function AdminUserDetailPage() {
         personalInfo={personal_info}
         psychotestHistory={psychotest_history}
       />
+
+      {/* Delete User Dialog */}
+      <DialogDeleteUser />
     </div>
   );
 }
