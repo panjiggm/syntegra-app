@@ -6,6 +6,7 @@ import type { GetTestsRequest } from "~/hooks/use-tests";
 import { CardAnalyticTest } from "~/components/admin/test/CardAnalyticTest";
 import { FilterTest } from "~/components/admin/test/FilterTest";
 import { CardTest } from "~/components/admin/test/CardTest";
+import { useNavigate } from "react-router";
 
 export function meta() {
   return [
@@ -15,6 +16,7 @@ export function meta() {
 }
 
 export default function AdminTestsPage() {
+  const navigate = useNavigate();
   const [filters, setFilters] = useState<GetTestsRequest>({
     page: 1,
     limit: 10,
@@ -147,7 +149,7 @@ export default function AdminTestsPage() {
             />
             Refresh
           </Button>
-          <Button>
+          <Button onClick={() => navigate("/admin/tests/new")}>
             <Plus className="size-4 mr-2" />
             Tambah Tes
           </Button>
