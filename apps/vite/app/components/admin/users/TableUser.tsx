@@ -37,6 +37,7 @@ import {
   Clock,
 } from "lucide-react";
 import type { GetUsersResponse } from "~/hooks/use-users";
+import { Link } from "react-router";
 
 interface User {
   id: string;
@@ -179,7 +180,11 @@ export function TableUser({
                       <TableRow key={user.id}>
                         <TableCell>
                           <div>
-                            <div className="font-medium">{user.name}</div>
+                            <div className="font-medium hover:underline cursor-pointer">
+                              <Link to={`/admin/users/${user.id}`}>
+                                {user.name}
+                              </Link>
+                            </div>
                             <div className="text-sm text-muted-foreground">
                               {user.email}
                             </div>
@@ -229,9 +234,11 @@ export function TableUser({
                             <DropdownMenuContent align="end">
                               <DropdownMenuLabel>Aksi</DropdownMenuLabel>
                               <DropdownMenuSeparator />
-                              <DropdownMenuItem>
-                                <Eye className="size-4 mr-2" />
-                                Lihat Detail
+                              <DropdownMenuItem asChild>
+                                <Link to={`/admin/users/${user.id}`}>
+                                  <Eye className="size-4 mr-2" />
+                                  Lihat Detail
+                                </Link>
                               </DropdownMenuItem>
                               <DropdownMenuItem>
                                 <Edit className="size-4 mr-2" />
