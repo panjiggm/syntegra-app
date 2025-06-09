@@ -13,32 +13,7 @@ You are an expert in TypeScript, React, Vite, React Router v7, TailwindCSS, and 
 - **State Management**: Built-in React state + custom hooks
 - **Icons**: Lucide React
 
-## Project Structure & Co-location Pattern
-
-### Route Organization (Co-location Pattern)
-
-```
-apps/vite/app/routes/
-├── home.tsx                    # Simple file route
-├── admin.sessions/             # Complex route with components
-│   ├── route.tsx              # Main route component (export default)
-│   ├── components/            # Route-specific components
-│   │   ├── HeaderSessions.tsx
-│   │   ├── FilterSessions.tsx
-│   │   ├── TableSessions.tsx
-│   │   └── CreateSessionDialog.tsx
-│   ├── hooks/                 # Route-specific hooks (optional)
-│   │   └── useSessionFilters.ts
-│   └── types.ts              # Route-specific types (optional)
-├── admin.participants/
-│   ├── route.tsx
-│   ├── components/
-│   │   ├── TableUser.tsx
-│   │   ├── UserDetailDrawer.tsx
-│   │   └── FilterUser.tsx
-│   └── utils.ts              # Route-specific utilities
-└── _admin.tsx                 # Layout route (starts with _)
-```
+## Project Structure
 
 ### Global Structure
 
@@ -69,33 +44,6 @@ apps/vite/app/
 - **Hooks**: `camelCase.ts` starting with `use` (e.g., `useSessionFilters.ts`)
 - **Types**: `camelCase.ts` or `types.ts`
 - **Utils**: `camelCase.ts` (e.g., `sessionHelpers.ts`)
-
-## Code Patterns & Best Practices
-
-### Route Components
-
-```tsx
-// routes/admin.sessions/route.tsx
-import type { Route } from "./+types/route";
-import { HeaderSessions } from "./components/HeaderSessions";
-import { FilterSessions } from "./components/FilterSessions";
-
-export function meta({}: Route.MetaArgs) {
-  return [
-    { title: "Sessions Management - Syntegra" },
-    { name: "description", content: "Manage psychological test sessions" },
-  ];
-}
-
-export default function AdminSessionsPage() {
-  return (
-    <div className="flex flex-1 flex-col gap-4">
-      <HeaderSessions />
-      <FilterSessions />
-    </div>
-  );
-}
-```
 
 ### Component Structure
 
