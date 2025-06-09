@@ -71,6 +71,8 @@ export const queryKeys = {
     list: (filters?: any) => [...queryKeys.tests.lists(), filters] as const,
     details: () => [...queryKeys.tests.all, "detail"] as const,
     detail: (id: string) => [...queryKeys.tests.details(), id] as const,
+    stats: () => [...queryKeys.tests.all, "stats"] as const,
+    filterOptions: () => [...queryKeys.tests.all, "filter-options"] as const,
   },
 
   // Auth-related queries
