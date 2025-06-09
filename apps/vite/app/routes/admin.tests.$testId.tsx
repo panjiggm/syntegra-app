@@ -19,6 +19,7 @@ import { TestBankSoal } from "~/components/admin/test-detail/TestBankSoal";
 import { formatISO } from "date-fns";
 import { useTestDialogStore } from "~/stores/use-test-dialog-store";
 import { DialogDeleteTest } from "~/components/admin/test/DialogDeleteTest";
+import { DialogAddQuestion } from "~/components/admin/test-detail/DialogAddQuestion";
 
 // Module type labels mapping
 const MODULE_TYPE_LABELS = {
@@ -305,6 +306,7 @@ export default function TestDetailPage() {
       </Tabs>
 
       <DialogDeleteTest />
+      <DialogAddQuestion />
     </div>
   );
 }

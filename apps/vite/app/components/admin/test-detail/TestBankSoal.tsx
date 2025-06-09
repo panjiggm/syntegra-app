@@ -53,9 +53,8 @@ import {
   ArrowUpDown,
   BarChart3,
 } from "lucide-react";
-import { toast } from "sonner";
 import { useQuestions } from "~/hooks/use-questions";
-import { DialogAddQuestion } from "./DialogAddQuestion";
+import { useQuestionDialogStore } from "~/stores/use-question-dialog-store";
 
 interface TestData {
   id: string;
@@ -109,8 +108,8 @@ export function TestBankSoal({ testId, test }: TestBankSoalProps) {
   const [currentPage, setCurrentPage] = useState(1);
   const [deleteQuestionId, setDeleteQuestionId] = useState<string | null>(null);
   const [deleteQuestionText, setDeleteQuestionText] = useState("");
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
   const itemsPerPage = 10;
+  const { openCreateDialog } = useQuestionDialogStore();
 
   // API calls
   const {
@@ -264,7 +263,7 @@ export function TestBankSoal({ testId, test }: TestBankSoalProps) {
             />
             Refresh
           </Button>
-          <Button className="gap-2" onClick={() => setIsDialogOpen(true)}>
+          <Button className="gap-2" onClick={() => openCreateDialog(testId)}>
             <Plus className="h-4 w-4" />
             Tambah Soal Baru
           </Button>
@@ -380,7 +379,7 @@ export function TestBankSoal({ testId, test }: TestBankSoalProps) {
                         "Mulai dengan menambahkan soal pertama untuk tes ini"
                       )}
                     </p>
-                    <Button onClick={() => setIsDialogOpen(true)}>
+                    <Button onClick={() => openCreateDialog(testId)}>
                       <Plus className="h-4 w-4 mr-2" />
                       Tambah Soal Pertama
                     </Button>
@@ -724,13 +723,6 @@ export function TestBankSoal({ testId, test }: TestBankSoalProps) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
-      {/* Add Question Dialog */}
-      <DialogAddQuestion
-        isOpen={isDialogOpen}
-        onClose={() => setIsDialogOpen(false)}
-        testId={testId}
-      />
     </div>
   );
 }
