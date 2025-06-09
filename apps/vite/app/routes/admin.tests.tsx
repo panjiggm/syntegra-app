@@ -127,7 +127,7 @@ export default function AdminTestsPage() {
   }
 
   return (
-    <div className="flex flex-1 flex-col gap-6">
+    <div className="flex flex-1 flex-col gap-4">
       {/* Header - Always show */}
       <div className="flex items-center justify-between">
         <div>

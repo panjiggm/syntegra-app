@@ -61,7 +61,7 @@ export function FilterUser({
   onResetFilters,
 }: FilterUserProps) {
   return (
-    <Card className="mb-6">
+    <Card className="mb-4">
       <CardHeader>
         <CardTitle className="text-lg flex items-center gap-2">
           <Filter className="size-4" />
