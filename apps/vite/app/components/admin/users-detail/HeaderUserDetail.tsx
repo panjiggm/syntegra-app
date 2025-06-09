@@ -6,15 +6,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu";
-import {
-  ArrowLeft,
-  Edit,
-  RefreshCw,
-  MoreVertical,
-  Eye,
-  FileText,
-  Trash2,
-} from "lucide-react";
+import { ArrowLeft, Edit, RefreshCw, MoreVertical, Trash2 } from "lucide-react";
+import { Link } from "react-router";
 
 interface HeaderUserDetailProps {
   onBack: () => void;
@@ -74,9 +67,11 @@ export function HeaderUserDetail({
             Test Delete
           </Button>
         )}
-        <Button variant="outline">
-          <Edit className="size-4 mr-2" />
-          Edit User
+        <Button variant="outline" asChild>
+          <Link to={`/admin/users/${userId}/edit`}>
+            <Edit className="size-4 mr-2" />
+            Edit User
+          </Link>
         </Button>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
