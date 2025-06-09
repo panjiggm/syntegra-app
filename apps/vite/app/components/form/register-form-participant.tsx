@@ -7,71 +7,43 @@ import { cn } from "~/lib/utils";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
-import { Card, CardContent } from "~/components/ui/card";
-import { Checkbox } from "~/components/ui/checkbox";
-import { RadioGroup, RadioGroupItem } from "~/components/ui/radio-group";
-import { Link } from "react-router";
 import {
-  Eye,
-  EyeOff,
-  Loader2,
-  User,
-  Mail,
-  Phone,
-  MapPin,
-  Calendar,
-  Users,
-} from "lucide-react";
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "~/components/ui/select";
+import { Link } from "react-router";
+import { Eye, EyeOff, Loader2, AlertCircle, CheckCircle } from "lucide-react";
 import { toast } from "sonner";
 import { useUsers } from "~/hooks/use-users";
 
-// Participant registration validation schema
+// Form validation schema for participant registration
 const participantRegistrationSchema = z.object({
+  nik: z
+    .string()
+    .min(1, "NIK tidak boleh kosong")
+    .length(16, "NIK harus 16 digit")
+    .regex(/^\d+$/, "NIK hanya boleh berisi angka"),
   name: z
     .string()
-    .min(2, "Nama minimal 2 karakter")
-    .max(50, "Nama maksimal 50 karakter")
+    .min(1, "Nama tidak boleh kosong")
+    .max(255, "Nama terlalu panjang")
     .regex(/^[a-zA-Z\s]+$/, "Nama hanya boleh berisi huruf dan spasi"),
   email: z
     .string()
+    .min(1, "Email tidak boleh kosong")
     .email("Format email tidak valid")
-    .min(1, "Email wajib diisi")
-    .max(100, "Email maksimal 100 karakter"),
+    .max(255, "Email terlalu panjang"),
   phone: z
     .string()
-    .min(10, "Nomor telepon minimal 10 digit")
-    .max(15, "Nomor telepon maksimal 15 digit")
-    .regex(/^(\+62|62|0)[0-9]+$/, "Format nomor telepon tidak valid"),
-  nik: z
-    .string()
-    .length(16, "NIK harus 16 digit")
-    .regex(/^[0-9]+$/, "NIK hanya boleh berisi angka"),
+    .min(1, "Nomor HP tidak boleh kosong")
+    .min(10, "Nomor HP minimal 10 digit")
+    .max(15, "Nomor HP maksimal 15 digit")
+    .regex(/^[\d+\-\s()]+$/, "Format nomor HP tidak valid"),
   gender: z.enum(["male", "female"], {
-    required_error: "Jenis kelamin wajib dipilih",
-  }),
-  birth_place: z
-    .string()
-    .min(2, "Tempat lahir minimal 2 karakter")
-    .max(50, "Tempat lahir maksimal 50 karakter"),
-  birth_date: z
-    .string()
-    .min(1, "Tanggal lahir wajib diisi")
-    .refine((date) => {
-      const birthDate = new Date(date);
-      const today = new Date();
-      const age = today.getFullYear() - birthDate.getFullYear();
-      return age >= 17 && age <= 80;
-    }, "Usia harus antara 17-80 tahun"),
-  address: z
-    .string()
-    .min(10, "Alamat minimal 10 karakter")
-    .max(200, "Alamat maksimal 200 karakter"),
-  province: z.string().min(1, "Provinsi wajib dipilih"),
-  regency: z.string().min(1, "Kabupaten/Kota wajib dipilih"),
-  religion: z.string().min(1, "Agama wajib dipilih"),
-  education: z.string().min(1, "Pendidikan terakhir wajib dipilih"),
-  agreeTerms: z.boolean().refine((val) => val === true, {
-    message: "Anda harus menyetujui syarat dan ketentuan",
+    required_error: "Jenis kelamin harus dipilih",
   }),
 });
 
@@ -88,79 +60,76 @@ export function RegisterFormParticipant({
   className,
   onSuccess,
 }: RegisterFormParticipantProps) {
+  const [showNIK, setShowNIK] = useState(false);
   const navigate = useNavigate();
   const { useCreateParticipant } = useUsers();
+
   const createParticipantMutation = useCreateParticipant();
 
   const {
     register,
     handleSubmit,
+    control,
     formState: { errors, isSubmitting },
     setError,
     clearErrors,
     watch,
     reset,
-    control,
   } = useForm<ParticipantRegistrationData>({
     resolver: zodResolver(participantRegistrationSchema),
     mode: "onChange",
     defaultValues: {
+      nik: "",
       name: "",
       email: "",
       phone: "",
-      nik: "",
       gender: undefined,
-      birth_place: "",
-      birth_date: "",
-      address: "",
-      province: "",
-      regency: "",
-      religion: "",
-      education: "",
-      agreeTerms: false,
     },
   });
 
   // Watch form values for real-time validation feedback
   const watchedValues = watch();
   const isFormValid =
-    Object.keys(errors).length === 0 && watchedValues.agreeTerms;
+    Object.keys(errors).length === 0 &&
+    watchedValues.nik &&
+    watchedValues.name &&
+    watchedValues.email &&
+    watchedValues.phone &&
+    watchedValues.gender;
 
   const onSubmit = async (data: ParticipantRegistrationData) => {
     try {
       clearErrors();
 
       // Show loading toast
-      const loadingToast = toast.loading("Mendaftarkan peserta...", {
-        description: "Mohon tunggu, kami sedang memproses pendaftaran peserta",
+      const loadingToast = toast.loading("Mendaftarkan akun...", {
+        description: "Mohon tunggu, kami sedang memproses pendaftaran Anda",
       });
 
-      // Prepare data for API call
+      // Format phone number (remove any spaces, brackets, dashes)
+      const formattedPhone = data.phone.replace(/[\s\-()]/g, "");
+
+      // Prepare data for API call (participant registration)
       const registrationData = {
+        nik: data.nik,
         name: data.name.trim(),
         email: data.email.toLowerCase().trim(),
-        phone: data.phone.trim(),
-        nik: data.nik.trim(),
+        phone: formattedPhone,
         gender: data.gender,
-        birth_place: data.birth_place.trim(),
-        birth_date: data.birth_date,
-        address: data.address.trim(),
-        province: data.province,
-        regency: data.regency,
-        religion: data.religion,
-        education: data.education,
+        role: "participant" as const, // Force participant role
       };
 
-      // Real API call to create participant
-      await createParticipantMutation.mutateAsync(registrationData);
+      // Call create participant API
+      const response =
+        await createParticipantMutation.mutateAsync(registrationData);
 
       // Dismiss loading toast
       toast.dismiss(loadingToast);
 
       // Show success toast
-      toast.success("Pendaftaran peserta berhasil!", {
-        description: `Akun peserta ${data.name} telah berhasil dibuat`,
-        duration: 8000,
+      toast.success("Pendaftaran berhasil!", {
+        description: `Akun participant ${data.name} telah berhasil dibuat`,
+        duration: 5000,
         action: {
           label: "Login Sekarang",
           onClick: () => navigate("/participant/login"),
@@ -173,36 +142,23 @@ export function RegisterFormParticipant({
       // Call success callback
       onSuccess?.();
 
-      // Auto redirect to login after 4 seconds
+      // Auto redirect to login after 3 seconds
       setTimeout(() => {
         navigate("/participant/login");
-      }, 4000);
+      }, 3000);
     } catch (error: any) {
-      console.error("Participant registration error:", error);
+      console.error("Registration error:", error);
 
       // Dismiss any loading toast
       toast.dismiss();
 
-      let errorMessage = "Terjadi kesalahan saat mendaftar peserta";
+      let errorMessage = "Terjadi kesalahan saat mendaftar";
 
       // Handle specific common errors
       if (error.message) {
         const errorMsg = error.message.toLowerCase();
 
-        if (
-          errorMsg.includes("email") &&
-          (errorMsg.includes("exist") || errorMsg.includes("already"))
-        ) {
-          setError("email", {
-            type: "manual",
-            message: "Email sudah terdaftar dalam sistem",
-          });
-          toast.error("Email sudah terdaftar", {
-            description:
-              "Email yang Anda masukkan sudah digunakan oleh akun lain",
-            duration: 6000,
-          });
-        } else if (errorMsg.includes("nik")) {
+        if (errorMsg.includes("nik") && errorMsg.includes("exist")) {
           setError("nik", {
             type: "manual",
             message: "NIK sudah terdaftar dalam sistem",
@@ -210,533 +166,312 @@ export function RegisterFormParticipant({
           toast.error("NIK sudah terdaftar", {
             description:
               "NIK yang Anda masukkan sudah digunakan oleh akun lain",
-            duration: 6000,
           });
-        } else if (errorMsg.includes("phone")) {
-          setError("phone", {
+        } else if (errorMsg.includes("email") && errorMsg.includes("exist")) {
+          setError("email", {
             type: "manual",
-            message: "Nomor telepon sudah terdaftar dalam sistem",
+            message: "Email sudah terdaftar dalam sistem",
           });
-          toast.error("Nomor telepon sudah terdaftar", {
+          toast.error("Email sudah terdaftar", {
             description:
-              "Nomor telepon yang Anda masukkan sudah digunakan oleh akun lain",
-            duration: 6000,
+              "Email yang Anda masukkan sudah digunakan oleh akun lain",
           });
         } else {
           // Generic error toast
-          toast.error("Pendaftaran peserta gagal", {
+          toast.error("Pendaftaran gagal", {
             description: error.message || errorMessage,
-            duration: 8000,
+            duration: 5000,
           });
         }
       } else {
-        toast.error("Pendaftaran peserta gagal", {
+        toast.error("Pendaftaran gagal", {
           description: errorMessage,
-          duration: 8000,
+          duration: 5000,
         });
       }
     }
   };
 
-  const isLoading = isSubmitting;
+  const isLoading = createParticipantMutation.isPending || isSubmitting;
 
   return (
     <div className={cn("flex flex-col gap-6", className)}>
-      <Card className="overflow-hidden">
-        <CardContent className="grid p-0 md:grid-cols-2">
-          {/* Logo Section */}
-          <div className="hidden bg-gradient-to-br from-blue-600 to-purple-700 p-8 text-white md:block">
-            <div className="flex h-full flex-col justify-between">
-              <div>
+      <form onSubmit={handleSubmit(onSubmit)}>
+        <div className="flex flex-col gap-6">
+          {/* Header */}
+          <div className="flex flex-col items-center gap-2">
+            <Link
+              to="/"
+              className="flex flex-col items-center gap-2 font-medium hover:opacity-80 transition-opacity"
+            >
+              <div className="flex h-8 w-8 items-center justify-center rounded-md">
                 <img
                   src="/images/syntegra-clear-logo.png"
                   alt="Syntegra Logo"
-                  className="w-32 h-32 md:w-40 md:h-40 mb-6"
+                  className="w-20 h-20 md:w-40 md:h-40 object-contain"
                 />
-                <h2 className="text-2xl font-bold">Daftar Peserta</h2>
-                <p className="mt-2 text-blue-100">
-                  Bergabunglah dengan platform tes psikologi Syntegra
-                </p>
               </div>
-
-              <div className="space-y-4">
-                {/* Info Box */}
-                <div className="rounded-lg bg-blue-800/50 p-4">
-                  <div className="flex items-start gap-3">
-                    <Users className="size-5 text-blue-200 mt-0.5" />
-                    <div>
-                      <h4 className="font-medium text-blue-100">
-                        Akses Tes Psikologi
-                      </h4>
-                      <p className="text-sm text-blue-200 mt-1">
-                        Dapatkan akses untuk mengikuti berbagai tes psikologi
-                        yang tersedia di platform Syntegra
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Navigation Links */}
-                <div className="flex flex-col gap-2 text-sm">
-                  <Link
-                    to="/"
-                    className="text-blue-200 hover:text-white transition-colors"
-                  >
-                    ← Kembali ke Beranda
-                  </Link>
-                  <Link
-                    to="/participant/login"
-                    className="text-blue-200 hover:text-white transition-colors"
-                  >
-                    Sudah punya akun? Login di sini
-                  </Link>
-                  <Link
-                    to="/admin/login"
-                    className="text-blue-200 hover:text-white transition-colors"
-                  >
-                    Login sebagai Admin
-                  </Link>
-                </div>
-              </div>
+              <span className="sr-only">Syntegra Services</span>
+            </Link>
+            <h1 className="text-xl font-bold">
+              Selamat Datang di Syntegra Services
+            </h1>
+            <p className="text-sm text-muted-foreground text-center">
+              Daftar untuk mengikuti psikotes
+            </p>
+            <div className="text-center text-sm">
+              Sudah memiliki akun?{" "}
+              <Link
+                to="/participant/login"
+                className="underline underline-offset-4 text-primary hover:text-primary/80"
+              >
+                Masuk ke akun
+              </Link>
             </div>
           </div>
 
-          {/* Form Section */}
-          <div className="flex flex-col justify-center p-8 space-y-6">
-            <div className="text-center space-y-2">
-              <h1 className="text-2xl font-bold tracking-tight">
-                Daftar Peserta Baru
-              </h1>
-              <p className="text-muted-foreground">
-                Lengkapi formulir di bawah untuk membuat akun peserta
+          {/* Form Fields */}
+          <div className="flex flex-col gap-4">
+            {/* NIK Field */}
+            <div className="grid gap-2">
+              <Label htmlFor="nik" className="text-sm font-medium">
+                Nomor Induk Kependudukan (NIK){" "}
+                <span className="text-red-500">*</span>
+              </Label>
+              <div className="relative">
+                <Input
+                  id="nik"
+                  type={showNIK ? "text" : "password"}
+                  placeholder="1234567890123456"
+                  disabled={isLoading}
+                  {...register("nik")}
+                  className={cn(
+                    "pr-10",
+                    errors.nik && "border-red-500 focus-visible:ring-red-500",
+                    !errors.nik &&
+                      watchedValues.nik &&
+                      watchedValues.nik.length === 16 &&
+                      "border-green-500 focus-visible:ring-green-500"
+                  )}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowNIK(!showNIK)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                  disabled={isLoading}
+                  tabIndex={-1}
+                >
+                  {showNIK ? (
+                    <EyeOff className="size-4" />
+                  ) : (
+                    <Eye className="size-4" />
+                  )}
+                </button>
+                {!errors.nik &&
+                  watchedValues.nik &&
+                  watchedValues.nik.length === 16 && (
+                    <CheckCircle className="absolute right-10 top-1/2 -translate-y-1/2 size-4 text-green-500" />
+                  )}
+              </div>
+              {errors.nik && (
+                <p className="text-sm text-red-600 flex items-center gap-1">
+                  <AlertCircle className="size-3" />
+                  {errors.nik.message}
+                </p>
+              )}
+              <p className="text-xs text-muted-foreground">
+                NIK akan digunakan sebagai identitas login Anda
               </p>
             </div>
 
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-              {/* Personal Information */}
-              <div className="space-y-4">
-                <div className="text-sm font-medium text-muted-foreground">
-                  Informasi Pribadi
-                </div>
+            {/* Name Field */}
+            <div className="grid gap-2">
+              <Label htmlFor="name" className="text-sm font-medium">
+                Nama Lengkap <span className="text-red-500">*</span>
+              </Label>
+              <Input
+                id="name"
+                type="text"
+                placeholder="Contoh: Ahmad Rizki Pratama"
+                disabled={isLoading}
+                {...register("name")}
+                className={cn(
+                  errors.name && "border-red-500 focus-visible:ring-red-500",
+                  !errors.name &&
+                    watchedValues.name &&
+                    watchedValues.name.length > 0 &&
+                    "border-green-500 focus-visible:ring-green-500"
+                )}
+              />
+              {errors.name && (
+                <p className="text-sm text-red-600 flex items-center gap-1">
+                  <AlertCircle className="size-3" />
+                  {errors.name.message}
+                </p>
+              )}
+            </div>
 
-                {/* Name */}
-                <div className="space-y-2">
-                  <Label htmlFor="name" className="flex items-center gap-2">
-                    <User className="size-4" />
-                    Nama Lengkap
-                  </Label>
-                  <Input
-                    id="name"
-                    type="text"
-                    placeholder="Masukkan nama lengkap"
-                    className={cn(
-                      "transition-colors duration-200",
-                      errors.name
-                        ? "border-red-500 focus:border-red-500"
-                        : watchedValues.name
-                          ? "border-green-500 focus:border-green-500"
-                          : ""
-                    )}
-                    {...register("name")}
-                  />
-                  {errors.name && (
-                    <p className="text-sm text-red-500">
-                      {errors.name.message}
-                    </p>
-                  )}
-                </div>
+            {/* Email Field */}
+            <div className="grid gap-2">
+              <Label htmlFor="email" className="text-sm font-medium">
+                Email <span className="text-red-500">*</span>
+              </Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="contoh@email.com"
+                disabled={isLoading}
+                {...register("email")}
+                className={cn(
+                  errors.email && "border-red-500 focus-visible:ring-red-500",
+                  !errors.email &&
+                    watchedValues.email &&
+                    watchedValues.email.includes("@") &&
+                    "border-green-500 focus-visible:ring-green-500"
+                )}
+              />
+              {errors.email && (
+                <p className="text-sm text-red-600 flex items-center gap-1">
+                  <AlertCircle className="size-3" />
+                  {errors.email.message}
+                </p>
+              )}
+            </div>
 
-                {/* Email */}
-                <div className="space-y-2">
-                  <Label htmlFor="email" className="flex items-center gap-2">
-                    <Mail className="size-4" />
-                    Email
-                  </Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="nama@email.com"
-                    className={cn(
-                      "transition-colors duration-200",
-                      errors.email
-                        ? "border-red-500 focus:border-red-500"
-                        : watchedValues.email
-                          ? "border-green-500 focus:border-green-500"
-                          : ""
-                    )}
-                    {...register("email")}
-                  />
-                  {errors.email && (
-                    <p className="text-sm text-red-500">
-                      {errors.email.message}
-                    </p>
-                  )}
-                </div>
+            {/* Phone Field */}
+            <div className="grid gap-2">
+              <Label htmlFor="phone" className="text-sm font-medium">
+                Nomor HP <span className="text-red-500">*</span>
+              </Label>
+              <Input
+                id="phone"
+                type="tel"
+                placeholder="081234567890"
+                disabled={isLoading}
+                {...register("phone")}
+                className={cn(
+                  errors.phone && "border-red-500 focus-visible:ring-red-500",
+                  !errors.phone &&
+                    watchedValues.phone &&
+                    watchedValues.phone.length >= 10 &&
+                    "border-green-500 focus-visible:ring-green-500"
+                )}
+              />
+              {errors.phone && (
+                <p className="text-sm text-red-600 flex items-center gap-1">
+                  <AlertCircle className="size-3" />
+                  {errors.phone.message}
+                </p>
+              )}
+              <p className="text-xs text-muted-foreground">
+                Format: 08123456789 atau +6281234567890
+              </p>
+            </div>
 
-                {/* Phone */}
-                <div className="space-y-2">
-                  <Label htmlFor="phone" className="flex items-center gap-2">
-                    <Phone className="size-4" />
-                    Nomor Telepon
-                  </Label>
-                  <Input
-                    id="phone"
-                    type="tel"
-                    placeholder="08xxxxxxxxxx"
-                    className={cn(
-                      "transition-colors duration-200",
-                      errors.phone
-                        ? "border-red-500 focus:border-red-500"
-                        : watchedValues.phone
-                          ? "border-green-500 focus:border-green-500"
-                          : ""
-                    )}
-                    {...register("phone")}
-                  />
-                  {errors.phone && (
-                    <p className="text-sm text-red-500">
-                      {errors.phone.message}
-                    </p>
-                  )}
-                </div>
-
-                {/* NIK */}
-                <div className="space-y-2">
-                  <Label htmlFor="nik">NIK (Nomor Induk Kependudukan)</Label>
-                  <Input
-                    id="nik"
-                    type="text"
-                    placeholder="16 digit NIK"
-                    maxLength={16}
-                    className={cn(
-                      "transition-colors duration-200",
-                      errors.nik
-                        ? "border-red-500 focus:border-red-500"
-                        : watchedValues.nik
-                          ? "border-green-500 focus:border-green-500"
-                          : ""
-                    )}
-                    {...register("nik")}
-                  />
-                  {errors.nik && (
-                    <p className="text-sm text-red-500">{errors.nik.message}</p>
-                  )}
-                </div>
-
-                {/* Gender */}
-                <div className="space-y-2">
-                  <Label>Jenis Kelamin</Label>
-                  <Controller
-                    name="gender"
-                    control={control}
-                    render={({ field }) => (
-                      <RadioGroup
-                        value={field.value}
-                        onValueChange={field.onChange}
-                        className="flex space-x-4"
-                      >
-                        <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="male" id="male" />
-                          <Label htmlFor="male">Laki-laki</Label>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="female" id="female" />
-                          <Label htmlFor="female">Perempuan</Label>
-                        </div>
-                      </RadioGroup>
-                    )}
-                  />
-                  {errors.gender && (
-                    <p className="text-sm text-red-500">
-                      {errors.gender.message}
-                    </p>
-                  )}
-                </div>
-
-                {/* Birth Place */}
-                <div className="space-y-2">
-                  <Label
-                    htmlFor="birth_place"
-                    className="flex items-center gap-2"
+            {/* Gender Field */}
+            <div className="grid gap-2">
+              <Label htmlFor="gender" className="text-sm font-medium">
+                Jenis Kelamin <span className="text-red-500">*</span>
+              </Label>
+              <Controller
+                name="gender"
+                control={control}
+                render={({ field }) => (
+                  <Select
+                    onValueChange={field.onChange}
+                    value={field.value}
+                    disabled={isLoading}
                   >
-                    <MapPin className="size-4" />
-                    Tempat Lahir
-                  </Label>
-                  <Input
-                    id="birth_place"
-                    type="text"
-                    placeholder="Kota tempat lahir"
-                    className={cn(
-                      "transition-colors duration-200",
-                      errors.birth_place
-                        ? "border-red-500 focus:border-red-500"
-                        : watchedValues.birth_place
-                          ? "border-green-500 focus:border-green-500"
-                          : ""
-                    )}
-                    {...register("birth_place")}
-                  />
-                  {errors.birth_place && (
-                    <p className="text-sm text-red-500">
-                      {errors.birth_place.message}
-                    </p>
-                  )}
-                </div>
-
-                {/* Birth Date */}
-                <div className="space-y-2">
-                  <Label
-                    htmlFor="birth_date"
-                    className="flex items-center gap-2"
-                  >
-                    <Calendar className="size-4" />
-                    Tanggal Lahir
-                  </Label>
-                  <Input
-                    id="birth_date"
-                    type="date"
-                    className={cn(
-                      "transition-colors duration-200",
-                      errors.birth_date
-                        ? "border-red-500 focus:border-red-500"
-                        : watchedValues.birth_date
-                          ? "border-green-500 focus:border-green-500"
-                          : ""
-                    )}
-                    {...register("birth_date")}
-                  />
-                  {errors.birth_date && (
-                    <p className="text-sm text-red-500">
-                      {errors.birth_date.message}
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              {/* Address Information */}
-              <div className="space-y-4">
-                <div className="text-sm font-medium text-muted-foreground">
-                  Informasi Alamat
-                </div>
-
-                {/* Address */}
-                <div className="space-y-2">
-                  <Label htmlFor="address">Alamat Lengkap</Label>
-                  <Input
-                    id="address"
-                    type="text"
-                    placeholder="Jalan, No. Rumah, RT/RW"
-                    className={cn(
-                      "transition-colors duration-200",
-                      errors.address
-                        ? "border-red-500 focus:border-red-500"
-                        : watchedValues.address
-                          ? "border-green-500 focus:border-green-500"
-                          : ""
-                    )}
-                    {...register("address")}
-                  />
-                  {errors.address && (
-                    <p className="text-sm text-red-500">
-                      {errors.address.message}
-                    </p>
-                  )}
-                </div>
-
-                {/* Province */}
-                <div className="space-y-2">
-                  <Label htmlFor="province">Provinsi</Label>
-                  <Input
-                    id="province"
-                    type="text"
-                    placeholder="Nama provinsi"
-                    className={cn(
-                      "transition-colors duration-200",
-                      errors.province
-                        ? "border-red-500 focus:border-red-500"
-                        : watchedValues.province
-                          ? "border-green-500 focus:border-green-500"
-                          : ""
-                    )}
-                    {...register("province")}
-                  />
-                  {errors.province && (
-                    <p className="text-sm text-red-500">
-                      {errors.province.message}
-                    </p>
-                  )}
-                </div>
-
-                {/* Regency */}
-                <div className="space-y-2">
-                  <Label htmlFor="regency">Kabupaten/Kota</Label>
-                  <Input
-                    id="regency"
-                    type="text"
-                    placeholder="Nama kabupaten/kota"
-                    className={cn(
-                      "transition-colors duration-200",
-                      errors.regency
-                        ? "border-red-500 focus:border-red-500"
-                        : watchedValues.regency
-                          ? "border-green-500 focus:border-green-500"
-                          : ""
-                    )}
-                    {...register("regency")}
-                  />
-                  {errors.regency && (
-                    <p className="text-sm text-red-500">
-                      {errors.regency.message}
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              {/* Additional Information */}
-              <div className="space-y-4">
-                <div className="text-sm font-medium text-muted-foreground">
-                  Informasi Tambahan
-                </div>
-
-                {/* Religion */}
-                <div className="space-y-2">
-                  <Label htmlFor="religion">Agama</Label>
-                  <Input
-                    id="religion"
-                    type="text"
-                    placeholder="Agama yang dianut"
-                    className={cn(
-                      "transition-colors duration-200",
-                      errors.religion
-                        ? "border-red-500 focus:border-red-500"
-                        : watchedValues.religion
-                          ? "border-green-500 focus:border-green-500"
-                          : ""
-                    )}
-                    {...register("religion")}
-                  />
-                  {errors.religion && (
-                    <p className="text-sm text-red-500">
-                      {errors.religion.message}
-                    </p>
-                  )}
-                </div>
-
-                {/* Education */}
-                <div className="space-y-2">
-                  <Label htmlFor="education">Pendidikan Terakhir</Label>
-                  <Input
-                    id="education"
-                    type="text"
-                    placeholder="SD/SMP/SMA/D1/D2/D3/S1/S2/S3"
-                    className={cn(
-                      "transition-colors duration-200",
-                      errors.education
-                        ? "border-red-500 focus:border-red-500"
-                        : watchedValues.education
-                          ? "border-green-500 focus:border-green-500"
-                          : ""
-                    )}
-                    {...register("education")}
-                  />
-                  {errors.education && (
-                    <p className="text-sm text-red-500">
-                      {errors.education.message}
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              {/* Terms Agreement */}
-              <div className="space-y-4">
-                <div className="flex items-start space-x-2">
-                  <Controller
-                    name="agreeTerms"
-                    control={control}
-                    render={({ field }) => (
-                      <Checkbox
-                        id="agreeTerms"
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                        className={cn(
-                          errors.agreeTerms ? "border-red-500" : ""
-                        )}
-                      />
-                    )}
-                  />
-                  <div className="grid gap-1.5 leading-none">
-                    <Label
-                      htmlFor="agreeTerms"
-                      className="text-sm font-normal cursor-pointer"
+                    <SelectTrigger
+                      className={cn(
+                        "w-full",
+                        errors.gender &&
+                          "border-red-500 focus-visible:ring-red-500",
+                        !errors.gender &&
+                          field.value &&
+                          "border-green-500 focus-visible:ring-green-500"
+                      )}
                     >
-                      Saya menyetujui{" "}
-                      <Link
-                        to="/terms"
-                        className="text-blue-600 hover:underline"
-                      >
-                        Syarat dan Ketentuan
-                      </Link>{" "}
-                      serta{" "}
-                      <Link
-                        to="/privacy"
-                        className="text-blue-600 hover:underline"
-                      >
-                        Kebijakan Privasi
-                      </Link>
-                    </Label>
-                    {errors.agreeTerms && (
-                      <p className="text-sm text-red-500">
-                        {errors.agreeTerms.message}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              </div>
+                      <SelectValue placeholder="Pilih Jenis Kelamin" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="male">Laki-laki</SelectItem>
+                      <SelectItem value="female">Perempuan</SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+              {errors.gender && (
+                <p className="text-sm text-red-600 flex items-center gap-1">
+                  <AlertCircle className="size-3" />
+                  {errors.gender.message}
+                </p>
+              )}
+            </div>
 
-              {/* Submit Button */}
+            {/* Submit Button */}
+            <div className="pt-2">
               <Button
                 type="submit"
                 className="w-full"
                 disabled={isLoading || !isFormValid}
+                size="lg"
               >
                 {isLoading ? (
                   <>
-                    <Loader2 className="size-4 mr-2 animate-spin" />
-                    Mendaftar...
+                    <Loader2 className="mr-2 size-4 animate-spin" />
+                    Memproses Pendaftaran...
                   </>
                 ) : (
-                  <>
-                    <User className="size-4 mr-2" />
-                    Daftar Sebagai Peserta
-                  </>
+                  "Daftar Sekarang"
                 )}
               </Button>
-            </form>
-
-            {/* Mobile Navigation Links */}
-            <div className="md:hidden flex flex-col gap-2 text-sm text-center">
-              <Link
-                to="/"
-                className="text-muted-foreground hover:text-foreground transition-colors"
-              >
-                ← Kembali ke Beranda
-              </Link>
-              <Link
-                to="/participant/login"
-                className="text-muted-foreground hover:text-foreground transition-colors"
-              >
-                Sudah punya akun? Login di sini
-              </Link>
-              <Link
-                to="/admin/login"
-                className="text-muted-foreground hover:text-foreground transition-colors"
-              >
-                Login sebagai Admin
-              </Link>
             </div>
           </div>
-        </CardContent>
-      </Card>
+
+          {/* Info Box */}
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+            <div className="flex items-start gap-2">
+              <div className="w-4 h-4 rounded-full bg-blue-500 flex-shrink-0 mt-0.5">
+                <div className="w-2 h-2 bg-white rounded-full mx-auto mt-1"></div>
+              </div>
+              <div className="text-sm text-blue-800">
+                <p className="font-medium mb-1">Informasi Pendaftaran:</p>
+                <ul className="text-xs space-y-1 text-blue-700">
+                  <li>• NIK akan digunakan sebagai username login</li>
+                  <li>• Email harus valid dan dapat diakses</li>
+                  <li>• Nomor HP akan digunakan untuk notifikasi</li>
+                  <li>• Data yang dimasukkan harus sesuai dengan KTP</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          {/* Divider */}
+          <div className="relative text-center text-sm after:absolute after:inset-0 after:top-1/2 after:z-0 after:flex after:items-center after:border-t after:border-border">
+            <Link to="/">
+              <span className="relative z-10 bg-background px-2 text-muted-foreground hover:underline hover:text-primary transition-colors">
+                Kembali ke Home
+              </span>
+            </Link>
+          </div>
+        </div>
+      </form>
+
+      {/* Footer */}
+      <div className="text-balance text-center text-xs text-muted-foreground [&_a]:underline [&_a]:underline-offset-4 hover:[&_a]:text-primary">
+        <p className="text-xs text-muted-foreground">
+          © 2025 Syntegra Services. Dikembangkan oleh{" "}
+          <a
+            href="https://oknum.studio"
+            className="text-emerald-700 font-bold hover:underline"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Oknum.Studio
+          </a>
+        </p>
+      </div>
     </div>
   );
 }
