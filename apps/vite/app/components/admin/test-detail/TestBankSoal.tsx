@@ -106,18 +106,13 @@ export function TestBankSoal({ testId, test }: TestBankSoalProps) {
   const [questionTypeFilter, setQuestionTypeFilter] = useState<string>("all");
   const [isRequiredFilter, setIsRequiredFilter] = useState<string>("all");
   const [currentPage, setCurrentPage] = useState(1);
-  const [deleteQuestionId, setDeleteQuestionId] = useState<string | null>(null);
-  const [deleteQuestionText, setDeleteQuestionText] = useState("");
   const itemsPerPage = 10;
-  const { openCreateDialog } = useQuestionDialogStore();
+  const { openCreateDialog, openEditDialog, openDeleteQuestionModal } =
+    useQuestionDialogStore();
 
   // API calls
-  const {
-    useGetQuestions,
-    useGetQuestionStats,
-    useDeleteQuestion,
-    useUpdateQuestionSequence,
-  } = useQuestions();
+  const { useGetQuestions, useGetQuestionStats, useUpdateQuestionSequence } =
+    useQuestions();
 
   // Get questions with current filters
   const questionsQuery = useGetQuestions(testId, {
@@ -134,9 +129,6 @@ export function TestBankSoal({ testId, test }: TestBankSoalProps) {
 
   // Get question statistics
   const statsQuery = useGetQuestionStats(testId);
-
-  // Delete mutation
-  const deleteQuestionMutation = useDeleteQuestion(testId);
 
   // Update sequence mutation
   const updateSequenceMutation = useUpdateQuestionSequence(testId);
@@ -155,19 +147,6 @@ export function TestBankSoal({ testId, test }: TestBankSoalProps) {
       hour: "2-digit",
       minute: "2-digit",
     });
-  };
-
-  // Handle delete question
-  const handleDeleteQuestion = async () => {
-    if (!deleteQuestionId) return;
-
-    try {
-      await deleteQuestionMutation.mutateAsync(deleteQuestionId);
-      setDeleteQuestionId(null);
-      setDeleteQuestionText("");
-    } catch (error: any) {
-      // Error already handled in the hook
-    }
   };
 
   // Handle move question
@@ -497,21 +476,23 @@ export function TestBankSoal({ testId, test }: TestBankSoalProps) {
                                   <Eye className="mr-2 h-4 w-4" />
                                   Lihat Detail
                                 </DropdownMenuItem>
-                                <DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() =>
+                                    openEditDialog(testId, question.id)
+                                  }
+                                >
                                   <Edit className="mr-2 h-4 w-4" />
                                   Edit Soal
-                                </DropdownMenuItem>
-                                <DropdownMenuItem>
-                                  <Copy className="mr-2 h-4 w-4" />
-                                  Duplikasi
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem
                                   className="text-red-600"
-                                  onClick={() => {
-                                    setDeleteQuestionId(question.id);
-                                    setDeleteQuestionText(question.question);
-                                  }}
+                                  onClick={() =>
+                                    openDeleteQuestionModal(
+                                      question.id,
+                                      question.question
+                                    )
+                                  }
                                 >
                                   <Trash2 className="mr-2 h-4 w-4" />
                                   Hapus Soal
@@ -677,52 +658,6 @@ export function TestBankSoal({ testId, test }: TestBankSoalProps) {
           </div>
         </div>
       </div>
-
-      {/* Delete Question Dialog */}
-      <AlertDialog
-        open={deleteQuestionId !== null}
-        onOpenChange={() => {
-          setDeleteQuestionId(null);
-          setDeleteQuestionText("");
-        }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Hapus Soal</AlertDialogTitle>
-            <AlertDialogDescription className="space-y-2">
-              <p>
-                Apakah Anda yakin ingin menghapus soal ini? Tindakan ini tidak
-                dapat dibatalkan.
-              </p>
-              {deleteQuestionText && (
-                <div className="p-3 bg-muted rounded-lg">
-                  <p className="text-sm font-medium">Soal yang akan dihapus:</p>
-                  <p className="text-sm text-muted-foreground line-clamp-2">
-                    {deleteQuestionText}
-                  </p>
-                </div>
-              )}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Batal</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDeleteQuestion}
-              disabled={deleteQuestionMutation.isPending}
-              className="bg-red-600 hover:bg-red-700"
-            >
-              {deleteQuestionMutation.isPending ? (
-                <>
-                  <Loader2 className="size-4 mr-2 animate-spin" />
-                  Menghapus...
-                </>
-              ) : (
-                "Hapus Soal"
-              )}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }

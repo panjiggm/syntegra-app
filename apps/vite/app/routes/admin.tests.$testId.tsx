@@ -20,6 +20,7 @@ import { formatISO } from "date-fns";
 import { useTestDialogStore } from "~/stores/use-test-dialog-store";
 import { DialogDeleteTest } from "~/components/admin/test/DialogDeleteTest";
 import { DialogAddQuestion } from "~/components/admin/test-detail/DialogAddQuestion";
+import { DialogDeleteQuestion } from "~/components/admin/test-detail/DialogDeleteQuestion";
 
 // Module type labels mapping
 const MODULE_TYPE_LABELS = {
@@ -307,6 +308,7 @@ export default function TestDetailPage() {
 
       <DialogDeleteTest />
       <DialogAddQuestion />
+      <DialogDeleteQuestion />
     </div>
   );
 }
