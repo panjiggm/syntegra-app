@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "~/lib/api-client";
 import { queryKeys } from "~/lib/query-client";
 import { toast } from "sonner";
+import type { CreateSessionFormData } from "~/lib/validations/session";
 
 // Types for sessions
 interface Session {
@@ -32,16 +33,52 @@ interface GetSessionsRequest {
 interface GetSessionsResponse {
   success: boolean;
   message: string;
-  data: {
-    sessions: Session[];
-    pagination: {
-      page: number;
-      limit: number;
-      total: number;
-      totalPages: number;
-    };
+  data: Session[];
+  meta: {
+    current_page: number;
+    per_page: number;
+    total: number;
+    total_pages: number;
+    has_next_page: boolean;
+    has_prev_page: boolean;
+  };
+  filters: {
+    statuses: string[];
+    target_positions: string[];
+    proctors: any[];
   };
   timestamp: string;
+}
+
+interface CreateSessionResponse {
+  success: boolean;
+  message: string;
+  data: Session;
+  timestamp: string;
+}
+
+interface UpdateSessionResponse {
+  success: boolean;
+  message: string;
+  data: Session;
+  timestamp: string;
+}
+
+interface TestOption {
+  id: string;
+  name: string;
+  category: string;
+  module_type: string;
+  time_limit: number;
+  total_questions: number;
+  icon?: string;
+  card_color?: string;
+}
+
+interface ProctorOption {
+  id: string;
+  name: string;
+  email: string;
 }
 
 export function useSessions() {
@@ -69,31 +106,10 @@ export function useSessions() {
           throw new Error(response.message || "Failed to fetch sessions");
         }
 
-        return response.data;
+        return response;
       },
       staleTime: 2 * 60 * 1000, // 2 minutes for real-time data
       refetchInterval: 30 * 1000, // Auto-refresh every 30 seconds
-    });
-  };
-
-  // Get participant sessions (Query)
-  const useGetParticipantSessions = (participantId: string) => {
-    return useQuery({
-      queryKey: queryKeys.sessions.participant(participantId),
-      queryFn: async () => {
-        const response = await apiClient.get(
-          `/participants/${participantId}/sessions`
-        );
-        if (!response.success) {
-          throw new Error(
-            response.message || "Failed to get participant sessions"
-          );
-        }
-        return response.data;
-      },
-      enabled: !!participantId,
-      staleTime: 1 * 60 * 1000, // 1 minute
-      refetchInterval: 15 * 1000, // Auto-refresh every 15 seconds for active sessions
     });
   };
 
@@ -102,7 +118,11 @@ export function useSessions() {
     return useQuery({
       queryKey: queryKeys.sessions.detail(sessionId),
       queryFn: async () => {
-        const response = await apiClient.get(`/sessions/${sessionId}`);
+        const response = await apiClient.get<{
+          success: boolean;
+          data: Session;
+          message: string;
+        }>(`/sessions/${sessionId}`);
         if (!response.success) {
           throw new Error(response.message || "Failed to get session");
         }
@@ -113,89 +133,216 @@ export function useSessions() {
     });
   };
 
-  // Join session (Mutation)
-  const useJoinSession = () => {
-    return useMutation({
-      mutationFn: async (sessionId: string) => {
-        const response = await apiClient.post(`/sessions/${sessionId}/join`);
+  // Get available tests for session modules (Query)
+  const useGetAvailableTests = () => {
+    return useQuery({
+      queryKey: queryKeys.tests.list({ status: "active" }),
+      queryFn: async () => {
+        const response = await apiClient.get<{
+          success: boolean;
+          data: TestOption[];
+          message: string;
+        }>(`/tests?status=active&limit=100`);
+
         if (!response.success) {
-          throw new Error(response.message || "Failed to join session");
+          throw new Error(response.message || "Failed to fetch tests");
         }
+
+        return response.data;
+      },
+      staleTime: 10 * 60 * 1000, // 10 minutes - tests don't change often
+    });
+  };
+
+  // Get available proctors (Query)
+  const useGetAvailableProctors = () => {
+    return useQuery({
+      queryKey: ["proctors"],
+      queryFn: async () => {
+        const response = await apiClient.get<{
+          success: boolean;
+          data: ProctorOption[];
+          message: string;
+        }>(`/users?role=admin&limit=50`);
+
+        if (!response.success) {
+          throw new Error(response.message || "Failed to fetch proctors");
+        }
+
+        return response.data;
+      },
+      staleTime: 5 * 60 * 1000, // 5 minutes
+    });
+  };
+
+  // Create session (Mutation)
+  const useCreateSession = () => {
+    return useMutation({
+      mutationFn: async (data: CreateSessionFormData) => {
+        const response = await apiClient.post<CreateSessionResponse>(
+          "/sessions",
+          data
+        );
+
+        if (!response.success) {
+          throw new Error(response.message || "Failed to create session");
+        }
+
         return response;
       },
-      onSuccess: (_, sessionId) => {
-        // Invalidate relevant queries
-        queryClient.invalidateQueries({
-          queryKey: queryKeys.sessions.detail(sessionId),
-        });
+      onSuccess: (response) => {
+        // Invalidate and refetch sessions list
         queryClient.invalidateQueries({ queryKey: queryKeys.sessions.lists() });
 
-        toast.success("Berhasil bergabung ke sesi!", {
-          description: "Anda telah terdaftar dalam sesi tes ini",
+        // Optionally add the new session to the cache
+        queryClient.setQueryData(
+          queryKeys.sessions.detail(response.data.id),
+          response.data
+        );
+
+        toast.success("Sesi berhasil dibuat!", {
+          description: `Sesi "${response.data.session_name}" telah dibuat dengan kode: ${response.data.session_code}`,
         });
       },
       onError: (error: Error) => {
+        console.error("Create session error:", error);
+
         const errorMessage = error.message.toLowerCase();
 
         if (
-          errorMessage.includes("full") ||
-          errorMessage.includes("capacity")
+          errorMessage.includes("session code") &&
+          errorMessage.includes("exists")
         ) {
-          toast.error("Sesi penuh", {
-            description: "Kapasitas peserta sudah mencapai batas maksimum",
+          toast.error("Kode sesi sudah digunakan", {
+            description:
+              "Silakan gunakan kode sesi yang berbeda atau biarkan kosong untuk dibuat otomatis",
           });
-        } else if (
-          errorMessage.includes("expired") ||
-          errorMessage.includes("closed")
-        ) {
-          toast.error("Sesi sudah ditutup", {
-            description: "Pendaftaran untuk sesi ini sudah ditutup",
+        } else if (errorMessage.includes("invalid test")) {
+          toast.error("Tes tidak valid", {
+            description:
+              "Satu atau lebih tes yang dipilih tidak valid atau tidak aktif",
+          });
+        } else if (errorMessage.includes("invalid proctor")) {
+          toast.error("Proktor tidak valid", {
+            description: "Proktor yang dipilih tidak valid atau bukan admin",
+          });
+        } else if (errorMessage.includes("time")) {
+          toast.error("Waktu tidak valid", {
+            description: "Periksa kembali waktu mulai dan selesai sesi",
           });
         } else {
-          toast.error("Gagal bergabung ke sesi", {
-            description:
-              error.message || "Terjadi kesalahan saat mendaftar ke sesi",
+          toast.error("Gagal membuat sesi", {
+            description: error.message || "Terjadi kesalahan saat membuat sesi",
           });
         }
       },
     });
   };
 
-  // Start test session (Mutation)
-  const useStartTestSession = () => {
+  // Update session (Mutation)
+  const useUpdateSession = () => {
+    return useMutation({
+      mutationFn: async ({
+        sessionId,
+        data,
+      }: {
+        sessionId: string;
+        data: CreateSessionFormData;
+      }) => {
+        const response = await apiClient.put<UpdateSessionResponse>(
+          `/sessions/${sessionId}`,
+          data
+        );
+
+        if (!response.success) {
+          throw new Error(response.message || "Failed to update session");
+        }
+
+        return response;
+      },
+      onSuccess: (response, { sessionId }) => {
+        // Update the session in cache
+        queryClient.setQueryData(
+          queryKeys.sessions.detail(sessionId),
+          response.data
+        );
+
+        // Invalidate sessions list to refresh
+        queryClient.invalidateQueries({ queryKey: queryKeys.sessions.lists() });
+
+        toast.success("Sesi berhasil diperbarui!", {
+          description: `Sesi "${response.data.session_name}" telah diperbarui`,
+        });
+      },
+      onError: (error: Error) => {
+        console.error("Update session error:", error);
+
+        toast.error("Gagal memperbarui sesi", {
+          description:
+            error.message || "Terjadi kesalahan saat memperbarui sesi",
+        });
+      },
+    });
+  };
+
+  // Delete session (Mutation)
+  const useDeleteSession = () => {
     return useMutation({
       mutationFn: async (sessionId: string) => {
-        const response = await apiClient.post(`/sessions/${sessionId}/start`);
+        const response = await apiClient.delete(`/sessions/${sessionId}`);
         if (!response.success) {
-          throw new Error(response.message || "Failed to start test session");
+          throw new Error(response.message || "Failed to delete session");
         }
         return response;
       },
       onSuccess: (_, sessionId) => {
-        queryClient.invalidateQueries({
+        // Remove from cache
+        queryClient.removeQueries({
           queryKey: queryKeys.sessions.detail(sessionId),
         });
 
-        toast.success("Tes dimulai!", {
-          description: "Selamat mengerjakan tes psikologi",
+        // Invalidate sessions list
+        queryClient.invalidateQueries({ queryKey: queryKeys.sessions.lists() });
+
+        toast.success("Sesi berhasil dihapus", {
+          description: "Sesi telah dihapus dari sistem",
         });
       },
       onError: (error: Error) => {
-        toast.error("Gagal memulai tes", {
-          description: error.message || "Terjadi kesalahan saat memulai tes",
+        toast.error("Gagal menghapus sesi", {
+          description: error.message || "Terjadi kesalahan saat menghapus sesi",
         });
       },
+    });
+  };
+
+  // Get session statistics (Query)
+  const useGetSessionStats = () => {
+    return useQuery({
+      queryKey: ["sessions", "stats"],
+      queryFn: async () => {
+        const response = await apiClient.get("/sessions/stats/summary");
+        if (!response.success) {
+          throw new Error(response.message || "Failed to fetch session stats");
+        }
+        return response.data;
+      },
+      staleTime: 5 * 60 * 1000, // 5 minutes
+      refetchInterval: 60 * 1000, // Auto-refresh every minute
     });
   };
 
   return {
     // Queries
     useGetSessions,
-    useGetParticipantSessions,
     useGetSessionById,
+    useGetAvailableTests,
+    useGetAvailableProctors,
+    useGetSessionStats,
 
     // Mutations
-    useJoinSession,
-    useStartTestSession,
+    useCreateSession,
+    useUpdateSession,
+    useDeleteSession,
   };
 }

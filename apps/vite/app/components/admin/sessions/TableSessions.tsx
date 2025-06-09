@@ -29,6 +29,9 @@ import {
   Calendar,
 } from "lucide-react";
 
+// Date utilities
+import { formatTime, formatDate } from "~/lib/utils/date";
+
 interface TableSessionsProps {
   sessions: any[];
   isLoading: boolean;
@@ -58,31 +61,6 @@ export const TableSessions = ({
   onViewDetails,
   onCopyLink,
 }: TableSessionsProps) => {
-  const formatTime = (date: string | Date) => {
-    try {
-      const dateObj = typeof date === "string" ? new Date(date) : date;
-      return dateObj.toLocaleTimeString("id-ID", {
-        hour: "2-digit",
-        minute: "2-digit",
-      });
-    } catch (error) {
-      return "--:--";
-    }
-  };
-
-  const formatDate = (date: string | Date) => {
-    try {
-      const dateObj = typeof date === "string" ? new Date(date) : date;
-      return dateObj.toLocaleDateString("id-ID", {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-      });
-    } catch (error) {
-      return "Invalid Date";
-    }
-  };
-
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "active":

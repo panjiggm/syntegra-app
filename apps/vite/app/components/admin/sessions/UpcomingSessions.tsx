@@ -1,6 +1,9 @@
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { Skeleton } from "~/components/ui/skeleton";
 
+// Date utilities
+import { formatTime, formatDate } from "~/lib/utils/date";
+
 interface UpcomingSessionsProps {
   sessions: any[];
   isLoading: boolean;
@@ -35,35 +38,6 @@ export const UpcomingSessions = ({
       </Card>
     );
   }
-
-  // Format time for display
-  const formatTime = (date: string | Date) => {
-    try {
-      const dateObj = typeof date === "string" ? new Date(date) : date;
-      return dateObj.toLocaleTimeString("id-ID", {
-        hour: "2-digit",
-        minute: "2-digit",
-      });
-    } catch (error) {
-      console.error("Error formatting time:", error);
-      return "--:--";
-    }
-  };
-
-  // Format date for display
-  const formatDate = (date: string | Date) => {
-    try {
-      const dateObj = typeof date === "string" ? new Date(date) : date;
-      return dateObj.toLocaleDateString("id-ID", {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-      });
-    } catch (error) {
-      console.error("Error formatting date:", error);
-      return "Invalid Date";
-    }
-  };
 
   const upcomingSessions = sessions
     .filter((s) => s.status === "active" || s.status === "draft")

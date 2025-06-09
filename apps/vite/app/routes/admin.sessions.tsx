@@ -7,10 +7,15 @@ import { CardAnalyticSessions } from "~/components/admin/sessions/CardAnalyticSe
 import { TableSessions } from "~/components/admin/sessions/TableSessions";
 import { MiniCalendar } from "~/components/admin/sessions/MiniCalendar";
 import { UpcomingSessions } from "~/components/admin/sessions/UpcomingSessions";
-// import { CreateSessionDialog } from "~/components/admin/sessions/CreateSessionDialog";
+import { DialogCreateSession } from "~/components/admin/sessions/DialogCreateSession";
 
-// Hooks
-// import { useSessions, sessionHelpers } from "~/hooks/use-sessions";
+// Hooks and Stores
+import { useSessions } from "~/hooks/use-sessions";
+import { useSessionDialogStore } from "~/stores/use-session-dialog-store";
+
+// Utils
+import { toast } from "sonner";
+import { getLocalDateString, isSameLocalDate } from "~/lib/utils/date";
 
 export function meta() {
   return [
@@ -31,7 +36,7 @@ interface GetSessionsRequest {
 
 export default function AdminSessionsPage() {
   const [selectedDate, setSelectedDate] = useState(new Date());
-  // const { openCreateSession } = useSessionStore();
+  const { openCreateSession, openEditDialog } = useSessionDialogStore();
 
   // Filter states
   const [filters, setFilters] = useState<GetSessionsRequest>({
@@ -44,13 +49,24 @@ export default function AdminSessionsPage() {
     sort_order: "desc",
   });
 
-  // Use sessions hook (temporarily mocked until hook is implemented)
-  const sessionsLoading = false;
-  const statsLoading = false;
-  const sessionsResponse: any = { success: true, data: [] };
-  const statsResponse: any = { success: true, data: { summary: {} } };
-  const sessionsError = null;
-  const statsError = null;
+  // Use sessions hooks
+  const { useGetSessions, useGetSessionStats, useDeleteSession } =
+    useSessions();
+
+  const {
+    data: sessionsResponse,
+    isLoading: sessionsLoading,
+    error: sessionsError,
+    refetch: refetchSessions,
+  } = useGetSessions(filters);
+
+  const {
+    data: statsResponse,
+    isLoading: statsLoading,
+    error: statsError,
+  } = useGetSessionStats();
+
+  const deleteSessionMutation = useDeleteSession();
 
   // Handle filter changes
   const updateFilter = (key: keyof GetSessionsRequest, value: any) => {
@@ -68,8 +84,8 @@ export default function AdminSessionsPage() {
       return { today: 0, ongoing: 0, upcoming: 0, thisWeek: 0 };
     }
 
-    if (statsResponse?.success && statsResponse.data?.summary) {
-      const data = statsResponse.data.summary;
+    if (statsResponse?.summary) {
+      const data = statsResponse.summary;
 
       const totalSessions = data?.total_sessions || 0;
       const activeSessions = data?.active_sessions || 0;
@@ -92,64 +108,79 @@ export default function AdminSessionsPage() {
 
   // Filter sessions by selected date
   const filteredSessions = useMemo(() => {
-    if (!sessionsResponse?.success || !sessionsResponse.data) return [];
-
-    const selectedDateString = selectedDate.toISOString().split("T")[0];
+    if (!sessionsResponse?.data) return [];
 
     return sessionsResponse.data.filter((session: any) => {
-      const sessionDate = new Date(session.start_time)
-        .toISOString()
-        .split("T")[0];
-      return sessionDate === selectedDateString;
+      return isSameLocalDate(session.start_time, selectedDate);
     });
   }, [sessionsResponse, selectedDate]);
 
   // All sessions for upcoming component
   const allSessions = useMemo(() => {
-    if (!sessionsResponse?.success || !sessionsResponse.data) return [];
+    if (!sessionsResponse?.data) return [];
     return sessionsResponse.data;
   }, [sessionsResponse]);
 
   // Action handlers
   const handleEdit = (sessionId: string) => {
-    console.log("Edit session:", sessionId);
-    // Navigate to edit page or open edit modal
+    openEditDialog(sessionId);
   };
 
-  const handleDelete = (sessionId: string) => {
-    console.log("Delete session:", sessionId);
-    // Open delete confirmation modal
+  const handleDelete = async (sessionId: string) => {
+    if (window.confirm("Apakah Anda yakin ingin menghapus sesi ini?")) {
+      try {
+        await deleteSessionMutation.mutateAsync(sessionId);
+      } catch (error) {
+        console.error("Delete session error:", error);
+      }
+    }
   };
 
   const handleViewDetails = (sessionId: string) => {
+    // Navigate to session details page - implement based on your routing
     console.log("View details:", sessionId);
-    // Navigate to session details page
+    // Example: navigate(`/admin/sessions/${sessionId}`);
   };
 
   const handleCopyLink = (sessionCode: string) => {
-    // const link = sessionHelpers.generateParticipantLink(sessionCode);
     const link = `${window.location.origin}/session/${sessionCode}`;
     navigator.clipboard.writeText(link);
-    // Show toast notification
-    console.log("Link copied:", link);
+
+    toast.success("Link berhasil disalin!", {
+      description: "Link partisipan telah disalin ke clipboard",
+    });
   };
 
   const handlePageChange = (page: number) => {
     updateFilter("page", page);
   };
 
-  const openCreateSession = () => {
-    console.log("Open create session dialog");
+  const handleRefresh = () => {
+    refetchSessions();
   };
 
-  if (sessionsLoading) {
-    return <div>Loading...</div>;
+  if (sessionsLoading && !sessionsResponse) {
+    return (
+      <div className="flex flex-1 flex-col gap-4">
+        <div className="animate-pulse">
+          <div className="h-8 bg-gray-200 rounded w-1/3 mb-2"></div>
+          <div className="h-4 bg-gray-200 rounded w-2/3"></div>
+        </div>
+        <div className="grid gap-4 md:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="animate-pulse">
+              <div className="h-32 bg-gray-200 rounded"></div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
   }
 
   return (
     <div className="flex flex-1 flex-col gap-4">
       {/* Header Section */}
-      <HeaderSessions isLoading={sessionsLoading} onRefresh={() => {}} />
+      <HeaderSessions isLoading={sessionsLoading} onRefresh={handleRefresh} />
 
       {/* Statistics Cards */}
       <CardAnalyticSessions stats={stats} isLoading={statsLoading} />
@@ -168,7 +199,7 @@ export default function AdminSessionsPage() {
             error={sessionsError}
             selectedDate={selectedDate}
             sessionsResponse={sessionsResponse}
-            onRefetch={() => {}}
+            onRefetch={handleRefresh}
             onNewSession={openCreateSession}
             onPageChange={handlePageChange}
             onEdit={handleEdit}
@@ -193,8 +224,8 @@ export default function AdminSessionsPage() {
         </div>
       </div>
 
-      {/* Create Session Dialog */}
-      {/* <CreateSessionDialog /> */}
+      {/* Create/Edit Session Dialog */}
+      <DialogCreateSession />
     </div>
   );
 }
