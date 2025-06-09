@@ -295,6 +295,22 @@ const mockSessions = [
           status: "active",
         },
       },
+      {
+        id: "mod-13",
+        test: {
+          id: "army-alpha-1",
+          name: "Army Alpha Test 2",
+          description:
+            "Tes kecerdasan untuk mengukur kemampuan verbal dan numerik",
+          module_type: "intelligence",
+          category: "army_alpha_2",
+          time_limit: 50,
+          icon: "🎖️",
+          card_color: "from-emerald-500 to-emerald-600",
+          total_questions: 80,
+          status: "active",
+        },
+      },
     ],
   },
 ];
@@ -362,7 +378,7 @@ function TestsContent() {
     totalTests > 0 ? (completedTests / totalTests) * 100 : 0;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+    <div className="min-h-screen">
       {/* Header */}
       <header className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -384,7 +400,7 @@ function TestsContent() {
       </header>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+      <main className="py-6">
         {/* Analytics Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <Card>
