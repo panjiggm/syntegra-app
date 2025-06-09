@@ -126,7 +126,7 @@ export default function AdminReportsPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Reports</h1>
-          <p className="text-muted-foreground">
+          <p className="text-muted-foreground text-sm">
             Kelola dan lihat laporan assessment psikologi
           </p>
         </div>
