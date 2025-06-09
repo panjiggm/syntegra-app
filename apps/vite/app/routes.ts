@@ -27,7 +27,7 @@ export default [
     //   route("/admin/tests/new", "routes/admin.tests.new.tsx"),
     //   route("/admin/tests/edit", "routes/admin.tests.edit.tsx"),
     //   route("/admin/tests/:testId", "routes/admin.tests.$testId.tsx"),
-    //   route("/admin/sessions", "routes/admin.sessions.tsx"),
+    route("/admin/sessions", "routes/admin.sessions.tsx"),
     //   route("/admin/reports", "routes/admin.reports.tsx"),
   ]),
 
