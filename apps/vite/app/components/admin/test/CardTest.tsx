@@ -127,9 +127,11 @@ export function CardTest({
                       Lihat
                     </Link>
                   </DropdownMenuItem>
-                  <DropdownMenuItem>
-                    <Edit className="size-4 mr-2" />
-                    Edit
+                  <DropdownMenuItem asChild>
+                    <Link to={`/admin/tests/${test.id}/edit`}>
+                      <Edit className="size-4 mr-2" />
+                      Edit
+                    </Link>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
