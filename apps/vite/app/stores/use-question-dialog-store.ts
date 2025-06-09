@@ -9,12 +9,18 @@ interface QuestionDialogState {
   isDeleteQuestionModalOpen: boolean;
   deleteQuestionId: string | null;
   deleteQuestionText: string | null;
+  // View question dialog state
+  isViewQuestionModalOpen: boolean;
+  viewQuestionId: string | null;
   openCreateDialog: (testId: string) => void;
   openEditDialog: (testId: string, questionId: string) => void;
   closeDialog: () => void;
   // Delete question actions
   openDeleteQuestionModal: (questionId: string, questionText: string) => void;
   closeDeleteQuestionModal: () => void;
+  // View question actions
+  openViewQuestionModal: (questionId: string) => void;
+  closeViewQuestionModal: () => void;
 }
 
 export const useQuestionDialogStore = create<QuestionDialogState>((set) => ({
@@ -26,6 +32,9 @@ export const useQuestionDialogStore = create<QuestionDialogState>((set) => ({
   isDeleteQuestionModalOpen: false,
   deleteQuestionId: null,
   deleteQuestionText: null,
+  // View question state
+  isViewQuestionModalOpen: false,
+  viewQuestionId: null,
   openCreateDialog: (testId: string) =>
     set({
       isOpen: true,
@@ -59,5 +68,16 @@ export const useQuestionDialogStore = create<QuestionDialogState>((set) => ({
       isDeleteQuestionModalOpen: false,
       deleteQuestionId: null,
       deleteQuestionText: null,
+    }),
+  // View question actions
+  openViewQuestionModal: (questionId: string) =>
+    set({
+      isViewQuestionModalOpen: true,
+      viewQuestionId: questionId,
+    }),
+  closeViewQuestionModal: () =>
+    set({
+      isViewQuestionModalOpen: false,
+      viewQuestionId: null,
     }),
 }));

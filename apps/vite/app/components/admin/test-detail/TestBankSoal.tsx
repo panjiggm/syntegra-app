@@ -112,8 +112,12 @@ export function TestBankSoal({ testId, test }: TestBankSoalProps) {
   const [isRequiredFilter, setIsRequiredFilter] = useState<string>("all");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
-  const { openCreateDialog, openEditDialog, openDeleteQuestionModal } =
-    useQuestionDialogStore();
+  const {
+    openCreateDialog,
+    openEditDialog,
+    openDeleteQuestionModal,
+    openViewQuestionModal,
+  } = useQuestionDialogStore();
 
   // API calls
   const { useGetQuestions, useGetQuestionStats, useUpdateQuestionSequence } =
@@ -493,7 +497,11 @@ export function TestBankSoal({ testId, test }: TestBankSoalProps) {
                               <DropdownMenuContent align="end">
                                 <DropdownMenuLabel>Aksi</DropdownMenuLabel>
                                 <DropdownMenuSeparator />
-                                <DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() =>
+                                    openViewQuestionModal(question.id)
+                                  }
+                                >
                                   <Eye className="mr-2 h-4 w-4" />
                                   Lihat Detail
                                 </DropdownMenuItem>

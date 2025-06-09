@@ -21,6 +21,7 @@ import { useTestDialogStore } from "~/stores/use-test-dialog-store";
 import { DialogDeleteTest } from "~/components/admin/test/DialogDeleteTest";
 import { DialogAddQuestion } from "~/components/admin/test-detail/DialogAddQuestion";
 import { DialogDeleteQuestion } from "~/components/admin/test-detail/DialogDeleteQuestion";
+import { DialogViewQuestion } from "~/components/admin/test-detail/DialogViewQuestion";
 
 // Module type labels mapping
 const MODULE_TYPE_LABELS = {
@@ -309,6 +310,7 @@ export default function TestDetailPage() {
       <DialogDeleteTest />
       <DialogAddQuestion />
       <DialogDeleteQuestion />
+      <DialogViewQuestion />
     </div>
   );
 }
