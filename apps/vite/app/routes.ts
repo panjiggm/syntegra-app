@@ -36,7 +36,23 @@ export default [
     route("/admin/sessions", "routes/admin.sessions.tsx"),
 
     // reports
-    //   route("/admin/reports", "routes/admin.reports.tsx"),
+    route("/admin/reports", "routes/admin.reports.tsx"),
+    // route(
+    //   "/admin/reports/individual/:userId",
+    //   "routes/admin.reports.individual.$userId.tsx"
+    // ),
+    // route(
+    //   "/admin/reports/session/:sessionId",
+    //   "routes/admin.reports.session.$sessionId.tsx"
+    // ),
+    // route(
+    //   "/admin/reports/comparative/:sessionId",
+    //   "routes/admin.reports.comparative.$sessionId.tsx"
+    // ),
+    // route(
+    //   "/admin/reports/batch/:sessionId",
+    //   "routes/admin.reports.batch.$sessionId.tsx"
+    // ),
   ]),
 
   // Participant routes (protected - participant only)
