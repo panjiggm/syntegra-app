@@ -35,7 +35,6 @@ import {
 import { RadioGroup, RadioGroupItem } from "~/components/ui/radio-group";
 import { Label } from "~/components/ui/label";
 import { Badge } from "~/components/ui/badge";
-import { Separator } from "~/components/ui/separator";
 
 // Icons
 import {
@@ -258,7 +257,7 @@ export default function AdminUsersNewPage() {
       {/* Header */}
       <div className="flex items-center gap-4">
         <Button
-          variant="ghost"
+          variant="link"
           size="sm"
           onClick={handleCancel}
           className="gap-2"
@@ -467,19 +466,15 @@ export default function AdminUsersNewPage() {
                       <FormLabel>
                         Nomor HP
                         {isParticipant && (
-                          <Badge variant="outline" className="ml-2">
-                            Untuk Login
-                          </Badge>
+                          <p className="ml-2 text-xs text-green-600 font-medium">
+                            [Untuk Login]
+                          </p>
                         )}
                       </FormLabel>
                       <FormControl>
                         <Input placeholder="08xxxxxxxxxx" {...field} />
                       </FormControl>
-                      {isParticipant && (
-                        <FormDescription>
-                          Digunakan untuk login peserta
-                        </FormDescription>
-                      )}
+
                       <FormMessage />
                     </FormItem>
                   )}
@@ -551,7 +546,7 @@ export default function AdminUsersNewPage() {
                         onValueChange={field.onChange}
                       >
                         <FormControl>
-                          <SelectTrigger>
+                          <SelectTrigger className="w-full">
                             <SelectValue placeholder="Pilih jenis kelamin" />
                           </SelectTrigger>
                         </FormControl>
@@ -609,7 +604,7 @@ export default function AdminUsersNewPage() {
                         onValueChange={field.onChange}
                       >
                         <FormControl>
-                          <SelectTrigger>
+                          <SelectTrigger className="w-full">
                             <SelectValue placeholder="Pilih agama" />
                           </SelectTrigger>
                         </FormControl>
@@ -637,7 +632,7 @@ export default function AdminUsersNewPage() {
                         onValueChange={field.onChange}
                       >
                         <FormControl>
-                          <SelectTrigger>
+                          <SelectTrigger className="w-full">
                             <SelectValue placeholder="Pilih pendidikan" />
                           </SelectTrigger>
                         </FormControl>
