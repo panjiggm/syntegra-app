@@ -236,7 +236,7 @@ export default function TestDetailPage() {
         </div>
         <div className="flex gap-3">
           <Button asChild>
-            <Link to={`/admin/tests/edit?testId=${testId}`}>
+            <Link to={`/admin/tests/${testId}/edit`}>
               <Edit className="h-4 w-4 mr-2" />
               Edit Tes
             </Link>

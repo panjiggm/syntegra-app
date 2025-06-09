@@ -349,6 +349,56 @@ export function useTests() {
     });
   };
 
+  // Update test
+  const useUpdateTest = () => {
+    return useMutation({
+      mutationFn: async ({
+        id,
+        data,
+      }: {
+        id: string;
+        data: Partial<TestData>;
+      }) => {
+        const response = await apiClient.put(`/tests/${id}`, data);
+        if (!response.success) {
+          throw new Error(response.message || "Failed to update test");
+        }
+        return response.data;
+      },
+      onMutate: async ({ id }) => {
+        // Get test name for toast
+        const testQuery = queryClient.getQueryData(
+          queryKeys.tests.detail(id)
+        ) as { data: TestData } | undefined;
+        return { testName: testQuery?.data?.name || "Test" };
+      },
+      onSuccess: (updatedTest, { id }, context) => {
+        // Update the specific test in cache
+        queryClient.setQueryData(queryKeys.tests.detail(id), (old: any) => ({
+          ...old,
+          data: updatedTest,
+        }));
+
+        // Invalidate lists and stats to reflect changes
+        queryClient.invalidateQueries({ queryKey: queryKeys.tests.lists() });
+        queryClient.invalidateQueries({ queryKey: queryKeys.tests.stats() });
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.tests.filterOptions(),
+        });
+
+        toast.success("Tes berhasil diperbarui!", {
+          description: `${context?.testName} telah disimpan`,
+        });
+      },
+      onError: (error: Error, { id }, context) => {
+        toast.error("Gagal memperbarui tes", {
+          description: error.message,
+          duration: 5000,
+        });
+      },
+    });
+  };
+
   return {
     // Queries
     useGetTests,
@@ -359,5 +409,6 @@ export function useTests() {
     // Mutations
     useDeleteTest,
     useDuplicateTest,
+    useUpdateTest,
   };
 }

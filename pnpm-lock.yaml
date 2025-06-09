@@ -322,6 +322,9 @@ importers:
       react-router:
         specifier: ^7.5.3
         version: 7.6.2(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
+      shared-types:
+        specifier: workspace:*
+        version: link:../../packages/shared-types
       sonner:
         specifier: ^2.0.5
         version: 2.0.5(react-dom@19.1.0(react@19.1.0))(react@19.1.0)

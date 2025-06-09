@@ -30,6 +30,7 @@ export default [
     route("/admin/tests", "routes/admin.tests.tsx"),
     route("/admin/tests/new", "routes/admin.tests.new.tsx"),
     route("/admin/tests/:testId", "routes/admin.tests.$testId.tsx"),
+    route("/admin/tests/:testId/edit", "routes/admin.tests.$testId.edit.tsx"),
 
     // sessions
     route("/admin/sessions", "routes/admin.sessions.tsx"),
