@@ -24,7 +24,6 @@ const data = {
       title: "Dashboard",
       url: "/participant/dashboard",
       icon: BarChart3,
-      isActive: true,
     },
     {
       title: "Psikotes",
