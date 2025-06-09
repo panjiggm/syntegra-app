@@ -7,6 +7,7 @@ import { CardAnalyticTest } from "~/components/admin/test/CardAnalyticTest";
 import { FilterTest } from "~/components/admin/test/FilterTest";
 import { CardTest } from "~/components/admin/test/CardTest";
 import { useNavigate } from "react-router";
+import { DialogDeleteTest } from "~/components/admin/test/DialogDeleteTest";
 
 export function meta() {
   return [
@@ -26,13 +27,7 @@ export default function AdminTestsPage() {
 
   const [searchTerm, setSearchTerm] = useState("");
 
-  const {
-    useGetTests,
-    useGetTestStats,
-    useGetTestFilterOptions,
-    useDeleteTest,
-    useDuplicateTest,
-  } = useTests();
+  const { useGetTests, useGetTestStats, useGetTestFilterOptions } = useTests();
 
   const {
     data: testsData,
@@ -45,9 +40,6 @@ export default function AdminTestsPage() {
 
   const { data: filterOptions, isLoading: filterOptionsLoading } =
     useGetTestFilterOptions();
-
-  const deleteTestMutation = useDeleteTest();
-  const duplicateTestMutation = useDuplicateTest();
 
   const handleSearch = () => {
     setFilters((prev) => ({
@@ -67,16 +59,6 @@ export default function AdminTestsPage() {
 
   const handlePageChange = (page: number) => {
     setFilters((prev) => ({ ...prev, page }));
-  };
-
-  const handleDeleteTest = (testId: string) => {
-    if (window.confirm("Apakah Anda yakin ingin menghapus tes ini?")) {
-      deleteTestMutation.mutate(testId);
-    }
-  };
-
-  const handleDuplicateTest = (testId: string) => {
-    duplicateTestMutation.mutate(testId);
   };
 
   const hasFilters = Boolean(
@@ -173,10 +155,6 @@ export default function AdminTestsPage() {
       {/* Tests Grid - Show loading indicator within component */}
       <CardTest
         tests={testsData?.data || []}
-        onDuplicateTest={handleDuplicateTest}
-        onDeleteTest={handleDeleteTest}
-        isDuplicating={duplicateTestMutation.isPending}
-        isDeleting={deleteTestMutation.isPending}
         hasFilters={hasFilters}
         isLoading={testsLoading && !testsData}
       />
@@ -211,6 +189,8 @@ export default function AdminTestsPage() {
           </div>
         </div>
       )}
+
+      <DialogDeleteTest />
     </div>
   );
 }

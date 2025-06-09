@@ -23,32 +23,26 @@ import {
   FileText,
   Edit,
   Trash2,
-  Copy,
   MoreHorizontal,
   Eye,
 } from "lucide-react";
 import type { TestData } from "~/hooks/use-tests";
 import { Link } from "react-router";
+import { useTestDialogStore } from "~/stores/use-test-dialog-store";
 
 interface CardTestProps {
   tests: TestData[];
-  onDuplicateTest: (testId: string) => void;
-  onDeleteTest: (testId: string) => void;
-  isDuplicating: boolean;
-  isDeleting: boolean;
   hasFilters?: boolean;
   isLoading?: boolean;
 }
 
 export function CardTest({
   tests,
-  onDuplicateTest,
-  onDeleteTest,
-  isDuplicating,
-  isDeleting,
   hasFilters = false,
   isLoading = false,
 }: CardTestProps) {
+  const { openDeleteTestModal } = useTestDialogStore();
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "active":
@@ -135,8 +129,7 @@ export function CardTest({
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
-                    onClick={() => onDeleteTest(test.id)}
-                    disabled={isDeleting}
+                    onClick={() => openDeleteTestModal(test.id, test.name)}
                     className="text-destructive"
                   >
                     <Trash2 className="size-4 mr-2" />

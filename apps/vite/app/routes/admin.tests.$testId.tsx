@@ -11,11 +11,14 @@ import {
   RefreshCw,
   AlertCircle,
   Loader2,
+  Trash2,
 } from "lucide-react";
 import { useTests } from "~/hooks/use-tests";
 import { TestOverview } from "~/components/admin/test-detail/TestOverview";
 import { TestBankSoal } from "~/components/admin/test-detail/TestBankSoal";
 import { formatISO } from "date-fns";
+import { useTestDialogStore } from "~/stores/use-test-dialog-store";
+import { DialogDeleteTest } from "~/components/admin/test/DialogDeleteTest";
 
 // Module type labels mapping
 const MODULE_TYPE_LABELS = {
@@ -76,8 +79,8 @@ const StatusBadge = ({
 
 export default function TestDetailPage() {
   const { testId } = useParams();
-  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
+  const { openDeleteTestModal } = useTestDialogStore();
 
   // Get initial tab from URL or default to overview
   const getInitialTab = () => {
@@ -235,6 +238,13 @@ export default function TestDetailPage() {
           </div>
         </div>
         <div className="flex gap-3">
+          <Button
+            variant="destructive"
+            onClick={() => openDeleteTestModal(testId!, test.name)}
+          >
+            <Trash2 className="h-4 w-4 mr-2" />
+            Hapus Tes
+          </Button>
           <Button asChild>
             <Link to={`/admin/tests/${testId}/edit`}>
               <Edit className="h-4 w-4 mr-2" />
@@ -293,6 +303,8 @@ export default function TestDetailPage() {
           <TestBankSoal testId={testId!} test={test} />
         </TabsContent>
       </Tabs>
+
+      <DialogDeleteTest />
     </div>
   );
 }
