@@ -192,7 +192,7 @@ export async function updateQuestionSequenceHandler(
     }> = [];
 
     try {
-      // Check if the new sequence is already taken by another question
+      // Check if there's a question at the target sequence position
       const [conflictingQuestion] = await db
         .select({
           id: questions.id,
@@ -209,98 +209,69 @@ export async function updateQuestionSequenceHandler(
         )
         .limit(1);
 
+      let updatedQuestion;
+
       if (conflictingQuestion) {
-        // Handle sequence conflict by shifting other questions
-        if (newSequence > oldSequence) {
-          // Moving question down: shift questions between oldSequence+1 and newSequence up by 1
-          const questionsToShift = await db
-            .select({
-              id: questions.id,
-              question: questions.question,
-              sequence: questions.sequence,
-            })
-            .from(questions)
-            .where(
-              and(
-                eq(questions.test_id, testId),
-                gt(questions.sequence, oldSequence),
-                lte(questions.sequence, newSequence),
-                sql`${questions.id} != ${questionId}`
-              )
-            );
+        // Simple swap: update both questions simultaneously using a large temporary offset
+        const tempOffset = 100000; // Use a large number to avoid conflicts
 
-          // Shift questions up
-          for (const questionToShift of questionsToShift) {
-            const newSeq = questionToShift.sequence - 1;
-            await db
-              .update(questions)
-              .set({
-                sequence: newSeq,
-                updated_at: updatedAt,
-              })
-              .where(eq(questions.id, questionToShift.id));
+        // First, move conflicting question to a safe temporary position
+        await db
+          .update(questions)
+          .set({
+            sequence: conflictingQuestion.sequence + tempOffset,
+            updated_at: updatedAt,
+          })
+          .where(eq(questions.id, conflictingQuestion.id));
 
-            conflictingQuestions.push({
-              question_id: questionToShift.id,
-              question: questionToShift.question,
-              old_sequence: questionToShift.sequence,
-              new_sequence: newSeq,
-            });
-          }
-        } else {
-          // Moving question up: shift questions between newSequence and oldSequence-1 down by 1
-          const questionsToShift = await db
-            .select({
-              id: questions.id,
-              question: questions.question,
-              sequence: questions.sequence,
-            })
-            .from(questions)
-            .where(
-              and(
-                eq(questions.test_id, testId),
-                gte(questions.sequence, newSequence),
-                lt(questions.sequence, oldSequence),
-                sql`${questions.id} != ${questionId}`
-              )
-            );
+        // Then update target question to desired position
+        [updatedQuestion] = await db
+          .update(questions)
+          .set({
+            sequence: newSequence,
+            updated_at: updatedAt,
+          })
+          .where(eq(questions.id, questionId))
+          .returning({
+            id: questions.id,
+            test_id: questions.test_id,
+            question: questions.question,
+            sequence: questions.sequence,
+            updated_at: questions.updated_at,
+          });
 
-          // Shift questions down
-          for (const questionToShift of questionsToShift) {
-            const newSeq = questionToShift.sequence + 1;
-            await db
-              .update(questions)
-              .set({
-                sequence: newSeq,
-                updated_at: updatedAt,
-              })
-              .where(eq(questions.id, questionToShift.id));
+        // Finally, move conflicting question to original target's position
+        await db
+          .update(questions)
+          .set({
+            sequence: oldSequence,
+            updated_at: updatedAt,
+          })
+          .where(eq(questions.id, conflictingQuestion.id));
 
-            conflictingQuestions.push({
-              question_id: questionToShift.id,
-              question: questionToShift.question,
-              old_sequence: questionToShift.sequence,
-              new_sequence: newSeq,
-            });
-          }
-        }
-      }
-
-      // Update the target question with new sequence
-      const [updatedQuestion] = await db
-        .update(questions)
-        .set({
-          sequence: newSequence,
-          updated_at: updatedAt,
-        })
-        .where(eq(questions.id, questionId))
-        .returning({
-          id: questions.id,
-          test_id: questions.test_id,
-          question: questions.question,
-          sequence: questions.sequence,
-          updated_at: questions.updated_at,
+        conflictingQuestions.push({
+          question_id: conflictingQuestion.id,
+          question: conflictingQuestion.question,
+          old_sequence: conflictingQuestion.sequence,
+          new_sequence: oldSequence,
         });
+      } else {
+        // No conflict, simple update
+        [updatedQuestion] = await db
+          .update(questions)
+          .set({
+            sequence: newSequence,
+            updated_at: updatedAt,
+          })
+          .where(eq(questions.id, questionId))
+          .returning({
+            id: questions.id,
+            test_id: questions.test_id,
+            question: questions.question,
+            sequence: questions.sequence,
+            updated_at: questions.updated_at,
+          });
+      }
 
       if (!updatedQuestion) {
         const errorResponse: QuestionErrorResponse = {

@@ -55,6 +55,11 @@ import {
 } from "lucide-react";
 import { useQuestions } from "~/hooks/use-questions";
 import { useQuestionDialogStore } from "~/stores/use-question-dialog-store";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "~/components/ui/tooltip";
 
 interface TestData {
   id: string;
@@ -435,32 +440,48 @@ export function TestBankSoal({ testId, test }: TestBankSoalProps) {
                           {/* Action Buttons */}
                           <div className="flex items-center gap-2">
                             <div className="flex flex-col gap-1">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() =>
-                                  handleMoveQuestion(question.id, "up")
-                                }
-                                disabled={
-                                  index === 0 ||
-                                  updateSequenceMutation.isPending
-                                }
-                              >
-                                <ArrowUpDown className="h-3 w-3" />
-                              </Button>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() =>
-                                  handleMoveQuestion(question.id, "down")
-                                }
-                                disabled={
-                                  index === questions.length - 1 ||
-                                  updateSequenceMutation.isPending
-                                }
-                              >
-                                <ArrowUpDown className="h-3 w-3 rotate-180" />
-                              </Button>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="cursor-pointer"
+                                    onClick={() =>
+                                      handleMoveQuestion(question.id, "up")
+                                    }
+                                    disabled={
+                                      index === 0 ||
+                                      updateSequenceMutation.isPending
+                                    }
+                                  >
+                                    <ArrowUpDown className="h-3 w-3" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>Pindah ke atas</p>
+                                </TooltipContent>
+                              </Tooltip>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="cursor-pointer"
+                                    onClick={() =>
+                                      handleMoveQuestion(question.id, "down")
+                                    }
+                                    disabled={
+                                      index === questions.length - 1 ||
+                                      updateSequenceMutation.isPending
+                                    }
+                                  >
+                                    <ArrowUpDown className="h-3 w-3 rotate-180" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>Pindah ke bawah</p>
+                                </TooltipContent>
+                              </Tooltip>
                             </div>
 
                             <DropdownMenu>
