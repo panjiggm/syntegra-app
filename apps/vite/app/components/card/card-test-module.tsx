@@ -46,7 +46,7 @@ interface TestData {
   subcategory?: string[] | undefined;
   total_questions?: number | undefined;
   passing_score?: number | undefined;
-  status?: "active" | "inactive" | "archived" | undefined;
+  status?: "active" | "inactive" | "archived" | "draft" | undefined;
   instructions?: string | undefined;
   created_at?: string | undefined;
   updated_at?: string | undefined;
@@ -113,18 +113,20 @@ const getGradientClass = (cardColor?: string): string => {
 export const StatusBadge = ({
   status,
 }: {
-  status: "active" | "inactive" | "archived";
+  status: "active" | "inactive" | "archived" | "draft";
 }) => {
   const variants = {
     active: "bg-green-100 text-green-700 hover:bg-green-200",
     inactive: "bg-red-100 text-red-700 hover:bg-red-200",
     archived: "bg-gray-100 text-gray-700 hover:bg-gray-200",
+    draft: "bg-yellow-100 text-yellow-700 hover:bg-yellow-200",
   };
 
   const labels = {
     active: "Aktif",
     inactive: "Tidak Aktif",
     archived: "Diarsipkan",
+    draft: "Draf",
   };
 
   return (

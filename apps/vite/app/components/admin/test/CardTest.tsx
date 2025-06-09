@@ -25,8 +25,10 @@ import {
   Trash2,
   Copy,
   MoreHorizontal,
+  Eye,
 } from "lucide-react";
 import type { TestData } from "~/hooks/use-tests";
+import { Link } from "react-router";
 
 interface CardTestProps {
   tests: TestData[];
@@ -100,7 +102,11 @@ export function CardTest({
               <div className="flex items-center gap-2">
                 <span className="text-2xl">{test.icon}</span>
                 <div>
-                  <CardTitle className="text-lg">{test.name}</CardTitle>
+                  <Link to={`/admin/tests/${test.id}`}>
+                    <CardTitle className="text-lg hover:underline cursor-pointer">
+                      {test.name}
+                    </CardTitle>
+                  </Link>
                   <CardDescription className="text-sm">
                     {test.category}
                   </CardDescription>
@@ -115,16 +121,15 @@ export function CardTest({
                 <DropdownMenuContent align="end">
                   <DropdownMenuLabel>Aksi</DropdownMenuLabel>
                   <DropdownMenuSeparator />
+                  <DropdownMenuItem asChild>
+                    <Link to={`/admin/tests/${test.id}`}>
+                      <Eye className="size-4 mr-2" />
+                      Lihat
+                    </Link>
+                  </DropdownMenuItem>
                   <DropdownMenuItem>
                     <Edit className="size-4 mr-2" />
                     Edit
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => onDuplicateTest(test.id)}
-                    disabled={isDuplicating}
-                  >
-                    <Copy className="size-4 mr-2" />
-                    Duplikasi
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem

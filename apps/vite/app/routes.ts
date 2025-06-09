@@ -17,16 +17,24 @@ export default [
 
   // Admin routes (protected - admin only)
   layout("routes/_admin.tsx", [
+    // dashboard
     route("/admin/dashboard", "routes/admin.dashboard.tsx"),
+
+    // users
     route("/admin/users", "routes/admin.users.tsx"),
     route("/admin/users/new", "routes/admin.users.new.tsx"),
     route("/admin/users/:userId", "routes/admin.users.$userId.tsx"),
     route("/admin/users/:userId/edit", "routes/admin.users.$userId.edit.tsx"),
+
+    // tests
     route("/admin/tests", "routes/admin.tests.tsx"),
     route("/admin/tests/new", "routes/admin.tests.new.tsx"),
-    //   route("/admin/tests/edit", "routes/admin.tests.edit.tsx"),
-    //   route("/admin/tests/:testId", "routes/admin.tests.$testId.tsx"),
+    route("/admin/tests/:testId", "routes/admin.tests.$testId.tsx"),
+
+    // sessions
     route("/admin/sessions", "routes/admin.sessions.tsx"),
+
+    // reports
     //   route("/admin/reports", "routes/admin.reports.tsx"),
   ]),
 

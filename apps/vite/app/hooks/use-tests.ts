@@ -15,7 +15,23 @@ export interface TestData {
     | "projective"
     | "interest"
     | "aptitude";
-  category: string;
+  category:
+    | "wais"
+    | "mbti"
+    | "wartegg"
+    | "riasec"
+    | "kraepelin"
+    | "pauli"
+    | "big_five"
+    | "papi_kostick"
+    | "dap"
+    | "raven"
+    | "epps"
+    | "army_alpha"
+    | "htp"
+    | "disc"
+    | "iq"
+    | "eq";
   time_limit: number;
   total_questions: number;
   icon?: string;
@@ -26,6 +42,8 @@ export interface TestData {
   passing_score?: number;
   difficulty_level?: "easy" | "medium" | "hard" | "expert";
   tags?: string[];
+  test_prerequisites?: string[];
+  subcategory?: string[];
   created_by: string;
   updated_by?: string;
   created_at: string;
@@ -202,6 +220,28 @@ export function useTests() {
     });
   };
 
+  // Get single test by ID
+  const useGetTestById = (testId: string) => {
+    return useQuery({
+      queryKey: queryKeys.tests.detail(testId),
+      queryFn: async () => {
+        const response = await apiClient.get<{
+          success: boolean;
+          message: string;
+          data: TestData;
+          timestamp: string;
+        }>(`/tests/${testId}`);
+        if (!response.success) {
+          throw new Error(response.message || "Failed to fetch test");
+        }
+        return response;
+      },
+      enabled: !!testId,
+      staleTime: 5 * 60 * 1000, // 5 minutes
+      retry: 2,
+    });
+  };
+
   // Get test statistics with real-time updates
   const useGetTestStats = () => {
     return useQuery({
@@ -312,6 +352,7 @@ export function useTests() {
   return {
     // Queries
     useGetTests,
+    useGetTestById,
     useGetTestStats,
     useGetTestFilterOptions,
 
