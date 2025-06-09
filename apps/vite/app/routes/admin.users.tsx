@@ -1,18 +1,11 @@
 import { useState, useMemo } from "react";
 import { Button } from "~/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "~/components/ui/dialog";
 import { useUsers } from "~/hooks/use-users";
-import { UserPlus, RefreshCw, UserCheck, Users } from "lucide-react";
+import { UserPlus, RefreshCw } from "lucide-react";
 import { CardAnalyticUser } from "~/components/admin/users/CardAnalyticUser";
 import { FilterUser } from "~/components/admin/users/FilterUser";
 import { TableUser } from "~/components/admin/users/TableUser";
+import { useNavigate } from "react-router";
 
 export function meta() {
   return [
@@ -46,10 +39,10 @@ const initialFilters: FilterState = {
 };
 
 export default function AdminUsersPage() {
+  const navigate = useNavigate();
   const [filters, setFilters] = useState<FilterState>(initialFilters);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
-  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
 
   const { useGetUsers } = useUsers();
 
@@ -106,7 +99,7 @@ export default function AdminUsersPage() {
         <div className="flex gap-2">
           <Button
             variant="outline"
-            size="sm"
+            className="cursor-pointer"
             onClick={() => refetch()}
             disabled={isLoading}
           >
@@ -115,51 +108,13 @@ export default function AdminUsersPage() {
             />
             Refresh
           </Button>
-          <Dialog
-            open={isCreateDialogOpen}
-            onOpenChange={setIsCreateDialogOpen}
+          <Button
+            className="cursor-pointer"
+            onClick={() => navigate("/admin/users/new")}
           >
-            <DialogTrigger asChild>
-              <Button>
-                <UserPlus className="size-4 mr-2" />
-                Tambah User
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-md">
-              <DialogHeader>
-                <DialogTitle>Pilih Jenis User</DialogTitle>
-                <DialogDescription>
-                  Pilih jenis pengguna yang ingin Anda buat
-                </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-3">
-                <Button
-                  className="w-full justify-start"
-                  variant="outline"
-                  onClick={() => {
-                    setIsCreateDialogOpen(false);
-                    // Navigate to create admin form
-                    console.log("Create Admin");
-                  }}
-                >
-                  <UserCheck className="size-4 mr-2" />
-                  Buat Admin Baru
-                </Button>
-                <Button
-                  className="w-full justify-start"
-                  variant="outline"
-                  onClick={() => {
-                    setIsCreateDialogOpen(false);
-                    // Navigate to create participant form
-                    console.log("Create Participant");
-                  }}
-                >
-                  <Users className="size-4 mr-2" />
-                  Daftarkan Peserta
-                </Button>
-              </div>
-            </DialogContent>
-          </Dialog>
+            <UserPlus className="size-4 mr-2" />
+            Tambah User
+          </Button>
         </div>
       </div>
 
