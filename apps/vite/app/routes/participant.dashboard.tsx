@@ -97,7 +97,7 @@ function DashboardContent() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-          <p className="text-muted-foreground">
+          <p className="text-muted-foreground text-sm">
             Selamat datang, {dashboardData?.user.name || user?.name}! Kelola tes
             psikologi Anda.
           </p>
@@ -117,7 +117,7 @@ function DashboardContent() {
         </div>
       </div>
       {/* Profile Card */}
-      <Card className="mb-8">
+      <Card className="mb-8 mt-4">
         <CardHeader>
           <CardTitle>Profil Saya</CardTitle>
           <CardDescription>Informasi profil dan kontak Anda</CardDescription>
