@@ -45,6 +45,7 @@ export interface LoginCredentials {
 
 export interface ParticipantLoginCredentials {
   phone: string;
+  rememberMe?: boolean;
 }
 
 export interface LoginResponse {

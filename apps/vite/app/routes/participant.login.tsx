@@ -25,8 +25,8 @@ export default function ParticipantLoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="container mx-auto px-4 py-8">
+    <div className="flex min-h-svh flex-col items-center justify-center gap-6 bg-background p-6 md:p-10">
+      <div className="w-full max-w-sm">
         <LoginFormParticipant onSuccess={handleSuccess} />
       </div>
     </div>
