@@ -38,7 +38,6 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "~/components/ui/alert-dialog";
-import { LoadingSpinner } from "~/components/ui/loading-spinner";
 import { Skeleton } from "~/components/ui/skeleton";
 
 import {
@@ -47,10 +46,7 @@ import {
   Search,
   Filter,
   MoreHorizontal,
-  Edit,
   Trash2,
-  Copy,
-  Mail,
   UserX,
   AlertTriangle,
   ChevronLeft,
@@ -85,11 +81,8 @@ export const TabParticipant = ({ session }: TabParticipantProps) => {
   });
 
   // Hooks
-  const {
-    useGetSessionParticipants,
-    useUpdateParticipantStatus,
-    useRemoveParticipant,
-  } = useSessionParticipants();
+  const { useGetSessionParticipants, useRemoveParticipant } =
+    useSessionParticipants();
 
   const { openBulkParticipantsDialog } = useBulkParticipantsDialogStore();
 
@@ -100,7 +93,6 @@ export const TabParticipant = ({ session }: TabParticipantProps) => {
     refetch,
   } = useGetSessionParticipants(session.id, filters);
 
-  const updateStatusMutation = useUpdateParticipantStatus();
   const removeParticipantMutation = useRemoveParticipant();
 
   // Update filter function
@@ -138,23 +130,6 @@ export const TabParticipant = ({ session }: TabParticipantProps) => {
     }
   };
 
-  // Action handlers
-  const handleUpdateStatus = async (
-    participantId: string,
-    newStatus: string,
-    userName: string
-  ) => {
-    try {
-      await updateStatusMutation.mutateAsync({
-        sessionId: session.id,
-        participantId,
-        data: { status: newStatus as any },
-      });
-    } catch (error) {
-      console.error("Update status error:", error);
-    }
-  };
-
   const handleRemoveParticipant = async (
     participantId: string,
     userName: string
@@ -187,7 +162,6 @@ export const TabParticipant = ({ session }: TabParticipantProps) => {
   // Pagination data
   const participants = participantsResponse?.data || [];
   const meta = participantsResponse?.meta;
-  const sessionInfo = participantsResponse?.session_info;
 
   // Loading skeleton for table rows
   const TableRowSkeleton = () => (
@@ -433,58 +407,6 @@ export const TabParticipant = ({ session }: TabParticipantProps) => {
                                   </DropdownMenuTrigger>
                                   <DropdownMenuContent align="end">
                                     <DropdownMenuLabel>Aksi</DropdownMenuLabel>
-                                    <DropdownMenuSeparator />
-
-                                    {/* Copy Access Link */}
-                                    <DropdownMenuItem
-                                      onClick={() =>
-                                        handleCopyAccessUrl(
-                                          participant.access_url,
-                                          participant.user.name
-                                        )
-                                      }
-                                    >
-                                      <Copy className="h-4 w-4 mr-2" />
-                                      Copy Link Akses
-                                    </DropdownMenuItem>
-
-                                    {/* Status Updates */}
-                                    <DropdownMenuSeparator />
-                                    <DropdownMenuLabel>
-                                      Ubah Status
-                                    </DropdownMenuLabel>
-
-                                    {participant.status !== "registered" && (
-                                      <DropdownMenuItem
-                                        onClick={() =>
-                                          handleUpdateStatus(
-                                            participant.id,
-                                            "registered",
-                                            participant.user.name
-                                          )
-                                        }
-                                      >
-                                        <UserX className="h-4 w-4 mr-2" />
-                                        Tandai Terdaftar
-                                      </DropdownMenuItem>
-                                    )}
-
-                                    {participant.status !== "no_show" && (
-                                      <DropdownMenuItem
-                                        onClick={() =>
-                                          handleUpdateStatus(
-                                            participant.id,
-                                            "no_show",
-                                            participant.user.name
-                                          )
-                                        }
-                                        className="text-red-600"
-                                      >
-                                        <UserX className="h-4 w-4 mr-2" />
-                                        Tandai Tidak Hadir
-                                      </DropdownMenuItem>
-                                    )}
-
                                     <DropdownMenuSeparator />
 
                                     {/* Remove Participant */}
