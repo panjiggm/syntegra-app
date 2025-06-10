@@ -27,6 +27,9 @@ import {
   Trash2,
   Copy,
   Calendar,
+  CheckCircle,
+  Play,
+  XCircle,
 } from "lucide-react";
 
 // Date utilities
@@ -53,27 +56,64 @@ export const TableSessions = ({
   isLoading,
   error,
   selectedDate,
-  sessionsResponse,
   onRefetch,
   onNewSession,
-  onPageChange,
   onEdit,
   onDelete,
-  onViewDetails,
   onCopyLink,
 }: TableSessionsProps) => {
-  const getStatusBadge = (status: string) => {
+  const getStatusBadge = (
+    status: string,
+    isActive: boolean,
+    isExpired: boolean
+  ) => {
+    if (isExpired) {
+      return (
+        <Badge variant="destructive" className="gap-1">
+          <XCircle className="h-3 w-3" />
+          Berakhir
+        </Badge>
+      );
+    }
+
+    if (isActive) {
+      return (
+        <Badge className="bg-green-100 text-green-700 gap-1">
+          <Play className="h-3 w-3" />
+          Berlangsung
+        </Badge>
+      );
+    }
+
     switch (status) {
       case "active":
-        return <Badge className="bg-green-100 text-green-700">Aktif</Badge>;
+        return (
+          <Badge className="bg-blue-100 text-blue-700 gap-1">
+            <CheckCircle className="h-3 w-3" />
+            Aktif
+          </Badge>
+        );
       case "draft":
-        return <Badge variant="outline">Draft</Badge>;
+        return (
+          <Badge variant="outline" className="gap-1">
+            <Edit className="h-3 w-3" />
+            Draft
+          </Badge>
+        );
       case "completed":
-        return <Badge className="bg-blue-100 text-blue-700">Selesai</Badge>;
-      case "expired":
-        return <Badge className="bg-gray-100 text-gray-700">Berakhir</Badge>;
+        return (
+          <Badge className="bg-green-100 text-green-700 gap-1">
+            <CheckCircle className="h-3 w-3" />
+            Selesai
+          </Badge>
+        );
       case "cancelled":
-        return <Badge variant="destructive">Dibatalkan</Badge>;
+        return (
+          <Badge variant="destructive" className="gap-1">
+            <XCircle className="h-3 w-3" />
+            Dibatalkan
+          </Badge>
+        );
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
@@ -168,7 +208,14 @@ export const TableSessions = ({
                             {session.target_position || "Umum"}
                           </Badge>
                         </TableCell>
-                        <TableCell>{getStatusBadge(session.status)}</TableCell>
+                        <TableCell>
+                          {" "}
+                          {getStatusBadge(
+                            session.status,
+                            session.is_active,
+                            session.is_expired
+                          )}
+                        </TableCell>
                         <TableCell>
                           <div className="text-sm">
                             {session.total_participants || 0} peserta
