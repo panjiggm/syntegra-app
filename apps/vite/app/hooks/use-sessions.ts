@@ -124,6 +124,39 @@ interface ProctorOption {
   email: string;
 }
 
+interface CheckParticipantRequest {
+  sessionCode: string;
+  phone: string;
+}
+
+interface CheckParticipantResponse {
+  success: boolean;
+  message: string;
+  data: {
+    participant_exists: boolean;
+    session: {
+      id: string;
+      session_name: string;
+      session_code: string;
+      status: string;
+    };
+    participant: {
+      id: string;
+      user_id: string;
+      name: string;
+      nik: string;
+      email: string;
+      phone: string;
+      status: string;
+      registered_at: string | null;
+      unique_link: string | null;
+      is_link_expired: boolean;
+      can_access: boolean;
+    } | null;
+  };
+  timestamp: string;
+}
+
 export function useSessions() {
   const queryClient = useQueryClient();
 
@@ -194,6 +227,44 @@ export function useSessions() {
       enabled: !!sessionCode,
       staleTime: 1 * 60 * 1000, // 1 minute - shorter cache for public access
       retry: 1, // Only retry once for public endpoint
+    });
+  };
+
+  // Check participant in session (Mutation) - for public access
+  const useCheckParticipant = () => {
+    return useMutation({
+      mutationFn: async (data: CheckParticipantRequest) => {
+        const response = await apiClient.post<CheckParticipantResponse>(
+          "/sessions/check-participant",
+          data
+        );
+
+        if (!response.success) {
+          throw new Error(response.message || "Failed to check participant");
+        }
+
+        return response;
+      },
+      onError: (error: Error) => {
+        console.error("Check participant error:", error);
+
+        const errorMessage = error.message.toLowerCase();
+
+        if (errorMessage.includes("session not found")) {
+          toast.error("Sesi tidak ditemukan", {
+            description: "Kode sesi yang Anda masukkan tidak valid",
+          });
+        } else if (errorMessage.includes("missing required")) {
+          toast.error("Data tidak lengkap", {
+            description: "Mohon lengkapi kode sesi dan nomor telepon",
+          });
+        } else {
+          toast.error("Gagal memeriksa peserta", {
+            description:
+              error.message || "Terjadi kesalahan saat memeriksa peserta",
+          });
+        }
+      },
     });
   };
 
@@ -409,5 +480,6 @@ export function useSessions() {
     useCreateSession,
     useUpdateSession,
     useDeleteSession,
+    useCheckParticipant,
   };
 }

@@ -38,27 +38,16 @@ export default [
 
     // reports
     route("/admin/reports", "routes/admin.reports.tsx"),
-    // route(
-    //   "/admin/reports/individual/:userId",
-    //   "routes/admin.reports.individual.$userId.tsx"
-    // ),
-    // route(
-    //   "/admin/reports/session/:sessionId",
-    //   "routes/admin.reports.session.$sessionId.tsx"
-    // ),
-    // route(
-    //   "/admin/reports/comparative/:sessionId",
-    //   "routes/admin.reports.comparative.$sessionId.tsx"
-    // ),
-    // route(
-    //   "/admin/reports/batch/:sessionId",
-    //   "routes/admin.reports.batch.$sessionId.tsx"
-    // ),
   ]),
 
   // Participant routes (protected - participant only)
   layout("routes/_participant.tsx", [
     route("/participant/dashboard", "routes/participant.dashboard.tsx"),
     route("/participant/tests", "routes/participant.tests.tsx"),
+  ]),
+
+  // Psikotes routes (protected - participant only)
+  layout("routes/_psikotes.tsx", [
+    route("/psikotes/:sessionCode", "routes/psikotes.$sessionCode.tsx"),
   ]),
 ] satisfies RouteConfig;
