@@ -21,6 +21,7 @@ import { HeaderSessionTest } from "~/components/admin/session/HeaderSessionTest"
 
 // Hooks and Utils
 import { useSessions } from "~/hooks/use-sessions";
+import { DialogDeleteSession } from "~/components/admin/session/DialogDeleteSession";
 
 // Meta function for SEO
 export function meta({ params }: Route.MetaArgs) {
@@ -169,6 +170,8 @@ export default function AdminSessionDetailPage() {
           <TabSettings session={session} />
         </TabsContent>
       </Tabs>
+
+      <DialogDeleteSession />
     </div>
   );
 }

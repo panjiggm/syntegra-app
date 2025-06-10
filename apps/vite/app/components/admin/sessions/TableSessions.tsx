@@ -35,6 +35,7 @@ import {
 // Date utilities
 import { formatTime, formatDate } from "~/lib/utils/date";
 import { Link } from "react-router";
+import { useSessionDialogStore } from "~/stores/use-session-dialog-store";
 
 interface TableSessionsProps {
   sessions: any[];
@@ -62,6 +63,8 @@ export const TableSessions = ({
   onDelete,
   onCopyLink,
 }: TableSessionsProps) => {
+  const { openDeleteSessionModal } = useSessionDialogStore();
+
   const getStatusBadge = (
     status: string,
     isActive: boolean,
@@ -245,7 +248,13 @@ export const TableSessions = ({
                               </DropdownMenuItem>
                               <DropdownMenuSeparator />
                               <DropdownMenuItem
-                                onClick={() => onDelete(session.id)}
+                                onClick={() =>
+                                  openDeleteSessionModal(
+                                    session.id,
+                                    session.session_name,
+                                    session.session_code
+                                  )
+                                }
                                 className="text-red-600"
                               >
                                 <Trash2 className="h-4 w-4 mr-2" />

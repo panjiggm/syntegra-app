@@ -159,11 +159,12 @@ export function DialogBulkParticipants() {
       return;
     }
 
-    try {
-      const loadingToast = toast.loading("Menambahkan peserta...", {
-        description: "Mohon tunggu, sedang memproses penambahan peserta",
-      });
+    const loadingToast = toast.loading("Menambahkan peserta...", {
+      description: "Mohon tunggu, sedang memproses penambahan peserta",
+      duration: 10000,
+    });
 
+    try {
       // Create participants array from selected users
       const participants = selectedUsers.map((user) => ({
         user_id: user.id,
@@ -182,6 +183,7 @@ export function DialogBulkParticipants() {
       toast.dismiss(loadingToast);
       closeBulkParticipantsDialog();
     } catch (error) {
+      toast.dismiss(loadingToast);
       console.error("Bulk add participants error:", error);
       // Error handling is already done in the hook
     }

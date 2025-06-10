@@ -16,6 +16,7 @@ import { useSessionDialogStore } from "~/stores/use-session-dialog-store";
 // Utils
 import { toast } from "sonner";
 import { getLocalDateString, isSameLocalDate } from "~/lib/utils/date";
+import { DialogDeleteSession } from "~/components/admin/session/DialogDeleteSession";
 
 export function meta() {
   return [
@@ -226,6 +227,7 @@ export default function AdminSessionsPage() {
 
       {/* Create/Edit Session Dialog */}
       <DialogCreateSession />
+      <DialogDeleteSession />
     </div>
   );
 }

@@ -7,21 +7,11 @@ import {
   Trash2,
   XCircle,
 } from "lucide-react";
-import { Link, useNavigate } from "react-router";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "~/components/ui/alert-dialog";
+import { Link } from "react-router";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import { useSessions, type Session } from "~/hooks/use-sessions";
+import { useSessionDialogStore } from "~/stores/use-session-dialog-store";
 
 interface HeaderSessionTestProps {
   session: Session;
@@ -32,10 +22,9 @@ export const HeaderSessionTest = ({
   session,
   sessionId,
 }: HeaderSessionTestProps) => {
-  const navigate = useNavigate();
-  const { useDeleteSession, useGetSessionById } = useSessions();
+  const { useGetSessionById } = useSessions();
+  const { openDeleteSessionModal } = useSessionDialogStore();
 
-  const deleteSessionMutation = useDeleteSession();
   const { refetch } = useGetSessionById(sessionId!);
 
   // Status badge component
@@ -101,15 +90,6 @@ export const HeaderSessionTest = ({
     // openEditDialog(sessionId!);
   };
 
-  const handleDelete = async () => {
-    try {
-      await deleteSessionMutation.mutateAsync(sessionId!);
-      navigate("/admin/sessions");
-    } catch (error) {
-      console.error("Delete session error:", error);
-    }
-  };
-
   const handleRefresh = () => {
     refetch();
   };
@@ -147,32 +127,20 @@ export const HeaderSessionTest = ({
           <Edit className="h-4 w-4 mr-2" />
           Edit
         </Button>
-        <AlertDialog>
-          <AlertDialogTrigger asChild>
-            <Button variant="destructive">
-              <Trash2 className="h-4 w-4 mr-2" />
-              Hapus
-            </Button>
-          </AlertDialogTrigger>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Hapus Session</AlertDialogTitle>
-              <AlertDialogDescription>
-                Apakah Anda yakin ingin menghapus session "
-                {session.session_name}"? Tindakan ini tidak dapat dibatalkan.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Batal</AlertDialogCancel>
-              <AlertDialogAction
-                onClick={handleDelete}
-                className="bg-red-600 hover:bg-red-700"
-              >
-                Hapus Session
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+        <Button
+          variant="destructive"
+          className="bg-red-500 hover:bg-red-600 cursor-pointer"
+          onClick={() =>
+            openDeleteSessionModal(
+              sessionId!,
+              session.session_name,
+              session.session_code
+            )
+          }
+        >
+          <Trash2 className="h-4 w-4 mr-2" />
+          Hapus
+        </Button>
       </div>
     </div>
   );
