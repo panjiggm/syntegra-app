@@ -1,34 +1,41 @@
 import { create } from "zustand";
 
 interface SessionDialogState {
-  isOpen: boolean;
-  mode: "create" | "edit";
-  editSessionId: string | null;
-  openCreateSession: () => void;
-  openEditDialog: (sessionId: string) => void;
-  closeDialog: () => void;
+  // Delete Session Dialog
+  isDeleteSessionModalOpen: boolean;
+  deleteSessionId: string | null;
+  deleteSessionName: string | null;
+  deleteSessionCode: string | null;
+  openDeleteSessionModal: (
+    sessionId: string,
+    sessionName: string,
+    sessionCode: string
+  ) => void;
+  closeDeleteSessionModal: () => void;
 }
 
 export const useSessionDialogStore = create<SessionDialogState>((set) => ({
-  isOpen: false,
-  mode: "create",
-  editSessionId: null,
-  openCreateSession: () =>
+  // Delete Session Dialog
+  isDeleteSessionModalOpen: false,
+  deleteSessionId: null,
+  deleteSessionName: null,
+  deleteSessionCode: null,
+  openDeleteSessionModal: (
+    sessionId: string,
+    sessionName: string,
+    sessionCode: string
+  ) =>
     set({
-      isOpen: true,
-      mode: "create",
-      editSessionId: null,
+      isDeleteSessionModalOpen: true,
+      deleteSessionId: sessionId,
+      deleteSessionName: sessionName,
+      deleteSessionCode: sessionCode,
     }),
-  openEditDialog: (sessionId: string) =>
+  closeDeleteSessionModal: () =>
     set({
-      isOpen: true,
-      mode: "edit",
-      editSessionId: sessionId,
-    }),
-  closeDialog: () =>
-    set({
-      isOpen: false,
-      mode: "create",
-      editSessionId: null,
+      isDeleteSessionModalOpen: false,
+      deleteSessionId: null,
+      deleteSessionName: null,
+      deleteSessionCode: null,
     }),
 }));
