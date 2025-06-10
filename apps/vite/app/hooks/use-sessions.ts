@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import type { CreateSessionFormData } from "~/lib/validations/session";
 
 // Types for sessions
-interface Session {
+export interface Session {
   id: string;
   session_name: string;
   session_code: string;
