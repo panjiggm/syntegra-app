@@ -82,6 +82,7 @@ export function DialogBulkParticipants() {
   const { useGetUsers } = useUsers();
   const { data: usersResponse, isLoading: isLoadingUsers } = useGetUsers({
     role: "participant",
+    is_active: true,
     limit: 100,
   });
 
