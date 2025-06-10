@@ -47,8 +47,6 @@ interface TableSessionsProps {
   onNewSession: () => void;
   onPageChange: (page: number) => void;
   onEdit: (sessionId: string) => void;
-  onDelete: (sessionId: string) => void;
-  onViewDetails: (sessionId: string) => void;
   onCopyLink: (sessionCode: string) => void;
 }
 
@@ -60,7 +58,6 @@ export const TableSessions = ({
   onRefetch,
   onNewSession,
   onEdit,
-  onDelete,
   onCopyLink,
 }: TableSessionsProps) => {
   const { openDeleteSessionModal } = useSessionDialogStore();

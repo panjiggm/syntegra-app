@@ -15,7 +15,7 @@ import { useSessionDialogStore } from "~/stores/use-session-dialog-store";
 
 // Utils
 import { toast } from "sonner";
-import { getLocalDateString, isSameLocalDate } from "~/lib/utils/date";
+import { isSameLocalDate } from "~/lib/utils/date";
 import { DialogDeleteSession } from "~/components/admin/session/DialogDeleteSession";
 
 export function meta() {
@@ -51,8 +51,7 @@ export default function AdminSessionsPage() {
   });
 
   // Use sessions hooks
-  const { useGetSessions, useGetSessionStats, useDeleteSession } =
-    useSessions();
+  const { useGetSessions, useGetSessionStats } = useSessions();
 
   const {
     data: sessionsResponse,
@@ -66,8 +65,6 @@ export default function AdminSessionsPage() {
     isLoading: statsLoading,
     error: statsError,
   } = useGetSessionStats();
-
-  const deleteSessionMutation = useDeleteSession();
 
   // Handle filter changes
   const updateFilter = (key: keyof GetSessionsRequest, value: any) => {
@@ -125,22 +122,6 @@ export default function AdminSessionsPage() {
   // Action handlers
   const handleEdit = (sessionId: string) => {
     openEditDialog(sessionId);
-  };
-
-  const handleDelete = async (sessionId: string) => {
-    if (window.confirm("Apakah Anda yakin ingin menghapus sesi ini?")) {
-      try {
-        await deleteSessionMutation.mutateAsync(sessionId);
-      } catch (error) {
-        console.error("Delete session error:", error);
-      }
-    }
-  };
-
-  const handleViewDetails = (sessionId: string) => {
-    // Navigate to session details page - implement based on your routing
-    console.log("View details:", sessionId);
-    // Example: navigate(`/admin/sessions/${sessionId}`);
   };
 
   const handleCopyLink = (sessionCode: string) => {
@@ -204,8 +185,6 @@ export default function AdminSessionsPage() {
             onNewSession={openCreateSession}
             onPageChange={handlePageChange}
             onEdit={handleEdit}
-            onDelete={handleDelete}
-            onViewDetails={handleViewDetails}
             onCopyLink={handleCopyLink}
           />
         </div>
