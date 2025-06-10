@@ -185,12 +185,6 @@ export const TableSessions = ({
                               <DropdownMenuLabel>Aksi</DropdownMenuLabel>
                               <DropdownMenuSeparator />
                               <DropdownMenuItem
-                                onClick={() => onViewDetails(session.id)}
-                              >
-                                <Eye className="h-4 w-4 mr-2" />
-                                Lihat Detail
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
                                 onClick={() => onEdit(session.id)}
                               >
                                 <Edit className="h-4 w-4 mr-2" />
