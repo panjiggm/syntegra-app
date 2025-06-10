@@ -47,7 +47,6 @@ import {
   Filter,
   MoreHorizontal,
   Trash2,
-  UserX,
   AlertTriangle,
   ChevronLeft,
   ChevronRight,
@@ -193,10 +192,12 @@ export const TabParticipant = ({ session }: TabParticipantProps) => {
               />
               Refresh
             </Button>
-            <Button onClick={handleAddParticipant}>
-              <Plus className="h-4 w-4 mr-2" />
-              Tambah Peserta
-            </Button>
+            {session.status === "draft" && (
+              <Button onClick={handleAddParticipant}>
+                <Plus className="h-4 w-4 mr-2" />
+                Tambah Peserta
+              </Button>
+            )}
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -400,11 +401,13 @@ export const TabParticipant = ({ session }: TabParticipantProps) => {
                               {/* Actions */}
                               <TableCell>
                                 <DropdownMenu>
-                                  <DropdownMenuTrigger asChild>
-                                    <Button variant="ghost" size="sm">
-                                      <MoreHorizontal className="h-4 w-4" />
-                                    </Button>
-                                  </DropdownMenuTrigger>
+                                  {session.status === "draft" && (
+                                    <DropdownMenuTrigger asChild>
+                                      <Button variant="ghost" size="sm">
+                                        <MoreHorizontal className="h-4 w-4" />
+                                      </Button>
+                                    </DropdownMenuTrigger>
+                                  )}
                                   <DropdownMenuContent align="end">
                                     <DropdownMenuLabel>Aksi</DropdownMenuLabel>
                                     <DropdownMenuSeparator />

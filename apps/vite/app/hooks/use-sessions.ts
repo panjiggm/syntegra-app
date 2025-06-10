@@ -12,7 +12,7 @@ export interface Session {
   start_time: string;
   end_time: string;
   target_position: string;
-  status: "draft" | "active" | "completed" | "cancelled";
+  status: "draft" | "active" | "completed" | "cancelled" | "expired";
   location: string;
   description: string;
   is_active: boolean;

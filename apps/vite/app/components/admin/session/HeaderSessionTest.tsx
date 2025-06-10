@@ -123,24 +123,28 @@ export const HeaderSessionTest = ({
           <RotateCcw className="h-4 w-4 mr-2" />
           Refresh
         </Button>
-        <Button variant="outline" onClick={handleEdit}>
-          <Edit className="h-4 w-4 mr-2" />
-          Edit
-        </Button>
-        <Button
-          variant="destructive"
-          className="bg-red-500 hover:bg-red-600 cursor-pointer"
-          onClick={() =>
-            openDeleteSessionModal(
-              sessionId!,
-              session.session_name,
-              session.session_code
-            )
-          }
-        >
-          <Trash2 className="h-4 w-4 mr-2" />
-          Hapus
-        </Button>
+        {session.status === "draft" && (
+          <Button variant="outline" onClick={handleEdit}>
+            <Edit className="h-4 w-4 mr-2" />
+            Edit
+          </Button>
+        )}
+        {["draft", "cancelled"].includes(session.status) && (
+          <Button
+            variant="destructive"
+            className="bg-red-500 hover:bg-red-600 cursor-pointer"
+            onClick={() =>
+              openDeleteSessionModal(
+                sessionId!,
+                session.session_name,
+                session.session_code
+              )
+            }
+          >
+            <Trash2 className="h-4 w-4 mr-2" />
+            Hapus
+          </Button>
+        )}
       </div>
     </div>
   );
