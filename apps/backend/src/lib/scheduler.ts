@@ -1,94 +1,218 @@
-import { getDbFromEnv } from "../db";
-import { createSessionManager } from "./sessionManager";
-import type { CloudflareBindings } from "./env";
+// apps/backend/src/lib/scheduler.ts
+import { eq, and, sql, lt } from "drizzle-orm";
+import { createDatabase, testSessions } from "../db";
+import { validateEnv, type CloudflareBindings } from "./env";
 
-// Store the last execution time to prevent duplicate runs
-let lastExecutionTime = 0;
-const MINIMUM_INTERVAL = 5 * 60 * 1000; // 5 minutes minimum between runs
+// Session status update job
+export async function updateExpiredSessionsJob(env: CloudflareBindings) {
+  console.log("🔄 Running session status update job...");
 
+  try {
+    // Validate environment and create database connection
+    const validatedEnv = validateEnv(env);
+    const db = createDatabase(validatedEnv.DATABASE_URL || "");
+
+    const now = new Date();
+
+    // Find active sessions that have passed their end_time
+    const expiredSessions = await db
+      .select({
+        id: testSessions.id,
+        session_name: testSessions.session_name,
+        session_code: testSessions.session_code,
+        end_time: testSessions.end_time,
+        status: testSessions.status,
+      })
+      .from(testSessions)
+      .where(
+        and(
+          eq(testSessions.status, "active"),
+          lt(testSessions.end_time, now),
+          eq(testSessions.auto_expire, true) // Only auto-expire sessions that have auto_expire enabled
+        )
+      );
+
+    if (expiredSessions.length === 0) {
+      console.log("✅ No sessions to expire");
+      return { success: true, expired_count: 0 };
+    }
+
+    console.log(
+      `📋 Found ${expiredSessions.length} sessions to expire:`,
+      expiredSessions.map((s) => `${s.session_name} (${s.session_code})`)
+    );
+
+    // Update sessions to expired status
+    const sessionIds = expiredSessions.map((s) => s.id);
+
+    const updateResult = await db
+      .update(testSessions)
+      .set({
+        status: "expired",
+        updated_at: now,
+      })
+      .where(
+        and(
+          sql`${testSessions.id} = ANY(${sessionIds})`,
+          eq(testSessions.status, "active") // Double-check status to avoid race conditions
+        )
+      )
+      .returning({
+        id: testSessions.id,
+        session_name: testSessions.session_name,
+        session_code: testSessions.session_code,
+      });
+
+    console.log(
+      `✅ Successfully expired ${updateResult.length} sessions:`,
+      updateResult.map((s) => `${s.session_name} (${s.session_code})`)
+    );
+
+    return {
+      success: true,
+      expired_count: updateResult.length,
+      expired_sessions: updateResult,
+    };
+  } catch (error) {
+    console.error("❌ Error in session status update job:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error",
+    };
+  }
+}
+
+// Auto-activate sessions that have reached their start_time
+export async function autoActivateSessionsJob(env: CloudflareBindings) {
+  console.log("🔄 Running session auto-activation job...");
+
+  try {
+    const validatedEnv = validateEnv(env);
+    const db = createDatabase(validatedEnv.DATABASE_URL || "");
+
+    const now = new Date();
+
+    // Find draft sessions that should be activated (start_time has passed)
+    const sessionsToActivate = await db
+      .select({
+        id: testSessions.id,
+        session_name: testSessions.session_name,
+        session_code: testSessions.session_code,
+        start_time: testSessions.start_time,
+        end_time: testSessions.end_time,
+        status: testSessions.status,
+      })
+      .from(testSessions)
+      .where(
+        and(
+          eq(testSessions.status, "draft"),
+          lt(testSessions.start_time, now), // start_time has passed
+          sql`${testSessions.end_time} > ${now}` // but end_time hasn't passed yet
+        )
+      );
+
+    if (sessionsToActivate.length === 0) {
+      console.log("✅ No sessions to activate");
+      return { success: true, activated_count: 0 };
+    }
+
+    console.log(
+      `📋 Found ${sessionsToActivate.length} sessions to activate:`,
+      sessionsToActivate.map((s) => `${s.session_name} (${s.session_code})`)
+    );
+
+    // Update sessions to active status
+    const sessionIds = sessionsToActivate.map((s) => s.id);
+
+    const updateResult = await db
+      .update(testSessions)
+      .set({
+        status: "active",
+        updated_at: now,
+      })
+      .where(
+        and(
+          sql`${testSessions.id} = ANY(${sessionIds})`,
+          eq(testSessions.status, "draft") // Double-check status
+        )
+      )
+      .returning({
+        id: testSessions.id,
+        session_name: testSessions.session_name,
+        session_code: testSessions.session_code,
+      });
+
+    console.log(
+      `✅ Successfully activated ${updateResult.length} sessions:`,
+      updateResult.map((s) => `${s.session_name} (${s.session_code})`)
+    );
+
+    return {
+      success: true,
+      activated_count: updateResult.length,
+      activated_sessions: updateResult,
+    };
+  } catch (error) {
+    console.error("❌ Error in session auto-activation job:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error",
+    };
+  }
+}
+
+// Main scheduled jobs runner
 export async function runScheduledJobs(env: CloudflareBindings) {
-  const now = Date.now();
+  console.log("⏰ Starting scheduled jobs execution...");
 
-  // Prevent running too frequently
-  if (now - lastExecutionTime < MINIMUM_INTERVAL) {
-    console.log("Skipping scheduled jobs - too soon since last execution");
+  const results = {
+    session_expiry: await updateExpiredSessionsJob(env),
+    session_activation: await autoActivateSessionsJob(env),
+    timestamp: new Date().toISOString(),
+  };
+
+  console.log("📊 Scheduled jobs completed:", results);
+  return results;
+}
+
+// Development scheduler (runs periodically in development)
+let devSchedulerInterval: NodeJS.Timeout | null = null;
+
+export function startDevScheduler(env: CloudflareBindings) {
+  // Don't start if already running
+  if (devSchedulerInterval) {
+    console.log("🔧 Development scheduler already running");
     return;
   }
 
-  try {
-    console.log("🔄 Starting scheduled jobs...");
-    lastExecutionTime = now;
+  console.log("🔧 Starting development scheduler (3-minute interval)...");
 
-    const db = getDbFromEnv(env);
+  // Run immediately once
+  runScheduledJobs(env).catch(console.error);
 
-    // 1. Session cleanup and management
-    await performSessionCleanup(db);
-
-    // 2. Update session status (existing job)
-    await updateSessionStatus(db);
-
-    console.log("✅ Scheduled jobs completed successfully");
-  } catch (error) {
-    console.error("❌ Error running scheduled jobs:", error);
-  }
-}
-
-async function performSessionCleanup(db: any) {
-  try {
-    console.log("🧹 Starting session cleanup...");
-
-    const sessionManager = createSessionManager(db);
-    const cleanupResult = await sessionManager.performMaintenanceCleanup();
-
-    console.log(`✅ Session cleanup completed:
-      - Expired sessions cleaned: ${cleanupResult.expiredCleaned}
-      - Inactive sessions cleaned: ${cleanupResult.inactiveCleaned}
-      - Current session stats: Total: ${cleanupResult.sessionStats.total}, Active: ${cleanupResult.sessionStats.active}, Expired: ${cleanupResult.sessionStats.expired}
-    `);
-  } catch (error) {
-    console.error("❌ Session cleanup error:", error);
-  }
-}
-
-async function updateSessionStatus(db: any) {
-  try {
-    console.log("📊 Updating session status...");
-
-    // Your existing session status update logic here
-    // This is the original logic from your existing scheduler
-
-    console.log("✅ Session status update completed");
-  } catch (error) {
-    console.error("❌ Session status update error:", error);
-  }
-}
-
-// Development scheduler - runs every 3 minutes
-let devSchedulerTimer: NodeJS.Timeout | null = null;
-
-export function startDevScheduler(env: CloudflareBindings) {
-  if (devSchedulerTimer) {
-    return; // Already started
-  }
-
-  console.log("🔧 Starting development scheduler (every 3 minutes)...");
-
-  // Run immediately
-  runScheduledJobs(env);
-
-  // Schedule to run every 3 minutes
-  devSchedulerTimer = setInterval(
+  // Then run every 3 minutes
+  devSchedulerInterval = setInterval(
     () => {
-      runScheduledJobs(env);
+      runScheduledJobs(env).catch(console.error);
     },
     3 * 60 * 1000
   ); // 3 minutes
+
+  // Clean up on process exit (for development)
+  if (typeof process !== "undefined") {
+    process.on("exit", () => {
+      if (devSchedulerInterval) {
+        clearInterval(devSchedulerInterval);
+        devSchedulerInterval = null;
+      }
+    });
+  }
 }
 
 export function stopDevScheduler() {
-  if (devSchedulerTimer) {
-    clearInterval(devSchedulerTimer);
-    devSchedulerTimer = null;
+  if (devSchedulerInterval) {
+    clearInterval(devSchedulerInterval);
+    devSchedulerInterval = null;
     console.log("🛑 Development scheduler stopped");
   }
 }

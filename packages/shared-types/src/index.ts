@@ -84,5 +84,8 @@ export * from "./report";
 // Export all user-detail-related types and schemas
 export * from "./user-detail";
 
+// Export session utilities and scheduler helpers
+export * from "./session-utilities";
+
 // Re-export zod for convenience
 export { z } from "zod";

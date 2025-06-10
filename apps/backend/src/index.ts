@@ -1,7 +1,7 @@
 // apps/backend/src/index.ts
 import { Hono } from "hono";
 import { api } from "./routes/api";
-import { startDevScheduler } from "./lib/scheduler";
+import { startDevScheduler, runScheduledJobs } from "./lib/scheduler";
 import type { CloudflareBindings } from "./lib/env";
 
 const app = new Hono<{ Bindings: CloudflareBindings }>();
@@ -15,6 +15,44 @@ if (typeof process !== "undefined" && process.env?.NODE_ENV !== "production") {
 
 // Mount API routes
 app.route("/api/v1", api);
+
+// Manual trigger endpoint for testing scheduled jobs (admin only)
+app.post("/api/v1/admin/trigger-scheduler", async (c) => {
+  try {
+    // This endpoint can be used to manually trigger the scheduler for testing
+    const results = await runScheduledJobs(c.env);
+
+    return c.json({
+      success: true,
+      message: "Scheduled jobs executed successfully",
+      data: results,
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error) {
+    console.error("Manual scheduler trigger error:", error);
+
+    return c.json(
+      {
+        success: false,
+        message: "Failed to execute scheduled jobs",
+        error: error instanceof Error ? error.message : "Unknown error",
+        timestamp: new Date().toISOString(),
+      },
+      500
+    );
+  }
+});
+
+// Health check endpoint
+app.get("/health", (c) => {
+  return c.json({
+    success: true,
+    message: "Syntegra Psikotes API is healthy",
+    version: "1.0.0",
+    timestamp: new Date().toISOString(),
+    environment: c.env.NODE_ENV || "development",
+  });
+});
 
 // Root endpoint
 app.get("/", (c) => {
@@ -33,11 +71,12 @@ app.get("/", (c) => {
     timestamp: new Date().toISOString(),
     scheduler: {
       enabled: true,
-      interval: "3 minutes",
-      jobs: ["session_status_updater"],
+      interval: "3 minutes (development) / 1 minute (production)",
+      jobs: ["session_status_updater", "session_auto_activator"],
     },
     endpoints: {
-      health: "/api/v1/health",
+      health: "/health",
+      manual_scheduler_trigger: "POST /api/v1/admin/trigger-scheduler",
       auth: {
         login: "POST /api/v1/auth/login",
         logout: "POST /api/v1/auth/logout",
@@ -165,18 +204,63 @@ app.get("/", (c) => {
   });
 });
 
-// Cloudflare Cron Trigger handler for production
+// 404 handler
+app.notFound((c) => {
+  return c.json(
+    {
+      success: false,
+      message: "Endpoint not found",
+      path: c.req.path,
+      method: c.req.method,
+      timestamp: new Date().toISOString(),
+    },
+    404
+  );
+});
+
+// Global error handler
+app.onError((err, c) => {
+  console.error("Global API Error:", err);
+
+  return c.json(
+    {
+      success: false,
+      message: "Internal server error",
+      ...(c.env?.NODE_ENV === "development" && {
+        error: err.message,
+        stack: err.stack,
+      }),
+      timestamp: new Date().toISOString(),
+    },
+    500
+  );
+});
+
+// Cloudflare Workers export with Cron Trigger support
 export default {
   fetch: app.fetch.bind(app),
 
-  // Handle scheduled events (cron triggers)
-  async scheduled(event: any, env: CloudflareBindings, ctx: any) {
+  // Handle scheduled events (cron triggers) - This runs in production
+  async scheduled(
+    event: ScheduledEvent,
+    env: CloudflareBindings,
+    ctx: ExecutionContext
+  ) {
     console.log("⏰ Cron trigger fired:", new Date().toISOString());
+    console.log("📅 Cron schedule:", event.cron);
 
     // Import and run scheduled jobs
     const { runScheduledJobs } = await import("./lib/scheduler");
 
     // Use waitUntil to ensure the job completes before the worker terminates
-    ctx.waitUntil(runScheduledJobs(env));
+    ctx.waitUntil(
+      runScheduledJobs(env)
+        .then((results) => {
+          console.log("✅ Scheduled jobs completed successfully:", results);
+        })
+        .catch((error) => {
+          console.error("❌ Scheduled jobs failed:", error);
+        })
+    );
   },
 };

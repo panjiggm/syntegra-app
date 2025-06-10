@@ -18,6 +18,7 @@ import { getSessionByIdHandler } from "./session.get";
 import { getSessionStatsHandler } from "./session.stats";
 import { updateSessionHandler } from "./session.update";
 import { deleteSessionHandler } from "./session.delete";
+import { checkParticipantHandler } from "./session.check-participant";
 import { authenticateUser, requireAdmin } from "../../middleware/auth";
 import { generalApiRateLimit } from "../../middleware/rateLimiter";
 import { participantRoutes } from "./participants";
@@ -52,6 +53,13 @@ sessionRoutes.get(
   getSessionByCodeHandler
 );
 
+// Check Participant in Session (public endpoint)
+sessionRoutes.post(
+  "/check-participant",
+  generalApiRateLimit,
+  checkParticipantHandler
+);
+
 // ==================== STATISTICS ROUTES (Admin only) ====================
 
 // Get Session Statistics
@@ -61,6 +69,131 @@ sessionRoutes.get(
   authenticateUser,
   requireAdmin,
   getSessionStatsHandler
+);
+
+// ==================== SCHEDULER ROUTES (Admin only) ====================
+
+// Manual trigger for session status updates (admin only)
+sessionRoutes.post(
+  "/scheduler/trigger-status-update",
+  generalApiRateLimit,
+  authenticateUser,
+  requireAdmin,
+  async (c) => {
+    try {
+      console.log("🔄 Manual session status update triggered by admin");
+
+      const { runScheduledJobs } = await import("@/lib/scheduler");
+      const results = await runScheduledJobs(c.env);
+
+      const response = {
+        success: true,
+        message: "Session status update completed successfully",
+        data: {
+          execution_time: new Date().toISOString(),
+          jobs_executed: {
+            session_expiry: results.session_expiry,
+            session_activation: results.session_activation,
+          },
+          summary: {
+            total_expired: results.session_expiry.expired_count || 0,
+            total_activated: results.session_activation.activated_count || 0,
+            all_successful:
+              results.session_expiry.success &&
+              results.session_activation.success,
+          },
+        },
+        timestamp: new Date().toISOString(),
+      };
+
+      console.log(
+        "✅ Manual session status update completed:",
+        response.data.summary
+      );
+      return c.json(response, 200);
+    } catch (error) {
+      console.error("❌ Manual session status update failed:", error);
+
+      const errorResponse: SessionErrorResponse = {
+        success: false,
+        message: "Failed to execute session status update",
+        errors: [
+          {
+            field: "scheduler",
+            message:
+              error instanceof Error ? error.message : "Unknown error occurred",
+            code: "SCHEDULER_ERROR",
+          },
+        ],
+        timestamp: new Date().toISOString(),
+      };
+
+      return c.json(errorResponse, 500);
+    }
+  }
+);
+
+// Get scheduler status and statistics (admin only)
+sessionRoutes.get(
+  "/scheduler/status",
+  generalApiRateLimit,
+  authenticateUser,
+  requireAdmin,
+  async (c) => {
+    try {
+      // Get current time and environment info
+      const now = new Date();
+      const env = c.env;
+
+      // Basic scheduler info
+      const schedulerInfo = {
+        success: true,
+        message: "Scheduler status retrieved successfully",
+        data: {
+          current_time: now.toISOString(),
+          environment: env.NODE_ENV || "development",
+          scheduler_enabled: true,
+          cron_pattern: "* * * * *", // Every minute
+          jobs: [
+            {
+              name: "session_expiry_job",
+              description:
+                "Updates active sessions to expired when end_time is reached",
+              enabled: true,
+              last_execution: "Managed by Cloudflare Cron Triggers",
+            },
+            {
+              name: "session_activation_job",
+              description:
+                "Auto-activates draft sessions when start_time is reached",
+              enabled: true,
+              last_execution: "Managed by Cloudflare Cron Triggers",
+            },
+          ],
+          manual_trigger_endpoint:
+            "/api/v1/sessions/scheduler/trigger-status-update",
+          notes: [
+            "In development: Jobs run every 3 minutes automatically",
+            "In production: Jobs run every minute via Cloudflare Cron Triggers",
+            "Use manual trigger endpoint for immediate execution",
+          ],
+        },
+        timestamp: now.toISOString(),
+      };
+
+      return c.json(schedulerInfo, 200);
+    } catch (error) {
+      console.error("Error getting scheduler status:", error);
+
+      const errorResponse: SessionErrorResponse = {
+        success: false,
+        message: "Failed to get scheduler status",
+        timestamp: new Date().toISOString(),
+      };
+
+      return c.json(errorResponse, 500);
+    }
+  }
 );
 
 // ==================== UTILITY ROUTES (Admin only) ====================
