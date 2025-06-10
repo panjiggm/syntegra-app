@@ -176,6 +176,27 @@ export function useSessions() {
     });
   };
 
+  // Get public session by code (Query) - for participant access
+  const useGetPublicSessionByCode = (sessionCode: string) => {
+    return useQuery({
+      queryKey: ["sessions", "public", sessionCode],
+      queryFn: async () => {
+        const response = await apiClient.get<{
+          success: boolean;
+          data: Session;
+          message: string;
+        }>(`/sessions/public/${sessionCode}`);
+        if (!response.success) {
+          throw new Error(response.message || "Failed to get session");
+        }
+        return response.data;
+      },
+      enabled: !!sessionCode,
+      staleTime: 1 * 60 * 1000, // 1 minute - shorter cache for public access
+      retry: 1, // Only retry once for public endpoint
+    });
+  };
+
   // Get available tests for session modules (Query)
   const useGetAvailableTests = () => {
     return useQuery({
@@ -379,6 +400,7 @@ export function useSessions() {
     // Queries
     useGetSessions,
     useGetSessionById,
+    useGetPublicSessionByCode,
     useGetAvailableTests,
     useGetAvailableProctors,
     useGetSessionStats,

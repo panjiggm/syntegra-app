@@ -81,8 +81,8 @@ interface AddParticipantRequest {
   send_invitation: boolean;
 }
 
-interface BulkAddParticipantsRequest {
-  participants: { user_id: string }[];
+export interface BulkAddParticipantsRequest {
+  participants: { user_id: string; custom_message?: string | undefined }[];
   link_expires_hours: number;
   send_invitations: boolean;
 }
