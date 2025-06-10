@@ -21,7 +21,6 @@ import {
   TrendingUp,
   Activity,
   AlertCircle,
-  CheckCircle,
   Plus,
   Eye,
   Calendar,
@@ -117,7 +116,6 @@ export default function AdminReportsPage() {
   }
 
   const stats = statsQuery.data?.data;
-  const health = healthQuery.data?.data;
   const config = configQuery.data?.data;
 
   return (
@@ -179,55 +177,6 @@ export default function AdminReportsPage() {
           </DropdownMenu>
         </div>
       </div>
-
-      {/* System Health Status */}
-      {health && (
-        <Card
-          className={
-            health.status === "healthy"
-              ? "border-green-200 bg-green-50"
-              : health.status === "degraded"
-                ? "border-yellow-200 bg-yellow-50"
-                : "border-red-200 bg-red-50"
-          }
-        >
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-base">
-              {health.status === "healthy" ? (
-                <CheckCircle className="h-5 w-5 text-green-600" />
-              ) : health.status === "degraded" ? (
-                <AlertCircle className="h-5 w-5 text-yellow-600" />
-              ) : (
-                <AlertCircle className="h-5 w-5 text-red-600" />
-              )}
-              System Status
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium">
-                  Report services are {health.status}
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  Database response: {health.database.response_time_ms}ms
-                </p>
-              </div>
-              <Badge
-                variant={
-                  health.status === "healthy"
-                    ? "default"
-                    : health.status === "degraded"
-                      ? "secondary"
-                      : "destructive"
-                }
-              >
-                {health.status.charAt(0).toUpperCase() + health.status.slice(1)}
-              </Badge>
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
       {/* Report Statistics Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -490,194 +439,6 @@ export default function AdminReportsPage() {
                 <Link to="/admin/reports/batch/new">
                   <Plus className="h-4 w-4" />
                 </Link>
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Generation Capacity & Limits */}
-      {stats?.report_generation_capacity && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Activity className="h-5 w-5" />
-              System Capacity & Limits
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-4 md:grid-cols-3">
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">
-                    Individual Reports
-                  </span>
-                  <Badge variant="outline">
-                    {
-                      stats.report_generation_capacity
-                        .individual_reports_per_hour
-                    }
-                    /hour
-                  </Badge>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">Batch Reports</span>
-                  <Badge variant="outline">
-                    {stats.report_generation_capacity.batch_reports_per_hour}
-                    /hour
-                  </Badge>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">
-                    Concurrent Processing
-                  </span>
-                  <Badge variant="outline">
-                    {stats.report_generation_capacity.max_concurrent_reports}{" "}
-                    reports
-                  </Badge>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">Max Batch Size</span>
-                  <Badge variant="outline">
-                    {config?.limits?.max_participants_batch || 1000}{" "}
-                    participants
-                  </Badge>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">Data Availability</span>
-                  <div className="flex gap-1">
-                    <Badge
-                      variant={
-                        stats.data_availability.has_test_results
-                          ? "default"
-                          : "secondary"
-                      }
-                    >
-                      Results
-                    </Badge>
-                    <Badge
-                      variant={
-                        stats.data_availability.has_sessions
-                          ? "default"
-                          : "secondary"
-                      }
-                    >
-                      Sessions
-                    </Badge>
-                    <Badge
-                      variant={
-                        stats.data_availability.has_participants
-                          ? "default"
-                          : "secondary"
-                      }
-                    >
-                      Participants
-                    </Badge>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Recent Activity Summary */}
-      <div className="grid gap-4 md:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Calendar className="h-5 w-5" />
-              Recent Activity (30 Days)
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium">New Test Results</p>
-                  <p className="text-sm text-muted-foreground">
-                    Available for individual reports
-                  </p>
-                </div>
-                <div className="text-right">
-                  <p className="text-2xl font-bold text-blue-600">
-                    {stats?.recent_results_30_days?.toLocaleString() || 0}
-                  </p>
-                  <p className="text-xs text-muted-foreground">results</p>
-                </div>
-              </div>
-              <Separator />
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium">New Sessions</p>
-                  <p className="text-sm text-muted-foreground">
-                    Created in last 30 days
-                  </p>
-                </div>
-                <div className="text-right">
-                  <p className="text-2xl font-bold text-green-600">
-                    {stats?.recent_sessions_30_days?.toLocaleString() || 0}
-                  </p>
-                  <p className="text-xs text-muted-foreground">sessions</p>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Target className="h-5 w-5" />
-              Quick Actions
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              <Button
-                asChild
-                className="w-full justify-start"
-                variant="outline"
-              >
-                <Link to="/admin/sessions">
-                  <BarChart3 className="h-4 w-4 mr-2" />
-                  View Active Sessions
-                </Link>
-              </Button>
-              <Button
-                asChild
-                className="w-full justify-start"
-                variant="outline"
-              >
-                <Link to="/admin/users">
-                  <Users className="h-4 w-4 mr-2" />
-                  Manage Participants
-                </Link>
-              </Button>
-              <Button
-                asChild
-                className="w-full justify-start"
-                variant="outline"
-              >
-                <Link to="/admin/tests">
-                  <FileText className="h-4 w-4 mr-2" />
-                  Configure Tests
-                </Link>
-              </Button>
-              <Separator />
-              <Button
-                className="w-full justify-start"
-                variant="outline"
-                onClick={() => window.open("/admin/reports/health", "_blank")}
-              >
-                <Activity className="h-4 w-4 mr-2" />
-                System Health Dashboard
               </Button>
             </div>
           </CardContent>
