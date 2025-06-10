@@ -55,7 +55,7 @@ export default function AdminSessionDetailPage() {
     return (
       <div className="flex flex-1 flex-col gap-4">
         <div className="flex items-center gap-4">
-          <Button variant="outline" size="sm" asChild>
+          <Button variant="link" size="sm" asChild>
             <Link to="/admin/sessions">
               <ArrowLeft className="h-4 w-4 mr-2" />
               Kembali
@@ -84,7 +84,7 @@ export default function AdminSessionDetailPage() {
     return (
       <div className="flex flex-1 flex-col gap-4">
         <div className="flex items-center gap-4">
-          <Button variant="outline" size="sm" asChild>
+          <Button variant="link" size="sm" asChild>
             <Link to="/admin/sessions">
               <ArrowLeft className="h-4 w-4 mr-2" />
               Kembali

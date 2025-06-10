@@ -117,7 +117,7 @@ export const HeaderSessionTest = ({
   return (
     <div className="flex items-center justify-between">
       <div className="flex items-center gap-4">
-        <Button variant="outline" size="sm" asChild>
+        <Button variant="link" size="sm" asChild>
           <Link to="/admin/sessions">
             <ArrowLeft className="h-4 w-4 mr-2" />
             Kembali
@@ -125,14 +125,14 @@ export const HeaderSessionTest = ({
         </Button>
         <div>
           <div className="flex items-center gap-3">
-            <h1 className="text-3xl font-bold">{session.session_name}</h1>
+            <h1 className="text-2xl font-bold">{session.session_name}</h1>
             {getStatusBadge(
               session.status,
               session.is_active,
               session.is_expired
             )}
           </div>
-          <p className="text-muted-foreground">
+          <p className="text-muted-foreground text-sm">
             Kode Session: {session.session_code}
           </p>
         </div>
