@@ -34,6 +34,7 @@ export default [
 
     // sessions
     route("/admin/sessions", "routes/admin.sessions.tsx"),
+    route("/admin/sessions/:sessionId", "routes/admin.sessions.$sessionId.tsx"),
 
     // reports
     route("/admin/reports", "routes/admin.reports.tsx"),

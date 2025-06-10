@@ -31,6 +31,7 @@ import {
 
 // Date utilities
 import { formatTime, formatDate } from "~/lib/utils/date";
+import { Link } from "react-router";
 
 interface TableSessionsProps {
   sessions: any[];
@@ -143,9 +144,14 @@ export const TableSessions = ({
                       <TableRow key={session.id}>
                         <TableCell>
                           <div>
-                            <div className="font-medium">
-                              {session.session_name}
-                            </div>
+                            <Link
+                              to={`/admin/sessions/${session.id}`}
+                              className="hover:underline cursor-pointer"
+                            >
+                              <div className="font-medium">
+                                {session.session_name}
+                              </div>
+                            </Link>
                             <div className="text-sm text-muted-foreground">
                               {session.session_code}
                             </div>

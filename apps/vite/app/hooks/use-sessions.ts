@@ -19,7 +19,50 @@ interface Session {
   is_expired: boolean;
   current_participants: number;
   max_participants: number;
-  session_modules: any[];
+  proctor_id: string;
+  auto_expire: boolean;
+  allow_late_entry: boolean;
+  created_at: string;
+  updated_at: string;
+  created_by: string;
+  updated_by: string;
+  time_remaining: number;
+  participant_link: string;
+  session_duration_hours: number;
+  total_test_time_minutes: number;
+  total_questions: number;
+  session_modules: SessionModule[];
+  proctor: UserInfo;
+  created_by_user: UserInfo;
+  updated_by_user: UserInfo;
+}
+
+interface SessionModule {
+  id: string;
+  session_id: string;
+  test_id: string;
+  sequence: number;
+  is_required: boolean;
+  weight: number;
+  created_at: string;
+  test: TestInfo;
+}
+
+interface TestInfo {
+  id: string;
+  name: string;
+  category: string;
+  module_type: string;
+  time_limit: number;
+  total_questions: number;
+  icon?: string;
+  card_color?: string;
+}
+
+interface UserInfo {
+  id: string;
+  name: string;
+  email: string;
 }
 
 interface GetSessionsRequest {
