@@ -317,51 +317,6 @@ function DashboardContent() {
           </CardContent>
         </Card>
       </div>
-
-      {/* Recent Activity */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Aktivitas Terbaru</CardTitle>
-          <CardDescription>
-            Aktivitas sistem dalam 24 jam terakhir
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {[
-              {
-                time: "10:30",
-                action: 'Sesi "Test Security" dimulai',
-                user: "25 peserta",
-              },
-              {
-                time: "09:15",
-                action: "Laporan bulanan dibuat",
-                user: "System",
-              },
-              {
-                time: "08:45",
-                action: "Peserta baru ditambahkan",
-                user: "12 orang",
-              },
-              {
-                time: "08:20",
-                action: "Konfigurasi tes MBTI diperbarui",
-                user: "Admin",
-              },
-            ].map((activity, index) => (
-              <div key={index} className="flex items-center space-x-4 py-2">
-                <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                <div className="flex-1">
-                  <p className="text-sm font-medium">{activity.action}</p>
-                  <p className="text-xs text-gray-600">{activity.user}</p>
-                </div>
-                <div className="text-xs text-gray-500">{activity.time}</div>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
     </>
   );
 }
