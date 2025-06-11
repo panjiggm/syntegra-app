@@ -3,9 +3,9 @@ import {
   BarChart3,
   Users,
   Brain,
-  Settings,
   FileText,
   Clock,
+  Monitor,
 } from "lucide-react";
 
 import { NavMain } from "./nav-main";
@@ -49,14 +49,14 @@ const data = {
       icon: Clock,
     },
     {
+      title: "Live Test Monitor",
+      url: "/admin/live-test",
+      icon: Monitor,
+    },
+    {
       title: "Laporan & Hasil",
       url: "/admin/reports",
       icon: FileText,
-    },
-    {
-      title: "Pengaturan Sistem",
-      url: "/admin/settings",
-      icon: Settings,
     },
   ],
 };
