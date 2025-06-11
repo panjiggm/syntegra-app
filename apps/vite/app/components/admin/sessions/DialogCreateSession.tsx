@@ -45,13 +45,11 @@ import { LoadingSpinner } from "~/components/ui/loading-spinner";
 
 // Icons
 import {
-  CalendarIcon,
   ClockIcon,
   Plus,
   Trash2,
   GripVertical,
   Info,
-  Users,
   Settings,
   BookOpen,
 } from "lucide-react";
@@ -73,6 +71,7 @@ export const DialogCreateSession = () => {
   const { isOpen, mode, editSessionId, closeDialog } = useSessionDialogStore();
 
   const [activeTab, setActiveTab] = useState("basic");
+  const [isInitializing, setIsInitializing] = useState(false);
 
   const {
     useCreateSession,
@@ -105,9 +104,48 @@ export const DialogCreateSession = () => {
     name: "session_modules",
   });
 
+  // Function to calculate and distribute weights evenly
+  const redistributeWeights = (moduleCount?: number) => {
+    const currentModules = form.getValues("session_modules");
+    const totalModules = moduleCount || currentModules.length;
+
+    if (totalModules === 0) return;
+
+    const totalWeight = 100;
+    const baseWeight = Math.floor(totalWeight / totalModules);
+    const remainder = totalWeight % totalModules;
+
+    // Update weights for all modules (regardless of whether test_id is selected)
+    for (let i = 0; i < totalModules; i++) {
+      // For the last modules, add the remainder to distribute 100 exactly
+      const weight =
+        i >= totalModules - remainder ? baseWeight + 1 : baseWeight;
+      form.setValue(`session_modules.${i}.weight`, weight);
+    }
+  };
+
+  // Watch for changes in session_modules to auto-redistribute weights
+  useEffect(() => {
+    const subscription = form.watch((value, { name }) => {
+      // Don't redistribute during initialization to preserve edit data
+      if (isInitializing) return;
+
+      // Redistribute weights when test_id is selected/changed (not for add/remove as they have their own handlers)
+      if (name?.includes(".test_id") && value.session_modules) {
+        const totalModules = value.session_modules.length;
+        if (totalModules > 0) {
+          redistributeWeights(totalModules);
+        }
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, [form, isInitializing]);
+
   // Reset form when dialog opens/closes or mode changes
   useEffect(() => {
     if (isOpen) {
+      setIsInitializing(true);
       if (mode === "create") {
         form.reset(createSessionDefaultValues);
         setActiveTab("basic");
@@ -136,8 +174,10 @@ export const DialogCreateSession = () => {
         form.reset(formData);
         setActiveTab("basic");
       }
+      setTimeout(() => setIsInitializing(false), 100);
     } else {
       form.reset(createSessionDefaultValues);
+      setIsInitializing(false);
     }
   }, [isOpen, mode, editData, form]);
 
@@ -191,12 +231,27 @@ export const DialogCreateSession = () => {
 
   const handleAddModule = () => {
     const nextSequence = fields.length + 1;
+
     append({
       test_id: "",
       sequence: nextSequence,
       is_required: true,
-      weight: 1,
+      weight: 1, // Temporary weight, will be redistributed
     });
+
+    // Always redistribute weights after adding a module
+    setTimeout(() => {
+      redistributeWeights(fields.length + 1);
+    }, 0);
+  };
+
+  const handleRemoveModule = (index: number) => {
+    remove(index);
+
+    // Redistribute weights after removing
+    setTimeout(() => {
+      redistributeWeights(fields.length - 1);
+    }, 0);
   };
 
   const isLoading =
@@ -207,9 +262,9 @@ export const DialogCreateSession = () => {
   return (
     <Dialog open={isOpen} onOpenChange={closeDialog}>
       <DialogContent
-        className="max-w-4xl max-h-[90vh] overflow-y-auto"
+        className="max-w-5xl max-h-[90vh] overflow-y-auto"
         style={{
-          minWidth: "45%",
+          minWidth: "55%",
           width: "100%",
         }}
       >
@@ -279,7 +334,7 @@ export const DialogCreateSession = () => {
                       <CardTitle>Informasi Dasar Sesi</CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="">
                         <FormField
                           control={form.control}
                           name="session_name"
@@ -292,26 +347,6 @@ export const DialogCreateSession = () => {
                                   {...field}
                                 />
                               </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-
-                        <FormField
-                          control={form.control}
-                          name="session_code"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Kode Sesi</FormLabel>
-                              <FormControl>
-                                <Input
-                                  placeholder="Kosongkan untuk dibuat otomatis"
-                                  {...field}
-                                />
-                              </FormControl>
-                              <FormDescription>
-                                Jika dikosongkan, kode akan dibuat otomatis
-                              </FormDescription>
                               <FormMessage />
                             </FormItem>
                           )}
@@ -572,6 +607,13 @@ export const DialogCreateSession = () => {
                                                     >
                                                       {test.module_type}
                                                     </Badge>
+                                                    <Badge
+                                                      variant="secondary"
+                                                      className="text-xs"
+                                                    >
+                                                      {test.total_questions}{" "}
+                                                      Soal
+                                                    </Badge>
                                                   </div>
                                                 </SelectItem>
                                               ))}
@@ -594,6 +636,7 @@ export const DialogCreateSession = () => {
                                               step="0.1"
                                               min="0.1"
                                               max="10"
+                                              disabled
                                               className="w-full"
                                               {...field}
                                               onChange={(e) =>
@@ -629,7 +672,7 @@ export const DialogCreateSession = () => {
                                       type="button"
                                       variant="outline"
                                       size="sm"
-                                      onClick={() => remove(index)}
+                                      onClick={() => handleRemoveModule(index)}
                                       className="text-red-600 hover:text-red-700"
                                     >
                                       <Trash2 className="h-4 w-4" />

@@ -159,7 +159,7 @@ export default function Calendar20({
                 </p>
               )}
             </div>
-            <div className="no-scrollbar h-full overflow-y-auto p-4">
+            <div className="no-scrollbar h-full overflow-y-auto p-4 pb-24">
               <div className="grid gap-1">
                 {timeSlots.map((time) => (
                   <Button
@@ -190,7 +190,7 @@ export default function Calendar20({
                   </p>
                 )}
               </div>
-              <div className="no-scrollbar h-full overflow-y-auto p-4">
+              <div className="no-scrollbar h-full overflow-y-auto p-4 pb-24">
                 <div className="grid gap-1">
                   {timeSlots.map((time) => (
                     <Button
