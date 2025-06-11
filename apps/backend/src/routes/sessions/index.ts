@@ -22,12 +22,17 @@ import { checkParticipantHandler } from "./session.check-participant";
 import { authenticateUser, requireAdmin } from "../../middleware/auth";
 import { generalApiRateLimit } from "../../middleware/rateLimiter";
 import { participantRoutes } from "./participants";
+import { liveTestRoutes } from "./live-test";
 
 const sessionRoutes = new Hono<{ Bindings: CloudflareBindings }>();
 
 // ==================== PARTICIPANT ROUTES ====================
 // Mount participant routes under /:sessionId/participants
 sessionRoutes.route("/:sessionId/participants", participantRoutes);
+
+// ==================== LIVE TEST MONITORING ROUTES ====================
+// Mount live test routes under /:sessionId/live-test
+sessionRoutes.route("/:sessionId/live-test", liveTestRoutes);
 
 // ==================== PUBLIC ROUTES (No Authentication) ====================
 

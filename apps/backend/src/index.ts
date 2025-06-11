@@ -115,6 +115,13 @@ app.get("/", (c) => {
           delete:
             "DELETE /api/v1/sessions/:sessionId/participants/:participantId",
         },
+        liveTest: {
+          get: "GET /api/v1/sessions/:sessionId/live-test",
+          participants:
+            "GET /api/v1/sessions/:sessionId/live-test/participants",
+          stats: "GET /api/v1/sessions/:sessionId/live-test/stats",
+          events: "GET /api/v1/sessions/:sessionId/live-test/events",
+        },
       },
       tests: {
         create: "POST /api/v1/tests",
