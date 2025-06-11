@@ -34,6 +34,7 @@ import {
 
 // Date utilities
 import { formatTime, formatDate } from "~/lib/utils/date";
+import { getSessionStatusInfo } from "~/lib/utils/session";
 import { Link } from "react-router";
 import { useSessionDialogStore } from "~/stores/use-session-dialog-store";
 
@@ -62,60 +63,49 @@ export const TableSessions = ({
 }: TableSessionsProps) => {
   const { openDeleteSessionModal } = useSessionDialogStore();
 
-  const getStatusBadge = (
-    status: string,
-    isActive: boolean,
-    isExpired: boolean
-  ) => {
-    if (isExpired) {
+  const getStatusBadge = (session: any) => {
+    try {
+      const statusInfo = getSessionStatusInfo(
+        session.start_time,
+        session.end_time
+      );
+
+      const iconMap = {
+        draft: <Edit className="h-3 w-3" />,
+        active: <Play className="h-3 w-3" />,
+        completed: <CheckCircle className="h-3 w-3" />,
+      };
+
+      const variantMap = {
+        draft: "outline" as const,
+        active: "default" as const,
+        completed: "secondary" as const,
+      };
+
+      const colorMap = {
+        draft: "text-gray-700",
+        active: "bg-green-100 text-green-700",
+        completed: "bg-blue-100 text-blue-700",
+      };
+
       return (
-        <Badge variant="destructive" className="gap-1">
+        <Badge
+          variant={variantMap[statusInfo.status]}
+          className={`gap-1 ${colorMap[statusInfo.status]}`}
+          title={statusInfo.description}
+        >
+          {iconMap[statusInfo.status]}
+          {statusInfo.label}
+        </Badge>
+      );
+    } catch (error) {
+      console.error("Error getting status badge:", error);
+      return (
+        <Badge variant="outline" className="gap-1">
           <XCircle className="h-3 w-3" />
-          Berakhir
+          Error
         </Badge>
       );
-    }
-
-    if (isActive) {
-      return (
-        <Badge className="bg-green-100 text-green-700 gap-1">
-          <Play className="h-3 w-3" />
-          Berlangsung
-        </Badge>
-      );
-    }
-
-    switch (status) {
-      case "active":
-        return (
-          <Badge className="bg-blue-100 text-blue-700 gap-1">
-            <CheckCircle className="h-3 w-3" />
-            Aktif
-          </Badge>
-        );
-      case "draft":
-        return (
-          <Badge variant="outline" className="gap-1">
-            <Edit className="h-3 w-3" />
-            Draft
-          </Badge>
-        );
-      case "completed":
-        return (
-          <Badge className="bg-green-100 text-green-700 gap-1">
-            <CheckCircle className="h-3 w-3" />
-            Selesai
-          </Badge>
-        );
-      case "cancelled":
-        return (
-          <Badge variant="destructive" className="gap-1">
-            <XCircle className="h-3 w-3" />
-            Dibatalkan
-          </Badge>
-        );
-      default:
-        return <Badge variant="outline">{status}</Badge>;
     }
   };
 
@@ -208,14 +198,7 @@ export const TableSessions = ({
                             {session.target_position || "Umum"}
                           </Badge>
                         </TableCell>
-                        <TableCell>
-                          {" "}
-                          {getStatusBadge(
-                            session.status,
-                            session.is_active,
-                            session.is_expired
-                          )}
-                        </TableCell>
+                        <TableCell>{getStatusBadge(session)}</TableCell>
                         <TableCell>
                           <div className="text-sm">
                             {session.total_participants || 0} peserta

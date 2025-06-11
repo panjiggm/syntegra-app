@@ -34,7 +34,7 @@ function AuthLoading() {
 export function ProtectedRoute({
   children,
   requiredRole,
-  fallbackPath = "/login",
+  fallbackPath = "/",
 }: ProtectedRouteProps) {
   const { isAuthenticated, isLoading, user, canAccess } = useAuth();
   const location = useLocation();

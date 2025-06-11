@@ -15,6 +15,9 @@ export default [
   route("/participant/login", "routes/participant.login.tsx"),
   route("/participant/register", "routes/participant.register.tsx"),
 
+  // Psikotes routes (public - participant)
+  route("/psikotes/:sessionCode", "routes/psikotes.$sessionCode.tsx"),
+
   // Admin routes (protected - admin only)
   layout("routes/_admin.tsx", [
     // dashboard
@@ -48,6 +51,25 @@ export default [
 
   // Psikotes routes (protected - participant only)
   layout("routes/_psikotes.tsx", [
-    route("/psikotes/:sessionCode", "routes/psikotes.$sessionCode.tsx"),
+    route(
+      "/psikotes/:sessionCode/tests",
+      "routes/psikotes.$sessionCode.tests.tsx"
+    ),
+    route(
+      "/psikotes/:sessionCode/test/:testId",
+      "routes/psikotes.$sessionCode.test.$testId.tsx"
+    ),
+    route(
+      "/psikotes/:sessionCode/test/:testId/question/:questionId",
+      "routes/psikotes.$sessionCode.test.$testId.question.$questionId.tsx"
+    ),
+    route(
+      "/psikotes/:sessionCode/test/:testId/complete",
+      "routes/psikotes.$sessionCode.test.$testId.complete.tsx"
+    ),
+    route(
+      "/psikotes/:sessionCode/test/complete",
+      "routes/psikotes.$sessionCode.test.complete.tsx"
+    ),
   ]),
 ] satisfies RouteConfig;
