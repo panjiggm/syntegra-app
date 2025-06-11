@@ -99,6 +99,65 @@ export function getSessionStatusInfo(
 }
 
 /**
+ * Get remaining time until session ends in minutes
+ */
+export function getSessionTimeRemaining(endTime: string): number {
+  if (!endTime) return 0;
+
+  try {
+    const end = parseISO(endTime);
+    const now = new Date();
+
+    if (isAfter(now, end)) {
+      return 0; // Session has ended
+    }
+
+    const diffMs = end.getTime() - now.getTime();
+    const diffMinutes = Math.floor(diffMs / (1000 * 60));
+    return Math.max(0, diffMinutes);
+  } catch (error) {
+    console.error("Error calculating remaining time:", error);
+    return 0;
+  }
+}
+
+/**
+ * Format session status for display
+ */
+export function getSessionStatusLabel(
+  startTime: string,
+  endTime: string,
+  status?: string
+): string {
+  if (status === "cancelled") return "Dibatalkan";
+  if (status === "completed") return "Selesai";
+
+  if (hasSessionEnded(endTime)) return "Berakhir";
+  if (isSessionActive(startTime, endTime)) return "Aktif";
+  if (!hasSessionStarted(startTime)) return "Belum Dimulai";
+
+  return "Draft";
+}
+
+/**
+ * Get session status color for UI
+ */
+export function getSessionStatusColor(
+  startTime: string,
+  endTime: string,
+  status?: string
+): string {
+  if (status === "cancelled") return "text-red-600 bg-red-50";
+  if (status === "completed") return "text-green-600 bg-green-50";
+
+  if (hasSessionEnded(endTime)) return "text-gray-600 bg-gray-50";
+  if (isSessionActive(startTime, endTime)) return "text-green-600 bg-green-50";
+  if (!hasSessionStarted(startTime)) return "text-yellow-600 bg-yellow-50";
+
+  return "text-blue-600 bg-blue-50";
+}
+
+/**
  * Check if session has started
  */
 export function hasSessionStarted(startTime: string | Date): boolean {

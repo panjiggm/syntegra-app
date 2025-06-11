@@ -3,6 +3,8 @@
  * All functions use local timezone to prevent UTC conversion issues
  */
 
+import { parseISO } from "date-fns";
+
 export const formatTime = (date: string | Date): string => {
   try {
     const dateObj = typeof date === "string" ? new Date(date) : date;
@@ -87,3 +89,78 @@ export const formatDateLong = (date: string | Date): string => {
     return "Invalid Date";
   }
 };
+
+/**
+ * Format relative time (e.g., "2 hours ago", "in 3 days")
+ */
+export function formatRelativeTime(
+  date: string | Date | null | undefined
+): string {
+  if (!date) return "-";
+
+  try {
+    const dateObj = typeof date === "string" ? parseISO(date) : date;
+    const now = new Date();
+    const diffMs = dateObj.getTime() - now.getTime();
+    const diffMinutes = Math.floor(diffMs / (1000 * 60));
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+    if (Math.abs(diffMinutes) < 1) {
+      return "Sekarang";
+    } else if (Math.abs(diffMinutes) < 60) {
+      return diffMinutes > 0
+        ? `dalam ${diffMinutes} menit`
+        : `${Math.abs(diffMinutes)} menit lalu`;
+    } else if (Math.abs(diffHours) < 24) {
+      return diffHours > 0
+        ? `dalam ${diffHours} jam`
+        : `${Math.abs(diffHours)} jam lalu`;
+    } else {
+      return diffDays > 0
+        ? `dalam ${diffDays} hari`
+        : `${Math.abs(diffDays)} hari lalu`;
+    }
+  } catch (error) {
+    console.error("Error formatting relative time:", error);
+    return "-";
+  }
+}
+
+/**
+ * Get duration between two dates in minutes
+ */
+export function getDurationInMinutes(
+  startDate: string | Date,
+  endDate: string | Date
+): number {
+  try {
+    const start =
+      typeof startDate === "string" ? parseISO(startDate) : startDate;
+    const end = typeof endDate === "string" ? parseISO(endDate) : endDate;
+
+    const diffMs = end.getTime() - start.getTime();
+    return Math.floor(diffMs / (1000 * 60));
+  } catch (error) {
+    console.error("Error calculating duration:", error);
+    return 0;
+  }
+}
+
+/**
+ * Format duration in minutes to human readable format
+ */
+export function formatDuration(minutes: number): string {
+  if (minutes < 60) {
+    return `${minutes} menit`;
+  }
+
+  const hours = Math.floor(minutes / 60);
+  const remainingMinutes = minutes % 60;
+
+  if (remainingMinutes === 0) {
+    return `${hours} jam`;
+  }
+
+  return `${hours} jam ${remainingMinutes} menit`;
+}

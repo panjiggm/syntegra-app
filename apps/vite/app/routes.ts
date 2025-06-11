@@ -15,6 +15,9 @@ export default [
   route("/participant/login", "routes/participant.login.tsx"),
   route("/participant/register", "routes/participant.register.tsx"),
 
+  // Pubic Registration
+  route("/registration", "routes/registration.tsx"),
+
   // Psikotes routes (public - participant)
   route("/psikotes/:sessionCode", "routes/psikotes.$sessionCode.tsx"),
 

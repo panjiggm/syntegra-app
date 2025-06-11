@@ -75,16 +75,72 @@ export const queryKeys = {
     filterOptions: () => [...queryKeys.tests.all, "filter-options"] as const,
   },
 
+  // Questions
+  questions: {
+    all: () => ["questions"] as const,
+    lists: () => [...queryKeys.questions.all(), "list"] as const,
+    list: (testId: string, params?: any) =>
+      [...queryKeys.questions.lists(), testId, params] as const,
+    details: () => [...queryKeys.questions.all(), "detail"] as const,
+    detail: (testId: string, questionId: string) =>
+      [...queryKeys.questions.details(), testId, questionId] as const,
+  },
+
+  // Session Participants
+  participants: {
+    all: () => ["participants"] as const,
+    lists: () => [...queryKeys.participants.all(), "list"] as const,
+    list: (sessionId: string, params?: any) =>
+      [...queryKeys.participants.lists(), sessionId, params] as const,
+    details: () => [...queryKeys.participants.all(), "detail"] as const,
+    detail: (sessionId: string, participantId: string) =>
+      [...queryKeys.participants.details(), sessionId, participantId] as const,
+  },
+
+  // Test Attempts
+  attempts: {
+    all: () => ["attempts"] as const,
+    lists: () => [...queryKeys.attempts.all(), "list"] as const,
+    list: (params?: any) => [...queryKeys.attempts.lists(), params] as const,
+    details: () => [...queryKeys.attempts.all(), "detail"] as const,
+    detail: (id: string) => [...queryKeys.attempts.details(), id] as const,
+    progress: (id: string) =>
+      [...queryKeys.attempts.all(), "progress", id] as const,
+  },
+
+  // Results
+  results: {
+    all: () => ["results"] as const,
+    lists: () => [...queryKeys.results.all(), "list"] as const,
+    list: (params?: any) => [...queryKeys.results.lists(), params] as const,
+    details: () => [...queryKeys.results.all(), "detail"] as const,
+    detail: (id: string) => [...queryKeys.results.details(), id] as const,
+    byAttempt: (attemptId: string) =>
+      [...queryKeys.results.all(), "attempt", attemptId] as const,
+    byUser: (userId: string) =>
+      [...queryKeys.results.all(), "user", userId] as const,
+  },
+
+  // Dashboard
+  dashboard: {
+    all: () => ["dashboard"] as const,
+    admin: () => [...queryKeys.dashboard.all(), "admin"] as const,
+    participant: () => [...queryKeys.dashboard.all(), "participant"] as const,
+    stats: () => [...queryKeys.dashboard.all(), "stats"] as const,
+  },
+
   // Auth-related queries
   auth: {
     user: ["auth", "user"] as const,
     permissions: ["auth", "permissions"] as const,
   },
 
-  // Dashboard-related queries
-  dashboard: {
-    admin: (userId?: string) => ["dashboard", "admin", userId] as const,
-    participant: (userId?: string) =>
-      ["dashboard", "participant", userId] as const,
+  // Analytics
+  analytics: {
+    all: () => ["analytics"] as const,
+    summary: () => [...queryKeys.analytics.all(), "summary"] as const,
+    tests: () => [...queryKeys.analytics.all(), "tests"] as const,
+    sessions: () => [...queryKeys.analytics.all(), "sessions"] as const,
+    users: () => [...queryKeys.analytics.all(), "users"] as const,
   },
 } as const;
