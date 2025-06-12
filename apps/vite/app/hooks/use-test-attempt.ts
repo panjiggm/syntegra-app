@@ -184,6 +184,7 @@ export function useTestAttempt() {
             can_continue: boolean;
             is_expired: boolean;
             is_nearly_expired: boolean;
+            answered_question_ids: string[];
             test: {
               id: string;
               name: string;
@@ -253,6 +254,11 @@ export function useTestAttempt() {
             time_remaining: data.attempt_progress.time_remaining,
           })
         );
+
+        // Invalidate progress to get fresh answered_question_ids
+        queryClient.invalidateQueries({
+          queryKey: ["attempt-progress", variables.attemptId],
+        });
 
         // Cache the answer
         queryClient.setQueryData(

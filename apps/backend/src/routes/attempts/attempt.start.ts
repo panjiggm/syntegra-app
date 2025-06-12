@@ -48,23 +48,6 @@ export async function startTestAttemptHandler(
 
     const testData = test[0];
 
-    // Check if test is active
-    if (testData.status !== "active") {
-      const errorResponse: AttemptErrorResponse = {
-        success: false,
-        message: "Test is not available",
-        errors: [
-          {
-            field: "test_status",
-            message: "Test is not currently active",
-            code: "TEST_INACTIVE",
-          },
-        ],
-        timestamp: new Date().toISOString(),
-      };
-      return c.json(errorResponse, 400);
-    }
-
     let sessionTestId: string | null = null;
     let sessionData = null;
 
@@ -110,11 +93,7 @@ export async function startTestAttemptHandler(
 
       // Check if session is active
       const now = new Date();
-      if (
-        sessionData.status !== "active" ||
-        now < sessionData.start_time ||
-        now > sessionData.end_time
-      ) {
+      if (now < sessionData.start_time || now > sessionData.end_time) {
         const errorResponse: AttemptErrorResponse = {
           success: false,
           message: "Session is not currently active",

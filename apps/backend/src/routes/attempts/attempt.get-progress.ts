@@ -1,6 +1,12 @@
 import { Context } from "hono";
-import { eq, and } from "drizzle-orm";
-import { getDbFromEnv, testAttempts, tests, testSessions } from "@/db";
+import { eq, and, isNotNull, or } from "drizzle-orm";
+import {
+  getDbFromEnv,
+  testAttempts,
+  tests,
+  testSessions,
+  userAnswers,
+} from "@/db";
 import { type CloudflareBindings } from "@/lib/env";
 import {
   type GetAttemptProgressResponse,
@@ -153,6 +159,19 @@ export async function getAttemptProgressHandler(
       );
     }
 
+    // Get answered question ids for this attempt
+    const answeredIdsResult = await db
+      .select({ id: userAnswers.question_id })
+      .from(userAnswers)
+      .where(
+        and(
+          eq(userAnswers.attempt_id, attempt.id),
+          or(isNotNull(userAnswers.answer), isNotNull(userAnswers.answer_data))
+        )
+      );
+
+    const answeredQuestionIds = answeredIdsResult.map((row) => row.id);
+
     const progressData = {
       attempt_id: attempt.id,
       status: currentStatus,
@@ -169,6 +188,7 @@ export async function getAttemptProgressHandler(
       is_expired: isExpired,
       is_nearly_expired: isNearlyExpired,
       estimated_completion_time: estimatedCompletion ?? undefined,
+      answered_question_ids: answeredQuestionIds,
       test: {
         id: test.id,
         name: test.name,

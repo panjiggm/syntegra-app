@@ -1,5 +1,8 @@
+// Buat file baru: apps/vite/app/hooks/use-question-attempt.ts
+
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useTestAttempt } from "./use-test-attempt";
+import { testStorage } from "~/lib/utils/storage";
 import { toast } from "sonner";
 
 interface UseQuestionAttemptProps {
@@ -19,82 +22,157 @@ export function useQuestionAttempt({
   onNavigatePrevious,
   autoSaveDelay = 3000,
 }: UseQuestionAttemptProps) {
-  // States
+  // State
   const [selectedAnswer, setSelectedAnswer] = useState<string>("");
   const [answerData, setAnswerData] = useState<any>(null);
-  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-  const [isAutoSaving, setIsAutoSaving] = useState(false);
-  const [timeSpent, setTimeSpent] = useState(0);
-  const [questionStartTime, setQuestionStartTime] = useState<Date | null>(null);
   const [confidenceLevel, setConfidenceLevel] = useState<number | null>(null);
+  const [timeSpent, setTimeSpent] = useState<number>(0);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isAutoSaving, setIsAutoSaving] = useState(false);
 
   // Refs
-  const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const timeTrackingRef = useRef<NodeJS.Timeout | null>(null);
+  const autoSaveTimeout = useRef<NodeJS.Timeout | null>(null);
+  const startTime = useRef<Date>(new Date());
+  const timeInterval = useRef<NodeJS.Timeout | null>(null);
 
   // Hooks
   const { useGetAnswer, useSubmitAnswer, useAutoSave } = useTestAttempt();
-
-  // Queries and mutations
   const answerQuery = useGetAnswer(attemptId, questionId);
   const submitAnswer = useSubmitAnswer();
   const autoSave = useAutoSave();
 
-  // Initialize question start time
+  // Load existing answer when component mounts
   useEffect(() => {
-    setQuestionStartTime(new Date());
+    if (answerQuery.data?.answer) {
+      const answer = answerQuery.data.answer;
+      setSelectedAnswer(answer.answer || "");
+      setAnswerData(answer.answer_data);
+      setConfidenceLevel(answer.confidence_level);
+      setHasUnsavedChanges(false);
+    } else {
+      // Try to load from draft storage
+      const draft = testStorage.getAnswerDraft(attemptId, questionId);
+      if (draft) {
+        setSelectedAnswer(draft.answer?.answer || "");
+        setAnswerData(draft.answer?.answer_data);
+        setConfidenceLevel(draft.answer?.confidence_level);
+        setHasUnsavedChanges(true);
+        toast.info("Draft jawaban dimuat", {
+          description: "Melanjutkan dari jawaban yang belum tersimpan",
+        });
+      }
+    }
+  }, [answerQuery.data, attemptId, questionId]);
+
+  // Reset state when question changes
+  useEffect(() => {
+    setSelectedAnswer("");
+    setAnswerData(null);
+    setConfidenceLevel(null);
     setTimeSpent(0);
+    setHasUnsavedChanges(false);
+    startTime.current = new Date();
+
+    // Clear auto-save timeout
+    if (autoSaveTimeout.current) {
+      clearTimeout(autoSaveTimeout.current);
+    }
   }, [questionId]);
 
-  // Track time spent on current question
+  // Start time tracking
   useEffect(() => {
-    if (questionStartTime) {
-      timeTrackingRef.current = setInterval(() => {
-        setTimeSpent(
-          Math.floor((Date.now() - questionStartTime.getTime()) / 1000)
-        );
-      }, 1000);
+    startTime.current = new Date();
+
+    timeInterval.current = setInterval(() => {
+      setTimeSpent((prev) => prev + 1);
+    }, 1000);
+
+    return () => {
+      if (timeInterval.current) {
+        clearInterval(timeInterval.current);
+      }
+    };
+  }, [questionId]);
+
+  // Auto-save effect
+  useEffect(() => {
+    if (hasUnsavedChanges && autoSaveDelay > 0) {
+      // Clear previous timeout
+      if (autoSaveTimeout.current) {
+        clearTimeout(autoSaveTimeout.current);
+      }
+
+      // Set new timeout
+      autoSaveTimeout.current = setTimeout(() => {
+        handleAutoSave();
+      }, autoSaveDelay);
     }
 
     return () => {
-      if (timeTrackingRef.current) {
-        clearInterval(timeTrackingRef.current);
+      if (autoSaveTimeout.current) {
+        clearTimeout(autoSaveTimeout.current);
       }
     };
-  }, [questionStartTime]);
+  }, [
+    hasUnsavedChanges,
+    selectedAnswer,
+    answerData,
+    confidenceLevel,
+    autoSaveDelay,
+  ]);
 
-  // Load existing answer when question changes
-  useEffect(() => {
-    if (answerQuery.data?.answer) {
-      const existingAnswer = answerQuery.data.answer;
+  // Handle answer change
+  const handleAnswerChange = useCallback(
+    (value: string) => {
+      setSelectedAnswer(value);
+      setHasUnsavedChanges(true);
 
-      if (existingAnswer.answer) {
-        setSelectedAnswer(existingAnswer.answer);
-      }
+      // Store draft immediately
+      testStorage.setAnswerDraft(attemptId, questionId, {
+        answer: value,
+        answer_data: answerData,
+        confidence_level: confidenceLevel,
+      });
+    },
+    [attemptId, questionId, answerData, confidenceLevel]
+  );
 
-      if (existingAnswer.answer_data) {
-        setAnswerData(existingAnswer.answer_data);
-      }
+  // Handle answer data change (for complex question types)
+  const handleAnswerDataChange = useCallback(
+    (data: any) => {
+      setAnswerData(data);
+      setHasUnsavedChanges(true);
 
-      if (existingAnswer.confidence_level) {
-        setConfidenceLevel(existingAnswer.confidence_level);
-      }
+      // Store draft
+      testStorage.setAnswerDraft(attemptId, questionId, {
+        answer: selectedAnswer,
+        answer_data: data,
+        confidence_level: confidenceLevel,
+      });
+    },
+    [attemptId, questionId, selectedAnswer, confidenceLevel]
+  );
 
-      setHasUnsavedChanges(false);
-    } else {
-      // Reset form for new question
-      setSelectedAnswer("");
-      setAnswerData(null);
-      setConfidenceLevel(null);
-      setHasUnsavedChanges(false);
-    }
-  }, [questionId, answerQuery.data]);
+  // Handle confidence level change
+  const handleConfidenceLevelChange = useCallback(
+    (level: number) => {
+      setConfidenceLevel(level);
+      setHasUnsavedChanges(true);
+
+      // Store draft
+      testStorage.setAnswerDraft(attemptId, questionId, {
+        answer: selectedAnswer,
+        answer_data: answerData,
+        confidence_level: level,
+      });
+    },
+    [attemptId, questionId, selectedAnswer, answerData]
+  );
 
   // Auto-save function
-  const triggerAutoSave = useCallback(async () => {
-    if (!attemptId || (!selectedAnswer.trim() && !answerData) || isAutoSaving) {
-      return;
-    }
+  const handleAutoSave = useCallback(async () => {
+    if (!hasUnsavedChanges || isSubmitting) return;
 
     setIsAutoSaving(true);
 
@@ -111,64 +189,34 @@ export function useQuestionAttempt({
       });
 
       setHasUnsavedChanges(false);
+
+      // Remove draft from storage since it's now saved
+      testStorage.removeAnswerDraft(attemptId, questionId);
+
+      console.log("Auto-save successful");
     } catch (error) {
       console.error("Auto-save failed:", error);
+      // Keep the draft in storage for retry
     } finally {
       setIsAutoSaving(false);
     }
   }, [
+    hasUnsavedChanges,
+    isSubmitting,
+    autoSave,
     attemptId,
     questionId,
     selectedAnswer,
     answerData,
     timeSpent,
     confidenceLevel,
-    autoSave,
-    isAutoSaving,
   ]);
 
-  // Auto-save with debounce
-  useEffect(() => {
-    if (hasUnsavedChanges) {
-      if (autoSaveTimerRef.current) {
-        clearTimeout(autoSaveTimerRef.current);
-      }
+  // Save and continue
+  const saveAndContinue = useCallback(async () => {
+    if (isSubmitting) return;
 
-      autoSaveTimerRef.current = setTimeout(() => {
-        triggerAutoSave();
-      }, autoSaveDelay);
-    }
-
-    return () => {
-      if (autoSaveTimerRef.current) {
-        clearTimeout(autoSaveTimerRef.current);
-      }
-    };
-  }, [hasUnsavedChanges, triggerAutoSave, autoSaveDelay]);
-
-  // Handle answer change
-  const handleAnswerChange = useCallback((value: string) => {
-    setSelectedAnswer(value);
-    setHasUnsavedChanges(true);
-  }, []);
-
-  // Handle answer data change (for complex questions)
-  const handleAnswerDataChange = useCallback((data: any) => {
-    setAnswerData(data);
-    setHasUnsavedChanges(true);
-  }, []);
-
-  // Handle confidence level change
-  const handleConfidenceLevelChange = useCallback((level: number) => {
-    setConfidenceLevel(level);
-    setHasUnsavedChanges(true);
-  }, []);
-
-  // Submit answer (final save)
-  const submitFinalAnswer = useCallback(async () => {
-    if (!attemptId) {
-      throw new Error("No attempt ID");
-    }
+    setIsSubmitting(true);
 
     try {
       const result = await submitAnswer.mutateAsync({
@@ -185,119 +233,95 @@ export function useQuestionAttempt({
 
       setHasUnsavedChanges(false);
 
+      // Remove draft from storage
+      testStorage.removeAnswerDraft(attemptId, questionId);
+
+      // Call callback
       if (onAnswerSaved) {
-        onAnswerSaved(result);
+        onAnswerSaved(result.answer);
       }
 
-      return result;
+      toast.success("Jawaban tersimpan", {
+        description: "Jawaban berhasil disimpan ke server",
+      });
     } catch (error) {
-      console.error("Failed to submit answer:", error);
-      throw error;
+      console.error("Failed to save answer:", error);
+      toast.error("Gagal menyimpan jawaban", {
+        description: "Terjadi kesalahan saat menyimpan jawaban",
+      });
+    } finally {
+      setIsSubmitting(false);
     }
   }, [
+    isSubmitting,
+    submitAnswer,
     attemptId,
     questionId,
     selectedAnswer,
     answerData,
     timeSpent,
     confidenceLevel,
-    submitAnswer,
     onAnswerSaved,
   ]);
 
-  // Navigate to next question with answer save
+  // Handle next navigation
   const handleNext = useCallback(async () => {
-    try {
-      // Only save if there's an answer
-      if (selectedAnswer.trim() || answerData) {
-        await submitFinalAnswer();
-      }
-
-      if (onNavigateNext) {
-        onNavigateNext();
-      }
-    } catch (error) {
-      toast.error("Gagal menyimpan jawaban");
-      console.error("Failed to save answer before navigation:", error);
+    if (hasUnsavedChanges) {
+      await saveAndContinue();
     }
-  }, [selectedAnswer, answerData, submitFinalAnswer, onNavigateNext]);
 
-  // Navigate to previous question
-  const handlePrevious = useCallback(() => {
-    if (onNavigatePrevious) {
-      onNavigatePrevious();
-    }
-  }, [onNavigatePrevious]);
-
-  // Save and continue (explicit save without navigation)
-  const saveAndContinue = useCallback(async () => {
-    try {
-      await submitFinalAnswer();
-      toast.success("Jawaban tersimpan");
-    } catch (error) {
-      toast.error("Gagal menyimpan jawaban");
-    }
-  }, [submitFinalAnswer]);
-
-  // Skip question (mark as unanswered but continue)
-  const skipQuestion = useCallback(() => {
     if (onNavigateNext) {
       onNavigateNext();
     }
-  }, [onNavigateNext]);
+  }, [hasUnsavedChanges, saveAndContinue, onNavigateNext]);
 
-  // Clean up timers on unmount
-  useEffect(() => {
-    return () => {
-      if (autoSaveTimerRef.current) {
-        clearTimeout(autoSaveTimerRef.current);
+  // Handle previous navigation
+  const handlePrevious = useCallback(async () => {
+    if (hasUnsavedChanges) {
+      const shouldSave = confirm(
+        "Anda memiliki perubahan yang belum tersimpan. Simpan sebelum pindah?"
+      );
+
+      if (shouldSave) {
+        await saveAndContinue();
       }
-      if (timeTrackingRef.current) {
-        clearInterval(timeTrackingRef.current);
-      }
+    }
+
+    if (onNavigatePrevious) {
+      onNavigatePrevious();
+    }
+  }, [hasUnsavedChanges, saveAndContinue, onNavigatePrevious]);
+
+  // Reset answer
+  const resetAnswer = useCallback(() => {
+    setSelectedAnswer("");
+    setAnswerData(null);
+    setConfidenceLevel(null);
+    setHasUnsavedChanges(false);
+
+    // Remove draft
+    testStorage.removeAnswerDraft(attemptId, questionId);
+  }, [attemptId, questionId]);
+
+  // Get current answer data
+  const getCurrentAnswerData = useCallback(() => {
+    return {
+      answer: selectedAnswer,
+      answer_data: answerData,
+      confidence_level: confidenceLevel,
+      time_taken: timeSpent,
     };
-  }, []);
-
-  // Validate answer based on question type
-  const validateAnswer = useCallback(
-    (questionType: string) => {
-      switch (questionType) {
-        case "multiple_choice":
-        case "true_false":
-          return selectedAnswer.trim() !== "";
-        case "text":
-          return selectedAnswer.trim().length >= 10; // Minimum 10 characters
-        case "rating_scale":
-          return selectedAnswer.trim() !== "";
-        case "sequence":
-        case "matrix":
-          return selectedAnswer.trim() !== "";
-        case "drawing":
-          return answerData || selectedAnswer.trim() !== "";
-        default:
-          return selectedAnswer.trim() !== "";
-      }
-    },
-    [selectedAnswer, answerData]
-  );
+  }, [selectedAnswer, answerData, confidenceLevel, timeSpent]);
 
   return {
     // State
     selectedAnswer,
     answerData,
     confidenceLevel,
-    hasUnsavedChanges,
-    isAutoSaving,
     timeSpent,
-
-    // Data
-    existingAnswer: answerQuery.data?.answer,
-    canModify: answerQuery.data?.can_modify ?? true,
-    isAnswered: answerQuery.data?.is_answered ?? false,
-
-    // Loading states
-    isLoadingAnswer: answerQuery.isLoading,
-    isSubmitting: submitAnswer.isPending,
+    hasUnsavedChanges,
+    isSubmitting,
+    isAutoSaving,
 
     // Handlers
     handleAnswerChange,
@@ -305,12 +329,16 @@ export function useQuestionAttempt({
     handleConfidenceLevelChange,
     handleNext,
     handlePrevious,
-    submitFinalAnswer,
     saveAndContinue,
-    skipQuestion,
-    validateAnswer,
+    handleAutoSave,
+    resetAnswer,
 
-    // Utils
-    triggerAutoSave,
+    // Utilities
+    getCurrentAnswerData,
+
+    // Query data
+    existingAnswer: answerQuery.data?.answer,
+    canModify: answerQuery.data?.can_modify ?? true,
+    isAnswered: answerQuery.data?.is_answered ?? false,
   };
 }

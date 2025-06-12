@@ -36,6 +36,8 @@ import { useAuth } from "~/contexts/auth-context";
 
 // Utils
 import { isSessionActive } from "~/lib/utils/session";
+import { useTestAttempt } from "~/hooks/use-test-attempt";
+import { toast } from "sonner";
 
 export function meta({ params }: Route.MetaArgs) {
   return [
@@ -62,6 +64,7 @@ export default function PsikotesTestDetailPage() {
   const [isStarting, setIsStarting] = useState(false);
   const [countdown, setCountdown] = useState<number | null>(null);
   const [isReady, setIsReady] = useState(false);
+  const [isStartingAttempt, setIsStartingAttempt] = useState(false);
 
   const { useGetPublicSessionByCode, useCheckParticipant } = useSessions();
   const { useGetQuestions } = useQuestions();
@@ -87,6 +90,9 @@ export default function PsikotesTestDetailPage() {
   const sessionIsActive = sessionData
     ? isSessionActive(sessionData.start_time, sessionData.end_time)
     : false;
+
+  const { useStartAttempt } = useTestAttempt();
+  const startAttempt = useStartAttempt();
 
   // Find current test in session modules
   useEffect(() => {
@@ -136,6 +142,7 @@ export default function PsikotesTestDetailPage() {
         setCountdown(countdown - 1);
       }, 1000);
     } else if (countdown === 0) {
+      // Call async function
       handleNavigateToTest();
     }
     return () => clearTimeout(timer);
@@ -147,19 +154,64 @@ export default function PsikotesTestDetailPage() {
     setCountdown(3); // 3 second countdown
   };
 
-  const handleNavigateToTest = () => {
-    if (!testId) return;
+  const handleNavigateToTest = async () => {
+    if (!testId || !sessionCode) return;
 
-    // Get the first question ID from the questions data
-    if (questionsData?.data && questionsData.data.length > 0) {
-      const firstQuestion = questionsData.data[0]; // Already sorted by sequence ASC
-      navigate(
-        `/psikotes/${sessionCode}/test/${testId}/question/${firstQuestion.id}`
+    setIsStartingAttempt(true);
+
+    try {
+      // 1. Start test attempt terlebih dahulu
+      const attempt = await startAttempt.mutateAsync({
+        test_id: testId,
+        session_code: sessionCode,
+        browser_info: {
+          user_agent: navigator.userAgent,
+          platform: navigator.platform,
+          language: navigator.language,
+          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+          startedAt: new Date().toISOString(),
+          screenResolution: `${screen.width}x${screen.height}`,
+          windowSize: `${window.innerWidth}x${window.innerHeight}`,
+        },
+      });
+
+      // 2. Store attemptId ke sessionStorage
+      sessionStorage.setItem(`attempt_${testId}`, attempt.id);
+
+      // 3. Store additional attempt data for offline capabilities
+      sessionStorage.setItem(
+        `attempt_data_${testId}`,
+        JSON.stringify({
+          attemptId: attempt.id,
+          testId: testId,
+          sessionCode: sessionCode,
+          startTime: attempt.start_time,
+          endTime: attempt.end_time,
+          timeLimit: attempt.test.time_limit,
+          totalQuestions: attempt.test.total_questions,
+        })
       );
-    } else {
-      // Fallback to sequence 1 if no questions data available
-      console.warn("No questions data available, using fallback navigation");
-      navigate(`/psikotes/${sessionCode}/test/${testId}/question/1`);
+
+      // 4. Navigate ke question pertama
+      if (questionsData?.data && questionsData.data.length > 0) {
+        const firstQuestion = questionsData.data[0]; // Already sorted by sequence ASC
+        navigate(
+          `/psikotes/${sessionCode}/test/${testId}/question/${firstQuestion.id}`
+        );
+      } else {
+        // Fallback jika tidak ada questions data
+        console.warn(
+          "No questions data available, starting attempt but redirecting to test page"
+        );
+        toast.warning("Data soal belum tersedia, silakan coba lagi");
+      }
+    } catch (error) {
+      console.error("Failed to start test attempt:", error);
+      toast.error("Gagal memulai tes", {
+        description: "Terjadi kesalahan saat memulai tes. Silakan coba lagi.",
+      });
+    } finally {
+      setIsStartingAttempt(false);
     }
   };
 
@@ -628,6 +680,7 @@ export default function PsikotesTestDetailPage() {
                       onClick={handleStartCountdown}
                       className="w-full cursor-pointer"
                       size="lg"
+                      disabled={isStartingAttempt}
                     >
                       <PlayCircle className="h-5 w-5 mr-2" />
                       Mulai Mengerjakan
@@ -649,23 +702,29 @@ export default function PsikotesTestDetailPage() {
                       ></div>
                     </div>
                   </div>
-                ) : countdown === 0 ? (
+                ) : isStartingAttempt ? (
                   <div className="text-center space-y-4">
                     <LoadingSpinner size="lg" />
                     <p className="text-sm text-muted-foreground">
                       Memulai tes...
                     </p>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div className="bg-green-600 h-2 rounded-full animate-pulse w-full"></div>
+                    </div>
                   </div>
-                ) : null}
-
-                {isReady && countdown === null && (
+                ) : (
                   <div className="text-center">
                     <Button
                       onClick={handleNavigateToTest}
                       className="w-full cursor-pointer bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700"
                       size="lg"
+                      disabled={isStartingAttempt}
                     >
-                      <PlayCircle className="h-5 w-5 mr-2" />
+                      {isStartingAttempt ? (
+                        <LoadingSpinner size="sm" className="mr-2" />
+                      ) : (
+                        <PlayCircle className="h-5 w-5 mr-2" />
+                      )}
                       Mulai Sekarang
                     </Button>
                   </div>
