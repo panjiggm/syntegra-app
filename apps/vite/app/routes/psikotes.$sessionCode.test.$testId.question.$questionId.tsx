@@ -34,6 +34,20 @@ export default function QuestionPage() {
   const [selectedAnswer, setSelectedAnswer] = useState<string>("");
   const [answers, setAnswers] = useState<Record<string, string>>({});
 
+  // Get session data
+  const { useGetPublicSessionByCode } = useSessions();
+  const sessionQuery = useGetPublicSessionByCode(sessionCode);
+
+  // Get questions data
+  const { useGetQuestions, useGetQuestionById } = useQuestions();
+  const questionsQuery = useGetQuestions(testId, {
+    sort_by: "sequence",
+    sort_order: "asc",
+    limit: 100, // Get all questions for navigation
+  });
+
+  const currentQuestionQuery = useGetQuestionById(testId, questionId);
+
   // Load answers from localStorage on mount
   useEffect(() => {
     const storageKey = `psikotes_answers_${sessionCode}_${testId}`;
@@ -57,19 +71,35 @@ export default function QuestionPage() {
     }
   }, [questionId, answers]);
 
-  // Get session data
-  const { useGetPublicSessionByCode } = useSessions();
-  const sessionQuery = useGetPublicSessionByCode(sessionCode);
+  // Handle case where questionId doesn't exist (redirect to first question)
+  useEffect(() => {
+    const questions = questionsQuery.data?.data || [];
+    const currentQuestion = currentQuestionQuery.data?.data;
 
-  // Get questions data
-  const { useGetQuestions, useGetQuestionById } = useQuestions();
-  const questionsQuery = useGetQuestions(testId, {
-    sort_by: "sequence",
-    sort_order: "asc",
-    limit: 1000, // Get all questions for navigation
-  });
-
-  const currentQuestionQuery = useGetQuestionById(testId, questionId);
+    if (
+      questions.length > 0 &&
+      !currentQuestion &&
+      !currentQuestionQuery.isLoading &&
+      !sessionQuery.isLoading &&
+      !questionsQuery.isLoading
+    ) {
+      const firstQuestion = questions[0];
+      navigate(
+        `/psikotes/${sessionCode}/test/${testId}/question/${firstQuestion.id}`,
+        { replace: true }
+      );
+      return;
+    }
+  }, [
+    questionsQuery.data?.data,
+    currentQuestionQuery.data?.data,
+    currentQuestionQuery.isLoading,
+    sessionQuery.isLoading,
+    questionsQuery.isLoading,
+    navigate,
+    sessionCode,
+    testId,
+  ]);
 
   // Handle loading states
   if (
@@ -115,29 +145,6 @@ export default function QuestionPage() {
   const sessionData = sessionQuery.data;
   const questions = questionsQuery.data?.data || [];
   const currentQuestion = currentQuestionQuery.data?.data;
-
-  // Handle case where questionId doesn't exist (redirect to first question)
-  useEffect(() => {
-    if (
-      questions.length > 0 &&
-      !currentQuestion &&
-      !currentQuestionQuery.isLoading
-    ) {
-      const firstQuestion = questions[0];
-      navigate(
-        `/psikotes/${sessionCode}/test/${testId}/question/${firstQuestion.id}`,
-        { replace: true }
-      );
-      return;
-    }
-  }, [
-    questions,
-    currentQuestion,
-    currentQuestionQuery.isLoading,
-    navigate,
-    sessionCode,
-    testId,
-  ]);
 
   if (!sessionData) {
     return (
@@ -190,7 +197,16 @@ export default function QuestionPage() {
       navigate(
         `/psikotes/${sessionCode}/test/${testId}/question/${nextQuestion.id}`
       );
+    } else {
+      // Last question - finish test
+      handleFinishTest();
     }
+  };
+
+  const handleFinishTest = () => {
+    // TODO: Implement test completion logic (submit answers, calculate score, etc.)
+    // For now, navigate back to test list
+    navigate(`/psikotes/${sessionCode}/tests`);
   };
 
   const handleQuestionSelect = (questionId: string) => {
@@ -580,10 +596,15 @@ export default function QuestionPage() {
 
                 <button
                   onClick={handleNext}
-                  disabled={currentIndex === questions.length - 1}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className={`px-4 py-2 text-white rounded-lg transition-colors ${
+                    currentIndex === questions.length - 1
+                      ? "bg-green-600 hover:bg-green-700"
+                      : "bg-blue-600 hover:bg-blue-700"
+                  }`}
                 >
-                  Selanjutnya
+                  {currentIndex === questions.length - 1
+                    ? "Selesai"
+                    : "Selanjutnya"}
                 </button>
               </div>
             </div>

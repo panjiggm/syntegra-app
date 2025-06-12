@@ -31,6 +31,7 @@ import {
 
 // Hooks
 import { useSessions } from "~/hooks/use-sessions";
+import { useQuestions } from "~/hooks/use-questions";
 import { useAuth } from "~/contexts/auth-context";
 
 // Utils
@@ -63,6 +64,7 @@ export default function PsikotesTestDetailPage() {
   const [isReady, setIsReady] = useState(false);
 
   const { useGetPublicSessionByCode, useCheckParticipant } = useSessions();
+  const { useGetQuestions } = useQuestions();
   const checkParticipant = useCheckParticipant();
 
   // Get session data
@@ -71,6 +73,15 @@ export default function PsikotesTestDetailPage() {
     isLoading: isValidatingSession,
     error: sessionError,
   } = useGetPublicSessionByCode(sessionCode || "");
+
+  // Get questions data to find first question
+  const { data: questionsData, isLoading: isLoadingQuestions } =
+    useGetQuestions(testId || "", {
+      sort_by: "sequence",
+      sort_order: "asc",
+      limit: 1,
+      page: 1,
+    });
 
   // Session timing checks
   const sessionIsActive = sessionData
@@ -139,8 +150,17 @@ export default function PsikotesTestDetailPage() {
   const handleNavigateToTest = () => {
     if (!testId) return;
 
-    // Simple navigation to first question - we'll determine the actual first question ID in the question page
-    navigate(`/psikotes/${sessionCode}/test/${testId}/question/1`);
+    // Get the first question ID from the questions data
+    if (questionsData?.data && questionsData.data.length > 0) {
+      const firstQuestion = questionsData.data[0]; // Already sorted by sequence ASC
+      navigate(
+        `/psikotes/${sessionCode}/test/${testId}/question/${firstQuestion.id}`
+      );
+    } else {
+      // Fallback to sequence 1 if no questions data available
+      console.warn("No questions data available, using fallback navigation");
+      navigate(`/psikotes/${sessionCode}/test/${testId}/question/1`);
+    }
   };
 
   const calculateOverallProgress = () => {
@@ -257,13 +277,15 @@ export default function PsikotesTestDetailPage() {
   };
 
   // Loading state
-  if (isValidatingSession) {
+  if (isValidatingSession || isLoadingQuestions) {
     return (
       <div className="min-h-screen bg-gradient-to-br flex items-center justify-center p-4">
         <Card className="w-full max-w-md">
           <CardContent className="flex flex-col items-center justify-center p-8">
             <LoadingSpinner size="lg" />
-            <p className="mt-4 text-muted-foreground">Memvalidasi sesi...</p>
+            <p className="mt-4 text-muted-foreground">
+              {isValidatingSession ? "Memvalidasi sesi..." : "Memuat soal..."}
+            </p>
           </CardContent>
         </Card>
       </div>
@@ -314,6 +336,35 @@ export default function PsikotesTestDetailPage() {
           <CardContent className="text-center space-y-4">
             <p className="text-muted-foreground">
               Tes yang Anda cari tidak tersedia dalam sesi ini.
+            </p>
+            <Button
+              variant="outline"
+              onClick={() => navigate(`/psikotes/${sessionCode}/tests`)}
+              className="w-full"
+            >
+              Kembali ke Daftar Tes
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // No questions available
+  if (questionsData && questionsData.data.length === 0) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br flex flex-col items-center justify-center p-4">
+        <Card className="w-full max-w-md">
+          <CardHeader className="text-center">
+            <div className="mx-auto w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center mb-4">
+              <AlertCircle className="h-6 w-6 text-yellow-600" />
+            </div>
+            <CardTitle className="text-yellow-800">Tidak Ada Soal</CardTitle>
+          </CardHeader>
+          <CardContent className="text-center space-y-4">
+            <p className="text-muted-foreground">
+              Tes ini belum memiliki soal yang tersedia. Silakan hubungi
+              administrator.
             </p>
             <Button
               variant="outline"

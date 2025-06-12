@@ -35,26 +35,7 @@ export async function getQuestionByIdHandler(
     const { testId, questionId } = c.req.param() as GetQuestionByIdRequest;
 
     // Get database connection
-    const env = getEnv(c);
     const db = getDbFromEnv(c.env);
-
-    // Get authenticated admin user
-    const auth = c.get("auth");
-    if (!auth || auth.user.role !== "admin") {
-      const errorResponse: QuestionErrorResponse = {
-        success: false,
-        message: "Access denied",
-        errors: [
-          {
-            field: "authorization",
-            message: "Only admin users can access questions",
-            code: "ACCESS_DENIED",
-          },
-        ],
-        timestamp: new Date().toISOString(),
-      };
-      return c.json(errorResponse, 403);
-    }
 
     // Check if test exists first
     const [targetTest] = await db
@@ -147,10 +128,6 @@ export async function getQuestionByIdHandler(
       data: questionData,
       timestamp: new Date().toISOString(),
     };
-
-    console.log(
-      `✅ Question retrieved by admin ${auth.user.email}: Sequence ${question.sequence} from test ${targetTest.name}`
-    );
 
     return c.json(response, 200);
   } catch (error) {

@@ -46,24 +46,6 @@ export async function getQuestionsListHandler(
     // Get database connection
     const db = getDbFromEnv(c.env);
 
-    // Get authenticated admin user
-    const auth = c.get("auth");
-    if (!auth || auth.user.role !== "admin") {
-      const errorResponse: QuestionErrorResponse = {
-        success: false,
-        message: "Access denied",
-        errors: [
-          {
-            field: "authorization",
-            message: "Only admin users can access questions",
-            code: "ACCESS_DENIED",
-          },
-        ],
-        timestamp: new Date().toISOString(),
-      };
-      return c.json(errorResponse, 403);
-    }
-
     // Check if test exists
     const [targetTest] = await db
       .select({

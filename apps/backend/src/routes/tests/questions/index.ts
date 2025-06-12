@@ -180,12 +180,11 @@ questionRoutes.put(
 
 // ==================== BASIC CRUD ROUTES ====================
 
-// Get All Questions for a Test (ADMIN ONLY)
+// Get All Questions for a Test
 questionRoutes.get(
   "/",
   generalApiRateLimit,
   authenticateUser,
-  requireAdmin,
   zValidator("param", GetQuestionsByTestIdRequestSchema, (result, c) => {
     if (!result.success) {
       const errorResponse: QuestionErrorResponse = {
@@ -258,12 +257,11 @@ questionRoutes.post(
   createQuestionHandler
 );
 
-// Get Single Question (ADMIN ONLY)
+// Get Single Question
 questionRoutes.get(
   "/:questionId",
   generalApiRateLimit,
   authenticateUser,
-  requireAdmin,
   zValidator("param", GetQuestionByIdRequestSchema, (result, c) => {
     if (!result.success) {
       const errorResponse: QuestionErrorResponse = {
