@@ -1,4 +1,4 @@
-import { Link } from "react-router";
+import { Link, useNavigate } from "react-router";
 import type { Route } from "./+types/home";
 
 // UI Components
@@ -10,21 +10,20 @@ import { Badge } from "~/components/ui/badge";
 import {
   ArrowRight,
   BookOpen,
-  Users,
   Clock,
   Shield,
   CheckCircle,
-  Star,
   BarChart3,
-  FileText,
   UserPlus,
   LogIn,
   Zap,
   Target,
   Award,
-  Brain,
   ShieldCheck,
 } from "lucide-react";
+import { LoadingSpinner } from "~/components/ui/loading-spinner";
+import { useAuth } from "~/contexts/auth-context";
+import { useEffect } from "react";
 
 export function meta({}: Route.MetaArgs) {
   return [
@@ -43,6 +42,46 @@ export function meta({}: Route.MetaArgs) {
 }
 
 export default function HomePage() {
+  const navigate = useNavigate();
+  const { user, isAuthenticated, isLoading } = useAuth();
+
+  useEffect(() => {
+    // If still loading auth state, wait
+    if (isLoading) return;
+
+    // If authenticated, redirect based on role
+    if (isAuthenticated && user) {
+      if (user.role === "admin") {
+        navigate("/admin/dashboard", { replace: true });
+      } else if (user.role === "participant") {
+        navigate("/participant/dashboard", { replace: true });
+      }
+    }
+  }, [isAuthenticated, user, isLoading, navigate]);
+
+  // Show loading while checking auth
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <LoadingSpinner size="lg" />
+      </div>
+    );
+  }
+
+  // If authenticated, show loading while redirecting
+  if (isAuthenticated && user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <LoadingSpinner size="lg" />
+          <p className="mt-4 text-muted-foreground">
+            Redirecting to dashboard...
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-amber-50 to-yellow-50">
       {/* Header */}
