@@ -89,13 +89,15 @@ export const LinkSessionTestCard = ({ session }: LinkSessionTestCardProps) => {
         <div className="flex flex-col items-center gap-4">
           {session.participant_link && showQr && (
             <div
-              className="inline-block bg-white p-6 rounded shadow gap-4"
+              className="inline-block bg-white p-4 rounded shadow gap-4"
               ref={qrRef}
             >
-              <p className="text-base font-semibold text-center">
+              <p className="text-base font-semibold text-center break-words">
                 {session.session_name}
               </p>
-              <QRCode value={session.participant_link} size={180} />
+              <div className="flex justify-center py-2">
+                <QRCode value={session.participant_link} size={180} />
+              </div>
               {session.start_time && (
                 <p className="text-sm text-muted-foreground text-center">
                   {new Date(session.start_time).toLocaleDateString("id-ID", {
@@ -118,7 +120,9 @@ export const LinkSessionTestCard = ({ session }: LinkSessionTestCardProps) => {
                     )}`}
                 </p>
               )}
-              <p className="text-sm font-medium">Syntegra Psikotes</p>
+              <p className="text-sm text-center font-medium">
+                Syntegra Psikotes
+              </p>
             </div>
           )}
 
