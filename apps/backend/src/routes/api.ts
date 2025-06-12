@@ -12,6 +12,7 @@ import { resultRoutes } from "./results";
 import { dashboardRoutes } from "./dashboard";
 import { analyticsRoutes } from "./analytics";
 import { reportRoutes } from "./reports";
+import { wilayahRoutes } from "./wilayah";
 
 const api = new Hono<{ Bindings: CloudflareBindings }>();
 
@@ -69,6 +70,7 @@ api.route("/results", resultRoutes);
 api.route("/dashboard", dashboardRoutes);
 api.route("/analytics", analyticsRoutes);
 api.route("/reports", reportRoutes);
+api.route("/wilayah", wilayahRoutes);
 
 // 404 handler for API routes
 api.notFound((c) => {

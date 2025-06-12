@@ -40,7 +40,7 @@ export function RegistrationProgress({
   onStepClick,
 }: RegistrationProgressProps) {
   return (
-    <div className="w-full">
+    <div className="container mx-auto max-w-xl px-4">
       <div className="flex items-center justify-between">
         {steps.map((step, index) => {
           const isActive = currentStep === step.id;
@@ -60,7 +60,7 @@ export function RegistrationProgress({
               >
                 <div
                   className={cn(
-                    "w-10 h-10 rounded-full border-2 flex items-center justify-center transition-colors",
+                    "w-8 h-8 rounded-full border-2 flex items-center justify-center transition-colors",
                     isCompleted
                       ? "bg-green-600 border-green-600 text-white"
                       : isActive
@@ -78,7 +78,7 @@ export function RegistrationProgress({
                 </div>
 
                 {/* Step Info */}
-                <div className="absolute top-12 left-1/2 transform -translate-x-1/2 text-center min-w-24">
+                <div className="text-sm absolute top-12 left-1/2 transform -translate-x-1/2 text-center min-w-24">
                   <div
                     className={cn(
                       "text-sm font-medium",
@@ -93,7 +93,7 @@ export function RegistrationProgress({
                   >
                     {step.title}
                   </div>
-                  <div className="text-xs text-gray-500 mt-1">
+                  <div className="text-xs text-gray-500">
                     {step.description}
                   </div>
                 </div>
@@ -103,7 +103,7 @@ export function RegistrationProgress({
               {index < steps.length - 1 && (
                 <div
                   className={cn(
-                    "flex-1 h-0.5 mx-4 transition-colors",
+                    "flex-1 h-0.5 mx-2 transition-colors",
                     currentStep > step.id
                       ? "bg-green-600"
                       : currentStep === step.id

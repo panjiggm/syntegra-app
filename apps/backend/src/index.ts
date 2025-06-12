@@ -207,6 +207,12 @@ app.get("/", (c) => {
         config: "GET /api/v1/analytics/config",
         health: "GET /api/v1/analytics/health",
       },
+      wilayah: {
+        provinces: "GET /api/v1/wilayah/provinces",
+        regencies: "GET /api/v1/wilayah/regencies/:provinceCode",
+        districts: "GET /api/v1/wilayah/districts/:regencyCode",
+        villages: "GET /api/v1/wilayah/villages/:districtCode",
+      },
     },
   });
 });

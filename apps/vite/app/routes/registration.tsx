@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { useNavigate } from "react-router";
+import { Link, useNavigate } from "react-router";
 import type { Route } from "./+types/registration";
 
 // UI Components
@@ -79,29 +79,29 @@ export default function RegistrationPage() {
 
   return (
     <div className="min-h-screen">
-      <div className="container mx-auto max-w-7xl px-4 py-8">
+      <div className="container mx-auto max-w-4xl px-4 py-8">
         {/* Header */}
         <div className="max-w-4xl mx-auto">
-          <div className="flex items-center justify-between mb-8">
-            <div className="flex items-center gap-4">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => navigate("/")}
-                className="flex items-center gap-2"
-              >
-                <ArrowLeft className="h-4 w-4" />
-                Kembali
-              </Button>
-              <div>
-                <h1 className="text-3xl font-bold text-gray-900">
-                  Pendaftaran Akun
-                </h1>
-                <p className="text-gray-600">
-                  Daftar untuk mengakses layanan psikotes online Syntegra
-                </p>
+          <div className="flex flex-col items-center gap-2 py-10 mb-4">
+            <Link
+              to="/"
+              className="flex flex-col items-center gap-2 font-medium hover:opacity-80 transition-opacity"
+            >
+              <div className="flex h-16 w-16 items-center justify-center rounded-md">
+                <img
+                  src="/images/syntegra-clear-logo.png"
+                  alt="Syntegra Logo"
+                  className="object-contain"
+                />
               </div>
-            </div>
+              <span className="sr-only">Syntegra Services</span>
+            </Link>
+            <h1 className="text-xl font-bold">
+              Selamat Datang di Syntegra Services
+            </h1>
+            <p className="text-sm text-muted-foreground text-center">
+              Daftar untuk mengikuti psikotes
+            </p>
           </div>
 
           {/* Progress Stepper */}

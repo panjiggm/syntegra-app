@@ -77,6 +77,7 @@ export function Step3AlamatWilayah({
   const watchedProvinceCode = watch("province_code");
   const watchedRegencyCode = watch("regency_code");
   const watchedDistrictCode = watch("district_code");
+  const watchedVillageCode = watch("village_code");
 
   // API queries
   const provincesQuery = useProvinces();
@@ -105,6 +106,19 @@ export function Step3AlamatWilayah({
       setValue("village_code", "", { shouldValidate: true });
     }
   }, [watchedDistrictCode, setValue]);
+
+  useEffect(() => {
+    if (watchedVillageCode && villagesQuery.data) {
+      const selectedVillage = villagesQuery.data.find(
+        (v) => v.code === watchedVillageCode
+      );
+      if (selectedVillage?.postal_code) {
+        setValue("postal_code", selectedVillage.postal_code, {
+          shouldValidate: true,
+        });
+      }
+    }
+  }, [watchedVillageCode, villagesQuery.data, setValue]);
 
   const onSubmit = (formData: Step3FormData) => {
     // Find names for the selected codes

@@ -90,7 +90,9 @@ export function Step4Overview({ onPrev, onEdit }: Step4OverviewProps) {
         nik: data.nik,
         gender: data.gender === "" ? undefined : data.gender,
         birth_place: data.birth_place,
-        birth_date: data.birth_date,
+        birth_date: data.birth_date
+          ? new Date(data.birth_date).toISOString()
+          : undefined,
         education: data.education,
         religion: data.religion,
         address: data.address,

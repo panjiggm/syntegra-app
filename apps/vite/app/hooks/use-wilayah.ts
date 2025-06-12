@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import axios from "axios";
+import { apiClient } from "~/lib/api-client";
 
 // Types for Wilayah Indonesia API
 interface Province {
@@ -23,74 +23,113 @@ interface Village {
   code: string;
   name: string;
   district_code: string;
+  postal_code: string;
 }
 
-const WILAYAH_BASE_URL = "https://wilayah.id/api";
-
-// Create axios instance for wilayah API
-const wilayahApi = axios.create({
-  baseURL: WILAYAH_BASE_URL,
-  timeout: 10000,
-});
+// API Response types
+interface WilayahApiResponse<T> {
+  success: boolean;
+  message: string;
+  data: T[];
+  timestamp: string;
+}
 
 export function useWilayah() {
   // Get all provinces
   const useProvinces = () => {
     return useQuery({
-      queryKey: ["provinces"],
+      queryKey: ["wilayah", "provinces"],
       queryFn: async (): Promise<Province[]> => {
-        const response = await wilayahApi.get("/provinces.json");
-        return response.data.data || [];
+        const response =
+          await apiClient.get<WilayahApiResponse<Province>>(
+            "/wilayah/provinces"
+          );
+
+        if (!response.success) {
+          throw new Error(response.message || "Gagal mengambil data provinsi");
+        }
+
+        return response.data;
       },
       staleTime: 24 * 60 * 60 * 1000, // 24 hours
       retry: 2,
+      retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 5000),
     });
   };
 
   // Get regencies by province code
   const useRegencies = (provinceCode: string) => {
     return useQuery({
-      queryKey: ["regencies", provinceCode],
+      queryKey: ["wilayah", "regencies", provinceCode],
       queryFn: async (): Promise<Regency[]> => {
         if (!provinceCode) return [];
-        const response = await wilayahApi.get(
-          `/regencies/${provinceCode}.json`
+
+        const response = await apiClient.get<WilayahApiResponse<Regency>>(
+          `/wilayah/regencies/${provinceCode}`
         );
-        return response.data.data || [];
+
+        if (!response.success) {
+          throw new Error(
+            response.message || "Gagal mengambil data kabupaten/kota"
+          );
+        }
+
+        return response.data;
       },
       enabled: !!provinceCode,
       staleTime: 24 * 60 * 60 * 1000, // 24 hours
       retry: 2,
+      retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 5000),
     });
   };
 
   // Get districts by regency code
   const useDistricts = (regencyCode: string) => {
     return useQuery({
-      queryKey: ["districts", regencyCode],
+      queryKey: ["wilayah", "districts", regencyCode],
       queryFn: async (): Promise<District[]> => {
         if (!regencyCode) return [];
-        const response = await wilayahApi.get(`/districts/${regencyCode}.json`);
-        return response.data.data || [];
+
+        const response = await apiClient.get<WilayahApiResponse<District>>(
+          `/wilayah/districts/${regencyCode}`
+        );
+
+        if (!response.success) {
+          throw new Error(response.message || "Gagal mengambil data kecamatan");
+        }
+
+        return response.data;
       },
       enabled: !!regencyCode,
       staleTime: 24 * 60 * 60 * 1000, // 24 hours
       retry: 2,
+      retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 5000),
     });
   };
 
   // Get villages by district code
   const useVillages = (districtCode: string) => {
     return useQuery({
-      queryKey: ["villages", districtCode],
+      queryKey: ["wilayah", "villages", districtCode],
       queryFn: async (): Promise<Village[]> => {
         if (!districtCode) return [];
-        const response = await wilayahApi.get(`/villages/${districtCode}.json`);
-        return response.data.data || [];
+
+        const response = await apiClient.get<WilayahApiResponse<Village>>(
+          `/wilayah/villages/${districtCode}`
+        );
+
+        if (!response.success) {
+          throw new Error(
+            response.message || "Gagal mengambil data kelurahan/desa"
+          );
+        }
+
+        return response.data;
       },
       enabled: !!districtCode,
       staleTime: 24 * 60 * 60 * 1000, // 24 hours
       retry: 2,
+      retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 5000),
     });
   };
 
