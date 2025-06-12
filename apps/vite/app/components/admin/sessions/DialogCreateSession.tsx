@@ -111,7 +111,7 @@ export const DialogCreateSession = () => {
 
     if (totalModules === 0) return;
 
-    const totalWeight = 100;
+    const totalWeight = 10;
     const baseWeight = Math.floor(totalWeight / totalModules);
     const remainder = totalWeight % totalModules;
 
