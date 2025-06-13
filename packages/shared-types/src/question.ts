@@ -158,6 +158,7 @@ export const GetQuestionsRequestSchema = z.object({
   has_image: z.coerce.boolean().optional(),
   has_audio: z.coerce.boolean().optional(),
   is_required: z.coerce.boolean().optional(),
+  session_compliant: z.coerce.boolean().optional(),
 
   // Time limit range filters
   time_limit_min: z.coerce
@@ -210,6 +211,19 @@ export const QuestionDataSchema = z.object({
   is_required: z.boolean(),
   created_at: z.date(),
   updated_at: z.date(),
+  session_compliance: z.object({
+    is_compliant: z.boolean(),
+    issues: z.array(z.string()),
+    applicable_constraint: z
+      .object({
+        session_name: z.string().nullable(),
+        session_status: z
+          .enum(["active", "draft", "expired", "completed", "cancelled"])
+          .nullable(),
+        forced_question_type: QuestionTypeEnum.nullable(),
+      })
+      .nullable(),
+  }),
 });
 
 // Create Question Response Schema
@@ -282,6 +296,40 @@ export const GetQuestionsResponseSchema = z.object({
       }),
     })
     .optional(),
+  session_constraints: z.object({
+    active_constraint: z
+      .object({
+        session_name: z.string().nullable(),
+        session_code: z.string().nullable(),
+        session_status: z
+          .enum(["active", "draft", "expired", "completed", "cancelled"])
+          .nullable(),
+        start_time: z.string().nullable(),
+        end_time: z.string().nullable(),
+        forced_question_type: QuestionTypeEnum.nullable(),
+        uniform_question_settings: z.any().nullable(),
+      })
+      .nullable(),
+    all_constraints: z.array(
+      z.object({
+        session_name: z.string().nullable(),
+        session_code: z.string().nullable(),
+        session_status: z
+          .enum(["active", "draft", "expired", "completed", "cancelled"])
+          .nullable(),
+        forced_question_type: QuestionTypeEnum.nullable(),
+        uniform_question_settings: z.any().nullable(),
+      })
+    ),
+    compliance_stats: z
+      .object({
+        total_questions: z.number(),
+        compliant_questions: z.number(),
+        non_compliant_questions: z.number(),
+        compliance_percentage: z.number(),
+      })
+      .nullable(),
+  }),
   timestamp: z.string(),
 });
 
