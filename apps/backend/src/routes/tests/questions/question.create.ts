@@ -348,6 +348,22 @@ export async function createQuestionHandler(
       is_required: newQuestion.is_required ?? true,
       created_at: newQuestion.created_at,
       updated_at: newQuestion.updated_at,
+      session_compliance: {
+        is_compliant:
+          activeConstraints.length === 0 ||
+          activeConstraints.every(
+            (constraint) =>
+              constraint.forced_question_type === newQuestion.question_type
+          ),
+        issues: [],
+        applicable_constraint: activeConstraints[0]
+          ? {
+              session_name: activeConstraints[0].session_name,
+              session_status: activeConstraints[0].session_status,
+              forced_question_type: activeConstraints[0].forced_question_type,
+            }
+          : null,
+      },
     };
 
     // **NEW: Prepare response message with warnings**
