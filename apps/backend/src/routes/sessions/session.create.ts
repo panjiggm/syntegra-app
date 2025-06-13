@@ -184,6 +184,134 @@ export async function createSessionHandler(
       return c.json(errorResponse, 400);
     }
 
+    // **NEW: Validate forced_question_type and uniform_question_settings for each module**
+    for (let i = 0; i < data.session_modules.length; i++) {
+      const module = data.session_modules[i];
+
+      // If forced_question_type is specified, validate settings
+      if (module.forced_question_type) {
+        const validQuestionTypes = [
+          "multiple_choice",
+          "true_false",
+          "text",
+          "rating_scale",
+          "drawing",
+          "sequence",
+          "matrix",
+        ];
+
+        if (!validQuestionTypes.includes(module.forced_question_type)) {
+          const errorResponse: SessionErrorResponse = {
+            success: false,
+            message: "Invalid forced question type",
+            errors: [
+              {
+                field: `session_modules[${i}].forced_question_type`,
+                message: `Invalid question type: ${module.forced_question_type}. Must be one of: ${validQuestionTypes.join(", ")}`,
+                code: "INVALID_QUESTION_TYPE",
+              },
+            ],
+            timestamp: new Date().toISOString(),
+          };
+          return c.json(errorResponse, 400);
+        }
+
+        // Validate uniform_question_settings based on question_type
+        if (module.uniform_question_settings) {
+          const settings = module.uniform_question_settings;
+
+          switch (module.forced_question_type) {
+            case "multiple_choice":
+              if (
+                settings.options_count &&
+                (settings.options_count < 2 || settings.options_count > 6)
+              ) {
+                const errorResponse: SessionErrorResponse = {
+                  success: false,
+                  message: "Invalid options count for multiple choice",
+                  errors: [
+                    {
+                      field: `session_modules[${i}].uniform_question_settings.options_count`,
+                      message: "Multiple choice options must be between 2-6",
+                      code: "INVALID_OPTIONS_COUNT",
+                    },
+                  ],
+                  timestamp: new Date().toISOString(),
+                };
+                return c.json(errorResponse, 400);
+              }
+              break;
+
+            case "rating_scale":
+              if (
+                settings.rating_scale_max &&
+                (settings.rating_scale_max < 3 ||
+                  settings.rating_scale_max > 10)
+              ) {
+                const errorResponse: SessionErrorResponse = {
+                  success: false,
+                  message: "Invalid rating scale maximum",
+                  errors: [
+                    {
+                      field: `session_modules[${i}].uniform_question_settings.rating_scale_max`,
+                      message: "Rating scale maximum must be between 3-10",
+                      code: "INVALID_RATING_SCALE",
+                    },
+                  ],
+                  timestamp: new Date().toISOString(),
+                };
+                return c.json(errorResponse, 400);
+              }
+              break;
+
+            case "text":
+              if (
+                settings.text_max_length &&
+                (settings.text_max_length < 10 ||
+                  settings.text_max_length > 5000)
+              ) {
+                const errorResponse: SessionErrorResponse = {
+                  success: false,
+                  message: "Invalid text maximum length",
+                  errors: [
+                    {
+                      field: `session_modules[${i}].uniform_question_settings.text_max_length`,
+                      message:
+                        "Text maximum length must be between 10-5000 characters",
+                      code: "INVALID_TEXT_LENGTH",
+                    },
+                  ],
+                  timestamp: new Date().toISOString(),
+                };
+                return c.json(errorResponse, 400);
+              }
+              break;
+          }
+
+          // Validate time_per_question if provided (common for all types)
+          if (
+            settings.time_per_question &&
+            (settings.time_per_question < 5 || settings.time_per_question > 600)
+          ) {
+            const errorResponse: SessionErrorResponse = {
+              success: false,
+              message: "Invalid time per question",
+              errors: [
+                {
+                  field: `session_modules[${i}].uniform_question_settings.time_per_question`,
+                  message:
+                    "Time per question must be between 5 seconds to 10 minutes",
+                  code: "INVALID_TIME_LIMIT",
+                },
+              ],
+              timestamp: new Date().toISOString(),
+            };
+            return c.json(errorResponse, 400);
+          }
+        }
+      }
+    }
+
     // Validate session timing
     const startTime = new Date(data.start_time);
     const endTime = new Date(data.end_time);
@@ -274,7 +402,7 @@ export async function createSessionHandler(
         return c.json(errorResponse, 500);
       }
 
-      // Insert session modules
+      // **UPDATED: Insert session modules with new fields**
       const sessionModulesData: CreateSessionModuleDB[] =
         data.session_modules.map((module) => ({
           session_id: newSession.id,
@@ -282,6 +410,8 @@ export async function createSessionHandler(
           sequence: module.sequence,
           is_required: module.is_required,
           weight: module.weight.toString(), // Convert to string for database
+          forced_question_type: module.forced_question_type || null, // NEW
+          uniform_question_settings: module.uniform_question_settings || null, // NEW
         }));
 
       const createdModules = await db
@@ -316,7 +446,7 @@ export async function createSessionHandler(
         proctorInfo = proctor || null;
       }
 
-      // Prepare session modules with test details for response
+      // **UPDATED: Prepare session modules with test details and new fields for response**
       const sessionModulesWithTests = createdModules.map((module) => {
         const testInfo = existingTests.find(
           (test) => test.id === module.test_id
@@ -328,6 +458,8 @@ export async function createSessionHandler(
           sequence: module.sequence,
           is_required: module.is_required ?? true,
           weight: Number(module.weight),
+          forced_question_type: module.forced_question_type, // NEW
+          uniform_question_settings: module.uniform_question_settings as any, // NEW - cast to expected type
           created_at: module.created_at,
           test: {
             id: testInfo.id,
