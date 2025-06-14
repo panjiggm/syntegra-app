@@ -105,7 +105,7 @@ export function useDashboard() {
   // Get admin dashboard data
   const useGetAdminDashboard = () => {
     return useQuery({
-      queryKey: queryKeys.dashboard.admin(user?.id),
+      queryKey: queryKeys.dashboard.admin(),
       queryFn: async () => {
         const response =
           await apiClient.get<GetAdminDashboardResponse>("/dashboard/admin");
@@ -127,7 +127,7 @@ export function useDashboard() {
   // Get participant dashboard data
   const useGetParticipantDashboard = () => {
     return useQuery({
-      queryKey: queryKeys.dashboard.participant(user?.id),
+      queryKey: queryKeys.dashboard.participant(),
       queryFn: async () => {
         const response = await apiClient.get<GetParticipantDashboardResponse>(
           "/dashboard/participant"
