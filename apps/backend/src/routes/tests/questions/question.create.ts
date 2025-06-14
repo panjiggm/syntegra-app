@@ -215,21 +215,28 @@ export async function createQuestionHandler(
       return c.json(errorResponse, 500);
     }
 
-    // Update test's total_questions count
-    const [updatedQuestionCount] = await db
+    // Update test's total_questions count and auto-calculate time_limit
+    // 🔄 AUTO-CALCULATE TEST DURATION: Get updated question count and total duration
+    const [testStatsResult] = await db
       .select({
-        count: sql<number>`count(*)`,
+        questionCount: sql<number>`count(*)`,
+        totalDurationSeconds: sql<number>`COALESCE(SUM(${questions.time_limit}), 0)`,
       })
       .from(questions)
       .where(eq(questions.test_id, testId));
 
-    const newTotalQuestions = updatedQuestionCount?.count || 0;
+    const newTotalQuestions = testStatsResult?.questionCount || 0;
+    const totalDurationSeconds = testStatsResult?.totalDurationSeconds || 0;
 
-    // Update the test with the new question count
+    // Convert seconds to minutes (round up to ensure enough time)
+    const totalDurationMinutes = Math.ceil(totalDurationSeconds / 60);
+
+    // 🎯 UPDATE TEST: Both question count AND auto-calculated time limit
     await db
       .update(tests)
       .set({
         total_questions: newTotalQuestions,
+        time_limit: totalDurationMinutes, // ← AUTO-CALCULATED from questions
         updated_at: new Date(),
         updated_by: auth.user.id,
       })
@@ -255,13 +262,13 @@ export async function createQuestionHandler(
 
     const response: CreateQuestionResponse = {
       success: true,
-      message: `Question #${newQuestion.sequence} created successfully for test '${targetTest.name}'`,
+      message: `Question #${newQuestion.sequence} created successfully for test '${targetTest.name}'. Test duration updated to ${totalDurationMinutes} minutes (${newTotalQuestions} questions total).`,
       data: responseData,
       timestamp: new Date().toISOString(),
     };
 
     console.log(
-      `✅ Question created by admin ${auth.user.email}: Sequence ${newQuestion.sequence} for test ${targetTest.name} (${targetTest.category})`
+      `✅ Question created by admin ${auth.user.email}: Sequence ${newQuestion.sequence} for test ${targetTest.name} (${targetTest.category}). Test duration: ${totalDurationMinutes}min from ${newTotalQuestions} questions.`
     );
 
     return c.json(response, 201);
