@@ -312,21 +312,27 @@ export async function createQuestionHandler(
       return c.json(errorResponse, 500);
     }
 
-    // Update test's total_questions count
-    const [updatedQuestionCount] = await db
+    // 🔄 AUTO-CALCULATE TEST DURATION: Get updated question count and total duration
+    const [testStatsResult] = await db
       .select({
-        count: sql<number>`count(*)`,
+        questionCount: sql<number>`count(*)`,
+        totalDurationSeconds: sql<number>`COALESCE(SUM(${questions.time_limit}), 0)`,
       })
       .from(questions)
       .where(eq(questions.test_id, testId));
 
-    const newTotalQuestions = updatedQuestionCount?.count || 0;
+    const newTotalQuestions = testStatsResult?.questionCount || 0;
+    const totalDurationSeconds = testStatsResult?.totalDurationSeconds || 0;
 
-    // Update the test with the new question count
+    // Convert seconds to minutes (round up to ensure enough time)
+    const totalDurationMinutes = Math.ceil(totalDurationSeconds / 60);
+
+    // 🎯 UPDATE TEST: Both question count AND auto-calculated time limit
     await db
       .update(tests)
       .set({
         total_questions: newTotalQuestions,
+        time_limit: totalDurationMinutes, // ← AUTO-CALCULATED from questions
         updated_at: new Date(),
         updated_by: auth.user.id,
       })
@@ -364,13 +370,23 @@ export async function createQuestionHandler(
             }
           : null,
       },
+      // 📊 NEW: Include test duration info in response
+      test_duration_info: {
+        total_questions: newTotalQuestions,
+        total_duration_minutes: totalDurationMinutes,
+        total_duration_seconds: totalDurationSeconds,
+        average_time_per_question:
+          newTotalQuestions > 0
+            ? Math.round(totalDurationSeconds / newTotalQuestions)
+            : 0,
+      },
     };
 
-    // **NEW: Prepare response message with warnings**
-    let responseMessage = `Question #${newQuestion.sequence} created successfully for test '${targetTest.name}'`;
+    // **NEW: Prepare response message with warnings and duration info**
+    let responseMessage = `Question #${newQuestion.sequence} created successfully for test '${targetTest.name}'. Test duration updated to ${totalDurationMinutes} minutes (${newTotalQuestions} questions total).`;
 
     if (constraintWarnings.length > 0) {
-      responseMessage += `. Note: ${constraintWarnings.join(". ")}`;
+      responseMessage += ` Note: ${constraintWarnings.join(". ")}`;
     }
 
     const response: CreateQuestionResponse = {
@@ -393,7 +409,7 @@ export async function createQuestionHandler(
     };
 
     console.log(
-      `✅ Question created by admin ${auth.user.email}: Sequence ${newQuestion.sequence} for test ${targetTest.name} (${targetTest.category})${constraintWarnings.length > 0 ? ` - WITH WARNINGS: ${constraintWarnings.join(", ")}` : ""}`
+      `✅ Question created by admin ${auth.user.email}: Sequence ${newQuestion.sequence} for test ${targetTest.name} (${targetTest.category}). Test duration: ${totalDurationMinutes}min from ${newTotalQuestions} questions.${constraintWarnings.length > 0 ? ` WITH WARNINGS: ${constraintWarnings.join(", ")}` : ""}`
     );
 
     return c.json(response, 201);
