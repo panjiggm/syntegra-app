@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { QuestionTypeEnum, type QuestionType } from "./question";
 
 // ==================== ENUMS ====================
 export const ModuleTypeEnum = z.enum([
@@ -71,6 +72,7 @@ export const CreateTestRequestSchema = z.object({
     .optional(),
   status: TestStatusEnum.optional(),
   instructions: z.string().optional(),
+  question_type: QuestionTypeEnum.optional(),
 });
 
 // Update Test Request Schema
@@ -116,6 +118,7 @@ export const UpdateTestRequestSchema = z
       .optional(),
     status: TestStatusEnum.optional(),
     instructions: z.string().optional(),
+    question_type: QuestionTypeEnum.optional(),
   })
   .refine(
     (data) => {
@@ -222,6 +225,7 @@ export const TestDataSchema = z.object({
   passing_score: z.number().nullable(),
   status: TestStatusEnum,
   instructions: z.string().nullable(),
+  question_type: QuestionTypeEnum.nullable(),
   created_at: z.date(),
   updated_at: z.date(),
   created_by: z.string().uuid().nullable(),
@@ -490,6 +494,7 @@ export type CreateTestDB = {
   passing_score: string | null;
   status: TestStatus;
   instructions: string | null;
+  question_type: QuestionType | null;
   created_by: string | null;
   updated_by: string | null;
 };
@@ -509,6 +514,7 @@ export type UpdateTestDB = {
   passing_score?: string | null;
   status?: TestStatus;
   instructions?: string | null;
+  question_type?: QuestionType | null;
   updated_at: Date;
   updated_by?: string | null;
 };

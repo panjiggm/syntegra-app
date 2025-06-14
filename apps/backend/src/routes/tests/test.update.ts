@@ -81,6 +81,7 @@ export async function updateTestHandler(
         passing_score: tests.passing_score,
         status: tests.status,
         instructions: tests.instructions,
+        question_type: tests.question_type,
         created_at: tests.created_at,
         updated_at: tests.updated_at,
         created_by: tests.created_by,
@@ -271,6 +272,8 @@ export async function updateTestHandler(
     if (data.status !== undefined) updateData.status = data.status;
     if (data.instructions !== undefined)
       updateData.instructions = data.instructions || null;
+    if (data.question_type !== undefined)
+      updateData.question_type = data.question_type || "multiple_choice";
 
     // Update test in database
     const [updatedTest] = await db
@@ -307,6 +310,7 @@ export async function updateTestHandler(
         : null,
       status: updatedTest.status ?? "active",
       instructions: updatedTest.instructions,
+      question_type: updatedTest.question_type,
       created_at: updatedTest.created_at,
       updated_at: updatedTest.updated_at,
       created_by: updatedTest.created_by,

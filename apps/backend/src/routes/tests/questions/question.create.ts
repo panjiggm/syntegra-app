@@ -71,6 +71,7 @@ export async function createQuestionHandler(
         category: tests.category,
         status: tests.status,
         total_questions: tests.total_questions,
+        question_type: tests.question_type,
       })
       .from(tests)
       .where(eq(tests.id, testId))
@@ -102,6 +103,26 @@ export async function createQuestionHandler(
             field: "status",
             message: "Questions cannot be added to archived tests",
             code: "TEST_ARCHIVED",
+          },
+        ],
+        timestamp: new Date().toISOString(),
+      };
+      return c.json(errorResponse, 400);
+    }
+
+    // Validate question_type matches test's question_type
+    if (
+      targetTest.question_type &&
+      data.question_type !== targetTest.question_type
+    ) {
+      const errorResponse: QuestionErrorResponse = {
+        success: false,
+        message: "Question type mismatch",
+        errors: [
+          {
+            field: "question_type",
+            message: `Question type '${data.question_type}' does not match test's required question type '${targetTest.question_type}'`,
+            code: "QUESTION_TYPE_MISMATCH",
           },
         ],
         timestamp: new Date().toISOString(),

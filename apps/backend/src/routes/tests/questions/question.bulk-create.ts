@@ -235,6 +235,7 @@ export async function bulkCreateQuestionsHandler(
         name: tests.name,
         category: tests.category,
         status: tests.status,
+        question_type: tests.question_type,
       })
       .from(tests)
       .where(eq(tests.id, testId))
@@ -271,6 +272,27 @@ export async function bulkCreateQuestionsHandler(
         timestamp: new Date().toISOString(),
       };
       return c.json(errorResponse, 400);
+    }
+
+    // Validate all questions have the same question_type as test (if test has question_type constraint)
+    if (testExists.question_type) {
+      const invalidQuestions = questionsData.filter(
+        (q, index) => q.question_type !== testExists.question_type
+      );
+
+      if (invalidQuestions.length > 0) {
+        const errorResponse: QuestionErrorResponse = {
+          success: false,
+          message: "Question type mismatch",
+          errors: invalidQuestions.map((q, index) => ({
+            field: `questions.${questionsData.indexOf(q)}.question_type`,
+            message: `Question type '${q.question_type}' does not match test's required question type '${testExists.question_type}'`,
+            code: "QUESTION_TYPE_MISMATCH",
+          })),
+          timestamp: new Date().toISOString(),
+        };
+        return c.json(errorResponse, 400);
+      }
     }
 
     // Get current max sequence for auto-numbering
