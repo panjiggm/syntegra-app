@@ -208,17 +208,6 @@ export const TestAttemptDataSchema = z.object({
     .nullable()
     .optional(),
 
-  session_constraints: z
-    .object({
-      forced_question_type: z.string().nullable(),
-      uniform_question_settings: z.any().nullable(),
-      sequence: z.number(),
-      is_required: z.boolean(),
-      weight: z.number(),
-    })
-    .nullable()
-    .optional(),
-
   // Computed fields
   time_remaining: z.number().optional(),
   progress_percentage: z.number().optional(),

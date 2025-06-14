@@ -18,17 +18,6 @@ export const SessionModuleSchema = z.object({
   sequence: z.number().min(1, "Sequence must be at least 1"),
   is_required: z.boolean().default(true),
   weight: z.number().min(0.1).max(10).default(1.0), // Weight for scoring
-  forced_question_type: z
-    .enum(["multiple_choice", "true_false", "text", "rating_scale"])
-    .optional(),
-  uniform_question_settings: z
-    .object({
-      options_count: z.number().optional(),
-      rating_scale_max: z.number().optional(),
-      text_max_length: z.number().optional(),
-      time_per_question: z.number().optional(),
-    })
-    .optional(),
 });
 
 // Create Session Request Schema

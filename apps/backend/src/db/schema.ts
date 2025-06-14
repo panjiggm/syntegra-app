@@ -313,13 +313,6 @@ export const sessionModules = pgTable(
     is_required: boolean("is_required").default(true),
     weight: numeric("weight", { precision: 3, scale: 2 }).default("1.00"), // for weighted scoring
     created_at: timestamp("created_at").defaultNow().notNull(),
-    forced_question_type: questionTypeEnum("forced_question_type"), // nullable
-    uniform_question_settings: json("uniform_question_settings").$type<{
-      options_count?: number;
-      rating_scale_max?: number;
-      text_max_length?: number;
-      time_per_question?: number;
-    }>(),
   },
   (table) => ({
     sessionIdIdx: index("session_modules_session_idx").on(table.session_id),

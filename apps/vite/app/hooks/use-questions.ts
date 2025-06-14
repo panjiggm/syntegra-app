@@ -103,18 +103,6 @@ export interface CreateQuestionResponse {
   success: boolean;
   message: string;
   data: QuestionData;
-  session_constraints?: Array<{
-    session_name: string | null;
-    session_status:
-      | "active"
-      | "draft"
-      | "expired"
-      | "completed"
-      | "cancelled"
-      | null;
-    forced_question_type: string | null;
-    uniform_question_settings: any;
-  }>;
   warnings?: string[];
   timestamp: string;
 }

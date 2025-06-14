@@ -1,13 +1,6 @@
 import { Context } from "hono";
 import { eq, and, sql, desc } from "drizzle-orm";
-import {
-  getDbFromEnv,
-  tests,
-  questions,
-  sessionModules,
-  testSessions,
-  isDatabaseConfigured,
-} from "@/db";
+import { getDbFromEnv, tests, questions, isDatabaseConfigured } from "@/db";
 import { getEnv, type CloudflareBindings } from "@/lib/env";
 import {
   type CreateQuestionRequest,
@@ -116,117 +109,6 @@ export async function createQuestionHandler(
       return c.json(errorResponse, 400);
     }
 
-    // **NEW: Check session constraints for this test**
-    const sessionConstraints = await db
-      .select({
-        session_id: sessionModules.session_id,
-        session_name: testSessions.session_name,
-        session_status: testSessions.status,
-        forced_question_type: sessionModules.forced_question_type,
-        uniform_question_settings: sessionModules.uniform_question_settings,
-      })
-      .from(sessionModules)
-      .leftJoin(testSessions, eq(sessionModules.session_id, testSessions.id))
-      .where(
-        and(
-          eq(sessionModules.test_id, testId),
-          sql`${sessionModules.forced_question_type} IS NOT NULL` // Only sessions with constraints
-        )
-      );
-
-    // **NEW: Validate against session constraints (if any)**
-    const activeConstraints = sessionConstraints.filter(
-      (constraint) =>
-        constraint.session_status !== "completed" &&
-        constraint.session_status !== "cancelled"
-    );
-
-    let constraintWarnings: string[] = [];
-    let constraintErrors: any[] = [];
-
-    for (const constraint of activeConstraints) {
-      if (
-        constraint.forced_question_type &&
-        constraint.forced_question_type !== data.question_type
-      ) {
-        // Check if this is a strict constraint or just a warning
-        if (constraint.session_status === "active") {
-          // Active session - this is an error
-          constraintErrors.push({
-            field: "question_type",
-            message: `Cannot create ${data.question_type} question. Active session "${constraint.session_name}" requires ${constraint.forced_question_type} questions only.`,
-            code: "ACTIVE_SESSION_CONSTRAINT",
-          });
-        } else {
-          // Draft/future session - this is a warning
-          constraintWarnings.push(
-            `Session "${constraint.session_name}" expects ${constraint.forced_question_type} questions, but you're creating ${data.question_type}`
-          );
-        }
-      }
-
-      // **NEW: Validate uniform question settings**
-      if (
-        constraint.forced_question_type === data.question_type &&
-        constraint.uniform_question_settings
-      ) {
-        const settings = constraint.uniform_question_settings as any;
-
-        switch (data.question_type) {
-          case "multiple_choice":
-            if (settings.options_count && data.options) {
-              const optionCount = Array.isArray(data.options)
-                ? data.options.length
-                : 0;
-              if (optionCount !== settings.options_count) {
-                if (constraint.session_status === "active") {
-                  constraintErrors.push({
-                    field: "options",
-                    message: `Active session "${constraint.session_name}" requires exactly ${settings.options_count} options, but you provided ${optionCount}`,
-                    code: "ACTIVE_SESSION_OPTIONS_CONSTRAINT",
-                  });
-                } else {
-                  constraintWarnings.push(
-                    `Session "${constraint.session_name}" expects ${settings.options_count} options, but you provided ${optionCount}`
-                  );
-                }
-              }
-            }
-            break;
-
-          case "text":
-            if (
-              settings.text_max_length &&
-              data.question.length > settings.text_max_length
-            ) {
-              if (constraint.session_status === "active") {
-                constraintErrors.push({
-                  field: "question",
-                  message: `Active session "${constraint.session_name}" limits text to ${settings.text_max_length} characters`,
-                  code: "ACTIVE_SESSION_TEXT_CONSTRAINT",
-                });
-              } else {
-                constraintWarnings.push(
-                  `Session "${constraint.session_name}" limits text to ${settings.text_max_length} characters`
-                );
-              }
-            }
-            break;
-        }
-      }
-    }
-
-    // Return errors if there are active session constraints violated
-    if (constraintErrors.length > 0) {
-      const errorResponse: QuestionErrorResponse = {
-        success: false,
-        message: "Question violates active session constraints",
-        errors: constraintErrors,
-        timestamp: new Date().toISOString(),
-      };
-      return c.json(errorResponse, 409);
-    }
-
     // Validate question options based on question type
     if (questionTypeRequiresOptions(data.question_type)) {
       if (
@@ -312,27 +194,21 @@ export async function createQuestionHandler(
       return c.json(errorResponse, 500);
     }
 
-    // 🔄 AUTO-CALCULATE TEST DURATION: Get updated question count and total duration
-    const [testStatsResult] = await db
+    // Update test's total_questions count
+    const [updatedQuestionCount] = await db
       .select({
-        questionCount: sql<number>`count(*)`,
-        totalDurationSeconds: sql<number>`COALESCE(SUM(${questions.time_limit}), 0)`,
+        count: sql<number>`count(*)`,
       })
       .from(questions)
       .where(eq(questions.test_id, testId));
 
-    const newTotalQuestions = testStatsResult?.questionCount || 0;
-    const totalDurationSeconds = testStatsResult?.totalDurationSeconds || 0;
+    const newTotalQuestions = updatedQuestionCount?.count || 0;
 
-    // Convert seconds to minutes (round up to ensure enough time)
-    const totalDurationMinutes = Math.ceil(totalDurationSeconds / 60);
-
-    // 🎯 UPDATE TEST: Both question count AND auto-calculated time limit
+    // Update the test with the new question count
     await db
       .update(tests)
       .set({
         total_questions: newTotalQuestions,
-        time_limit: totalDurationMinutes, // ← AUTO-CALCULATED from questions
         updated_at: new Date(),
         updated_by: auth.user.id,
       })
@@ -354,62 +230,17 @@ export async function createQuestionHandler(
       is_required: newQuestion.is_required ?? true,
       created_at: newQuestion.created_at,
       updated_at: newQuestion.updated_at,
-      session_compliance: {
-        is_compliant:
-          activeConstraints.length === 0 ||
-          activeConstraints.every(
-            (constraint) =>
-              constraint.forced_question_type === newQuestion.question_type
-          ),
-        issues: [],
-        applicable_constraint: activeConstraints[0]
-          ? {
-              session_name: activeConstraints[0].session_name,
-              session_status: activeConstraints[0].session_status,
-              forced_question_type: activeConstraints[0].forced_question_type,
-            }
-          : null,
-      },
-      // 📊 NEW: Include test duration info in response
-      test_duration_info: {
-        total_questions: newTotalQuestions,
-        total_duration_minutes: totalDurationMinutes,
-        total_duration_seconds: totalDurationSeconds,
-        average_time_per_question:
-          newTotalQuestions > 0
-            ? Math.round(totalDurationSeconds / newTotalQuestions)
-            : 0,
-      },
     };
-
-    // **NEW: Prepare response message with warnings and duration info**
-    let responseMessage = `Question #${newQuestion.sequence} created successfully for test '${targetTest.name}'. Test duration updated to ${totalDurationMinutes} minutes (${newTotalQuestions} questions total).`;
-
-    if (constraintWarnings.length > 0) {
-      responseMessage += ` Note: ${constraintWarnings.join(". ")}`;
-    }
 
     const response: CreateQuestionResponse = {
       success: true,
-      message: responseMessage,
+      message: `Question #${newQuestion.sequence} created successfully for test '${targetTest.name}'`,
       data: responseData,
-      // **NEW: Include constraint info in response**
-      ...(activeConstraints.length > 0 && {
-        session_constraints: activeConstraints.map((constraint) => ({
-          session_name: constraint.session_name,
-          session_status: constraint.session_status,
-          forced_question_type: constraint.forced_question_type,
-          uniform_question_settings: constraint.uniform_question_settings,
-        })),
-      }),
-      ...(constraintWarnings.length > 0 && {
-        warnings: constraintWarnings,
-      }),
       timestamp: new Date().toISOString(),
     };
 
     console.log(
-      `✅ Question created by admin ${auth.user.email}: Sequence ${newQuestion.sequence} for test ${targetTest.name} (${targetTest.category}). Test duration: ${totalDurationMinutes}min from ${newTotalQuestions} questions.${constraintWarnings.length > 0 ? ` WITH WARNINGS: ${constraintWarnings.join(", ")}` : ""}`
+      `✅ Question created by admin ${auth.user.email}: Sequence ${newQuestion.sequence} for test ${targetTest.name} (${targetTest.category})`
     );
 
     return c.json(response, 201);

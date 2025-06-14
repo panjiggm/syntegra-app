@@ -48,26 +48,8 @@ export async function startTestAttemptHandler(
 
     const testData = test[0];
 
-    // Check if test is active
-    if (testData.status !== "active") {
-      const errorResponse: AttemptErrorResponse = {
-        success: false,
-        message: "Test is not available",
-        errors: [
-          {
-            field: "test_status",
-            message: "Test is not currently active",
-            code: "TEST_INACTIVE",
-          },
-        ],
-        timestamp: new Date().toISOString(),
-      };
-      return c.json(errorResponse, 400);
-    }
-
     let sessionTestId: string | null = null;
     let sessionData = null;
-    let sessionModuleData = null;
 
     // If session code is provided, validate session access
     if (requestData.session_code) {
@@ -107,16 +89,11 @@ export async function startTestAttemptHandler(
       }
 
       sessionData = sessionResult[0].session;
-      sessionModuleData = sessionResult[0].module;
       sessionTestId = sessionData.id;
 
       // Check if session is active
       const now = new Date();
-      if (
-        sessionData.status !== "active" ||
-        now < sessionData.start_time ||
-        now > sessionData.end_time
-      ) {
+      if (now < sessionData.start_time || now > sessionData.end_time) {
         const errorResponse: AttemptErrorResponse = {
           success: false,
           message: "Session is not currently active",
@@ -131,16 +108,6 @@ export async function startTestAttemptHandler(
           timestamp: new Date().toISOString(),
         };
         return c.json(errorResponse, 400);
-      }
-
-      // **NEW: Validate session constraints if any**
-      if (sessionModuleData?.forced_question_type) {
-        console.log(
-          `🔒 Session "${sessionData.session_name}" enforces ${sessionModuleData.forced_question_type} question type for test "${testData.name}"`
-        );
-
-        // Note: We don't block attempt start based on question types since
-        // questions can be transformed at runtime. This is just for logging and response info.
       }
     }
 
@@ -172,7 +139,7 @@ export async function startTestAttemptHandler(
       const elapsed = now.getTime() - ongoingAttempt.start_time.getTime();
 
       if (elapsed < timeLimit) {
-        // Return the existing attempt with session constraint info
+        // Return the existing attempt
         const timeRemaining = Math.max(
           0,
           Math.floor((timeLimit - elapsed) / 1000)
@@ -225,17 +192,6 @@ export async function startTestAttemptHandler(
                   session_name: sessionData.session_name,
                   session_code: sessionData.session_code,
                   target_position: sessionData.target_position || "",
-                }
-              : null,
-            // **NEW: Include session constraints for frontend**
-            session_constraints: sessionModuleData
-              ? {
-                  forced_question_type: sessionModuleData.forced_question_type,
-                  uniform_question_settings:
-                    sessionModuleData.uniform_question_settings as any,
-                  sequence: sessionModuleData.sequence,
-                  is_required: sessionModuleData.is_required ?? true,
-                  weight: Number(sessionModuleData.weight),
                 }
               : null,
             time_remaining: timeRemaining,
@@ -301,21 +257,9 @@ export async function startTestAttemptHandler(
       (endTime.getTime() - now.getTime()) / 1000
     );
 
-    // **NEW: Prepare session constraint info for response**
-    const sessionConstraints = sessionModuleData
-      ? {
-          forced_question_type: sessionModuleData.forced_question_type,
-          uniform_question_settings:
-            sessionModuleData.uniform_question_settings as any,
-          sequence: sessionModuleData.sequence,
-          is_required: sessionModuleData.is_required ?? true,
-          weight: Number(sessionModuleData.weight),
-        }
-      : null;
-
     const response: StartTestAttemptResponse = {
       success: true,
-      message: `Test attempt started successfully${sessionConstraints?.forced_question_type ? ` with ${sessionConstraints.forced_question_type} question format` : ""}`,
+      message: "Test attempt started successfully",
       data: {
         id: newAttempt.id,
         user_id: newAttempt.user_id,
@@ -353,8 +297,6 @@ export async function startTestAttemptHandler(
               target_position: sessionData.target_position || "",
             }
           : null,
-        // **NEW: Include session constraints for frontend**
-        session_constraints: sessionConstraints,
         time_remaining: timeRemaining,
         progress_percentage: 0,
         can_continue: true,
@@ -362,11 +304,6 @@ export async function startTestAttemptHandler(
       },
       timestamp: new Date().toISOString(),
     };
-
-    // **NEW: Enhanced logging with constraint info**
-    console.log(
-      `✅ Test attempt started by ${user.email}: ${testData.name} (${testData.category})${sessionData ? ` in session "${sessionData.session_name}"` : ""}${sessionConstraints?.forced_question_type ? ` with enforced ${sessionConstraints.forced_question_type} format` : ""}`
-    );
 
     return c.json(response, 201);
   } catch (error) {

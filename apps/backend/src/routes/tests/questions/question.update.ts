@@ -301,12 +301,6 @@ export async function updateQuestionHandler(
       is_required: updatedQuestion.is_required ?? true,
       created_at: updatedQuestion.created_at,
       updated_at: updatedQuestion.updated_at,
-      // Add session compliance data
-      session_compliance: {
-        is_compliant: true,
-        issues: [],
-        applicable_constraint: null,
-      },
       // 📊 NEW: Include test duration info in response
       test_duration_info: {
         total_questions: totalQuestions,
