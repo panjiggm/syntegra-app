@@ -225,7 +225,14 @@ export async function bulkDeleteQuestionsHandler(
     }
 
     // 🔄 RE-SEQUENCE: Update sequence untuk semua question yang tersisa
-    // Menggunakan ROW_NUMBER() untuk generate urutan baru berdasarkan sequence lama
+    // Step 1: Set all sequences to negative values to avoid constraint conflicts
+    await db.execute(sql`
+      UPDATE ${questions} 
+      SET sequence = -sequence, updated_at = NOW()
+      WHERE test_id = ${testId}
+    `);
+
+    // Step 2: Update to final sequence values using ROW_NUMBER()
     await db.execute(sql`
       UPDATE ${questions} 
       SET 
@@ -234,7 +241,7 @@ export async function bulkDeleteQuestionsHandler(
       FROM (
         SELECT 
           id, 
-          ROW_NUMBER() OVER (ORDER BY sequence ASC, created_at ASC) as new_sequence
+          ROW_NUMBER() OVER (ORDER BY -sequence ASC, created_at ASC) as new_sequence
         FROM ${questions} 
         WHERE test_id = ${testId}
       ) as reordered
