@@ -119,6 +119,8 @@ export default function TestDetailPage() {
   const { useGetTestById } = useTests();
   const testQuery = useGetTestById(testId!);
 
+  const totalQuestions = testQuery.data?.data?.total_questions;
+
   // Handle refresh
   const handleRefresh = () => {
     testQuery.refetch();
@@ -277,7 +279,10 @@ export default function TestDetailPage() {
               className="flex items-center gap-2 px-8"
             >
               <BarChart3 className="h-4 w-4" />
-              Bank Soal
+              Bank Soal{" "}
+              <Badge variant="outline" className="bg-amber-100 text-amber-700">
+                {totalQuestions}
+              </Badge>
             </TabsTrigger>
           </TabsList>
           <div className="w-full border-b border-border"></div>
