@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React from "react";
 import {
   MoreHorizontal,
   Eye,
@@ -52,7 +52,6 @@ import {
 } from "@/components/ui/pagination";
 import type { UserData, GetUsersRequest } from "shared-types";
 import { useModalStore } from "@/stores/useModalStore";
-// import { UserDetailDrawer } from "./UserDetailDrawer";
 
 interface UsersResponse {
   data: UserData[];
@@ -86,20 +85,6 @@ export function TableUser({
   onEditUser,
 }: TableUserProps) {
   const { openDeleteUserModal } = useModalStore();
-
-  // State for user detail drawer
-  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
-  const [selectedUserName, setSelectedUserName] = useState<string>("");
-  const [isDetailDrawerOpen, setIsDetailDrawerOpen] = useState(false);
-
-  // Cleanup effect to reset state when component unmounts
-  useEffect(() => {
-    return () => {
-      setSelectedUserId(null);
-      setSelectedUserName("");
-      setIsDetailDrawerOpen(false);
-    };
-  }, []);
 
   // Format age from birth_date
   const calculateAge = (birthDate: Date | null) => {
@@ -136,12 +121,6 @@ export function TableUser({
 
   const handleViewUserDetail = (user: UserData) => {
     console.log("View user detail:", user.name);
-  };
-
-  const handleCloseDetailDrawer = () => {
-    setIsDetailDrawerOpen(false);
-    setSelectedUserId(null);
-    setSelectedUserName("");
   };
 
   return (
@@ -424,14 +403,6 @@ export function TableUser({
           )}
         </CardContent>
       </Card>
-
-      {/* User Detail Drawer */}
-      {/* <UserDetailDrawer
-        isOpen={isDetailDrawerOpen}
-        onClose={handleCloseDetailDrawer}
-        userId={selectedUserId}
-        userName={selectedUserName}
-      /> */}
     </>
   );
 }
