@@ -61,6 +61,15 @@ interface FormEditTestProps {
   watchedStatus: "active" | "inactive" | "archived" | "draft" | undefined;
   watchedTimeLimit: number | undefined;
   watchedCategory: string | undefined;
+  watchedQuestionType:
+    | "multiple_choice"
+    | "true_false"
+    | "text"
+    | "rating_scale"
+    | "drawing"
+    | "sequence"
+    | "matrix"
+    | undefined;
   availableCategories: readonly {
     readonly value: string;
     readonly label: string;
@@ -82,6 +91,7 @@ export function FormEditTest({
   watchedCategory,
   watchedTimeLimit,
   watchedStatus,
+  watchedQuestionType,
   availableCategories,
   test,
   initialDataLoaded,
@@ -289,7 +299,14 @@ export function FormEditTest({
                           • {watchedModuleType || test.module_type}
                         </p>
                         <p className={`text-xs `}>
-                          • {watchedCategory || test.category}
+                          •{" "}
+                          {watchedCategory ||
+                            test.category?.split("_").join(" ")}
+                        </p>
+                        <p className={`text-xs `}>
+                          •{" "}
+                          {watchedQuestionType ||
+                            test.question_type?.split("_").join(" ")}
                         </p>
                       </div>
                     </div>
@@ -379,25 +396,36 @@ export function FormEditTest({
 
               <FormField
                 control={form.control}
-                name="time_limit"
+                name="question_type"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Batas Waktu (menit) *</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        placeholder="30"
-                        min="1"
-                        max="480"
-                        {...field}
-                        onChange={(e) =>
-                          field.onChange(parseInt(e.target.value) || 0)
-                        }
-                        disabled={isSubmitting}
-                      />
-                    </FormControl>
+                    <FormLabel>Tipe Soal</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      value={field.value || "multiple_choice"}
+                      disabled={isSubmitting}
+                    >
+                      <FormControl>
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Pilih tipe soal" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="multiple_choice">
+                          Pilihan Ganda
+                        </SelectItem>
+                        <SelectItem value="true_false">Benar/Salah</SelectItem>
+                        <SelectItem value="text">Esai</SelectItem>
+                        <SelectItem value="rating_scale">
+                          Skala Rating
+                        </SelectItem>
+                        <SelectItem value="drawing">Gambar</SelectItem>
+                        <SelectItem value="sequence">Urutan</SelectItem>
+                        <SelectItem value="matrix">Matriks</SelectItem>
+                      </SelectContent>
+                    </Select>
                     <FormDescription>
-                      Waktu maksimal pengerjaan (1-480 menit)
+                      Soal dalam tes menggunakan tipe yang sama
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -469,33 +497,6 @@ export function FormEditTest({
                     </FormControl>
                     <FormDescription>
                       Skor minimum untuk lulus (0-100, kosongkan jika tidak ada)
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="display_order"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Urutan Tampilan</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        placeholder="0"
-                        min="0"
-                        max="9999"
-                        {...field}
-                        onChange={(e) =>
-                          field.onChange(parseInt(e.target.value) || 0)
-                        }
-                        disabled={isSubmitting}
-                      />
-                    </FormControl>
-                    <FormDescription>
-                      Urutan tampilan tes dalam daftar (0 = default)
                     </FormDescription>
                     <FormMessage />
                   </FormItem>

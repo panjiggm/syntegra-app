@@ -12,39 +12,6 @@ interface SidebarTipsProps {
 export function SidebarTips({ form }: SidebarTipsProps) {
   return (
     <div className="space-y-6">
-      {/* Design Tips */}
-      <Card className="border-purple-200 bg-purple-50">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-purple-900">
-            <Palette className="h-5 w-5" />
-            Tips Desain Visual
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="text-purple-800 text-sm space-y-3">
-          <div>
-            <h4 className="font-semibold mb-1">Pemilihan Icon:</h4>
-            <p>
-              Gunakan emoji yang relevan dengan jenis tes. Contoh: 🧠 untuk tes
-              inteligensi, 💭 untuk tes kepribadian, 🎯 untuk tes bakat
-            </p>
-          </div>
-          <div>
-            <h4 className="font-semibold mb-1">Pemilihan Warna:</h4>
-            <p>
-              Pilih warna yang mudah dibaca dan sesuai dengan tema tes. Warna
-              akan mempengaruhi tampilan card pada dashboard peserta
-            </p>
-          </div>
-          <div>
-            <h4 className="font-semibold mb-1">Konsistensi:</h4>
-            <p>
-              Gunakan skema warna yang konsisten untuk kategori tes yang sama
-              agar mudah dikenali
-            </p>
-          </div>
-        </CardContent>
-      </Card>
-
       {/* Tips */}
       <Card className="border-blue-200 bg-blue-50">
         <CardHeader>
@@ -62,11 +29,8 @@ export function SidebarTips({ form }: SidebarTipsProps) {
             </p>
           </div>
           <div>
-            <h4 className="font-semibold mb-1">Waktu Pengerjaan:</h4>
-            <p>
-              Sesuaikan dengan kompleksitas tes. Umumnya 15-60 menit untuk tes
-              kepribadian, 30-90 menit untuk tes inteligensi
-            </p>
+            <h4 className="font-semibold mb-1">Tipe Soal:</h4>
+            <p>Pilih tipe soal yang sesuai dengan tes yang akan dibuat.</p>
           </div>
           <div>
             <h4 className="font-semibold mb-1">Skor Kelulusan:</h4>
@@ -135,61 +99,6 @@ export function SidebarTips({ form }: SidebarTipsProps) {
               Tes kecerdasan emosional dan kognitif lainnya
             </p>
           </div>
-        </CardContent>
-      </Card>
-
-      {/* Color Guide */}
-      <Card className="border-green-200 bg-green-50">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-green-900">
-            <CheckCircle className="h-5 w-5" />
-            Rekomendasi Warna
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="text-green-800 text-sm space-y-2">
-          <div className="grid grid-cols-2 gap-2">
-            <div>
-              <div className="w-4 h-4 bg-cyan-500 rounded inline-block mr-2"></div>
-              <span className="text-xs">Inteligensi</span>
-            </div>
-            <div>
-              <div className="w-4 h-4 bg-pink-500 rounded inline-block mr-2"></div>
-              <span className="text-xs">Kepribadian</span>
-            </div>
-            <div>
-              <div className="w-4 h-4 bg-emerald-500 rounded inline-block mr-2"></div>
-              <span className="text-xs">Bakat</span>
-            </div>
-            <div>
-              <div className="w-4 h-4 bg-amber-500 rounded inline-block mr-2"></div>
-              <span className="text-xs">Minat</span>
-            </div>
-            <div>
-              <div className="w-4 h-4 bg-purple-500 rounded inline-block mr-2"></div>
-              <span className="text-xs">Proyektif</span>
-            </div>
-            <div>
-              <div className="w-4 h-4 bg-indigo-500 rounded inline-block mr-2"></div>
-              <span className="text-xs">Kognitif</span>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Next Steps */}
-      <Card className="border-green-200 bg-green-50">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-green-900">
-            <CheckCircle className="h-5 w-5" />
-            Langkah Selanjutnya
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="text-green-800 text-sm">
-          <p>
-            Setelah tes dibuat, Anda perlu menambahkan pertanyaan dan jawaban.
-            Tes baru akan otomatis tersedia dengan status "Aktif" dan siap
-            digunakan setelah pertanyaan ditambahkan.
-          </p>
         </CardContent>
       </Card>
 

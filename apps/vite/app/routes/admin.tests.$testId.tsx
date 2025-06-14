@@ -22,6 +22,7 @@ import { DialogDeleteTest } from "~/components/admin/test/DialogDeleteTest";
 import { DialogAddQuestion } from "~/components/admin/test-detail/DialogAddQuestion";
 import { DialogDeleteQuestion } from "~/components/admin/test-detail/DialogDeleteQuestion";
 import { DialogViewQuestion } from "~/components/admin/test-detail/DialogViewQuestion";
+import { QuestionTypeBadge } from "~/components/question-type-badge";
 
 // Module type labels mapping
 const MODULE_TYPE_LABELS = {
@@ -237,6 +238,7 @@ export default function TestDetailPage() {
                   }
                 </Badge>
                 <StatusBadge status={test.status || "active"} />
+                <QuestionTypeBadge questionType={test.question_type} />
                 <p className="text-sm text-muted-foreground">ID: {test.id}</p>
               </div>
             </div>

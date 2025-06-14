@@ -47,6 +47,7 @@ export default function EditTestPage() {
   const watchedStatus = form.watch("status");
   const watchedTimeLimit = form.watch("time_limit");
   const watchedCategory = form.watch("category");
+  const watchedQuestionType = form.watch("question_type");
 
   // Redirect if no testId
   useEffect(() => {
@@ -305,6 +306,7 @@ export default function EditTestPage() {
               watchedCardColor={watchedCardColor}
               watchedName={watchedName}
               watchedDescription={watchedDescription}
+              watchedQuestionType={watchedQuestionType}
               availableCategories={availableCategories}
               test={test}
               initialDataLoaded={initialDataLoaded}

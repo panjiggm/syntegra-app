@@ -59,6 +59,8 @@ export function FormNewTest({
   watchedCardColor,
   availableCategories,
 }: FormNewTestProps) {
+  console.log("form errors", form.formState.errors);
+  console.log("form isValid", form.formState.isValid);
   return (
     <div className="lg:col-span-2 space-y-6">
       <Form {...form}>
@@ -301,75 +303,42 @@ export function FormNewTest({
 
               <FormField
                 control={form.control}
-                name="time_limit"
+                name="question_type"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Batas Waktu (menit) *</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        placeholder="30"
-                        min="1"
-                        max="480"
-                        {...field}
-                        onChange={(e) =>
-                          field.onChange(parseInt(e.target.value) || 0)
-                        }
-                        disabled={isSubmitting}
-                      />
-                    </FormControl>
+                    <FormLabel>Tipe Soal</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      value={field.value || ""}
+                      disabled={isSubmitting}
+                    >
+                      <FormControl>
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Pilih tipe soal" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="multiple_choice">
+                          Pilihan Ganda
+                        </SelectItem>
+                        <SelectItem value="true_false">Benar/Salah</SelectItem>
+                        <SelectItem value="text">Esai</SelectItem>
+                        <SelectItem value="rating_scale">
+                          Skala Rating
+                        </SelectItem>
+                        <SelectItem value="drawing">Gambar</SelectItem>
+                        <SelectItem value="sequence">Urutan</SelectItem>
+                        <SelectItem value="matrix">Matriks</SelectItem>
+                      </SelectContent>
+                    </Select>
                     <FormDescription>
-                      Waktu maksimal pengerjaan (1-480 menit)
+                      Soal dalam tes menggunakan tipe yang sama
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
               />
 
-              <FormField
-                control={form.control}
-                name="status"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Status</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      value={field.value}
-                      disabled={isSubmitting}
-                    >
-                      <FormControl>
-                        <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Pilih status" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {statusOptions.map((option) => (
-                          <SelectItem key={option.value} value={option.value}>
-                            {option.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormDescription>Status ketersediaan tes</FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </CardContent>
-          </Card>
-
-          {/* Advanced Settings */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Target className="h-5 w-5" />
-                Pengaturan Lanjutan
-              </CardTitle>
-              <CardDescription>
-                Konfigurasi tambahan untuk tes (opsional)
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="grid gap-4 md:grid-cols-2">
               <FormField
                 control={form.control}
                 name="passing_score"
@@ -379,7 +348,7 @@ export function FormNewTest({
                     <FormControl>
                       <Input
                         type="number"
-                        placeholder="0"
+                        placeholder="80"
                         min="0"
                         max="100"
                         {...field}
@@ -390,34 +359,7 @@ export function FormNewTest({
                       />
                     </FormControl>
                     <FormDescription>
-                      Skor minimum untuk lulus (0-100, kosongkan jika tidak ada)
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="display_order"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Urutan Tampilan</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        placeholder="0"
-                        min="0"
-                        max="9999"
-                        {...field}
-                        onChange={(e) =>
-                          field.onChange(parseInt(e.target.value) || 0)
-                        }
-                        disabled={isSubmitting}
-                      />
-                    </FormControl>
-                    <FormDescription>
-                      Urutan tampilan tes dalam daftar (0 = default)
+                      Skor minimum untuk lulus (0-100)
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -432,7 +374,7 @@ export function FormNewTest({
               <div className="flex gap-4">
                 <Button
                   type="submit"
-                  disabled={isSubmitting || !form.formState.isValid}
+                  disabled={isSubmitting}
                   className="min-w-[120px]"
                 >
                   {isSubmitting ? (

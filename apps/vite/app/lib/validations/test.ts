@@ -59,9 +59,11 @@ export const createTestSchema = z.object({
       required_error: "Batas waktu wajib diisi",
       invalid_type_error: "Batas waktu harus berupa angka",
     })
-    .min(1, "Batas waktu minimal 1 menit")
+    .min(0, "Batas waktu minimal 0 menit")
     .max(480, "Batas waktu maksimal 480 menit (8 jam)")
-    .int("Batas waktu harus berupa bilangan bulat"),
+    .int("Batas waktu harus berupa bilangan bulat")
+    .optional()
+    .or(z.literal(0)),
 
   icon: z
     .string()
@@ -119,13 +121,13 @@ export type CreateTestFormData = z.infer<typeof createTestSchema>;
 export const createTestDefaultValues: Partial<CreateTestFormData> = {
   name: "",
   description: "",
-  module_type: undefined,
-  category: undefined,
-  time_limit: 30,
+  module_type: "intelligence",
+  category: "wais",
+  time_limit: 0,
   icon: "",
   card_color: "",
-  passing_score: 0,
-  question_type: undefined,
+  passing_score: 80,
+  question_type: "multiple_choice",
   display_order: 0,
   status: "active",
 };
