@@ -212,6 +212,10 @@ export interface QuestionStatsResponse {
   timestamp: string;
 }
 
+export interface BulkDeleteQuestionsRequest {
+  questionIds: string[];
+}
+
 export function useQuestions() {
   const queryClient = useQueryClient();
 
@@ -510,6 +514,35 @@ export function useQuestions() {
     });
   };
 
+  // Bulk Delete Questions
+  const useBulkDeleteQuestions = (testId: string) => {
+    return useMutation({
+      mutationFn: async (data: BulkDeleteQuestionsRequest) => {
+        const response = await apiClient.delete(
+          `/tests/${testId}/questions/bulk-delete`,
+          {
+            data,
+          }
+        );
+
+        return response;
+      },
+      onSuccess: (response) => {
+        queryClient.invalidateQueries({ queryKey: ["questions", testId] });
+        queryClient.invalidateQueries({ queryKey: ["tests", testId] });
+
+        toast.success(`${response.deleted_count} soal berhasil dihapus!`, {
+          description: `Durasi test: ${response.test_duration_info.total_duration_minutes} menit`,
+        });
+      },
+      onError: (error: Error) => {
+        toast.error("Gagal menghapus soal secara bulk", {
+          description: error.message,
+        });
+      },
+    });
+  };
+
   return {
     useGetQuestions,
     useGetQuestionById,
@@ -520,5 +553,6 @@ export function useQuestions() {
     useDeleteQuestion,
     useBulkCreateQuestions,
     useBulkUpdateQuestions,
+    useBulkDeleteQuestions,
   };
 }
