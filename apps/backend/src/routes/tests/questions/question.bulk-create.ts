@@ -412,25 +412,28 @@ export async function bulkCreateQuestionsHandler(
       success: true,
       message: `Successfully created ${insertedQuestions.length} questions. Test duration updated to ${totalDurationMinutes} minutes (${newTotalQuestions} questions total).`,
       data: {
-        total_created: insertedQuestions.length,
-        created_questions: insertedQuestions.map((q) => ({
-          ...q,
+        created_count: insertedQuestions.length,
+        questions: insertedQuestions.map((q) => ({
+          id: q.id,
+          question: q.question,
+          question_type: q.question_type,
+          sequence: q.sequence,
+          time_limit: q.time_limit,
           is_required: q.is_required ?? true,
-          session_compliance: {
-            is_compliant: true,
-            issues: [],
-            applicable_constraint: null,
-          },
-          test_duration_info: {
-            total_questions: newTotalQuestions,
-            total_duration_minutes: totalDurationMinutes,
-            total_duration_seconds: totalDurationSeconds,
-            average_time_per_question:
-              newTotalQuestions > 0
-                ? Math.round(totalDurationSeconds / newTotalQuestions)
-                : 0,
-          },
+          created_at: q.created_at.toISOString(),
         })),
+        test_id: testId,
+        new_total_questions: newTotalQuestions,
+        test_duration_info: {
+          total_questions: newTotalQuestions,
+          total_duration_minutes: totalDurationMinutes,
+          total_duration_seconds: totalDurationSeconds,
+          average_time_per_question:
+            newTotalQuestions > 0
+              ? Math.round(totalDurationSeconds / newTotalQuestions)
+              : 0,
+          questions_added: insertedQuestions.length,
+        },
       },
       timestamp: new Date().toISOString(),
     };

@@ -221,6 +221,17 @@ export async function deleteQuestionHandler(
         question: deletedQuestion.question,
         sequence: deletedQuestion.sequence,
         deleted_at: deletedAt,
+        test_duration_info: {
+          total_questions: newTotalQuestions,
+          total_duration_minutes: totalDurationMinutes,
+          total_duration_seconds: totalDurationSeconds,
+          average_time_per_question:
+            newTotalQuestions > 0
+              ? Math.round(totalDurationSeconds / newTotalQuestions)
+              : 0,
+          questions_remaining: newTotalQuestions,
+          deleted_question_time_limit: existingQuestion.time_limit || 0,
+        },
       },
       timestamp: new Date().toISOString(),
     };
