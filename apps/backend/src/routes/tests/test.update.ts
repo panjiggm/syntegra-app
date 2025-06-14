@@ -9,8 +9,6 @@ import {
   type TestErrorResponse,
   type UpdateTestDB,
   validateCategoryForModuleType,
-  getDefaultTimeLimitByCategory,
-  getRecommendedCardColorByCategory,
 } from "shared-types";
 
 export async function updateTestHandler(

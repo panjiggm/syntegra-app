@@ -6,9 +6,7 @@ import {
   type CreateTestRequest,
   type CreateTestResponse,
   type TestErrorResponse,
-  type CreateTestDB,
   validateCategoryForModuleType,
-  getDefaultTimeLimitByCategory,
   getRecommendedCardColorByCategory,
 } from "shared-types";
 
@@ -132,8 +130,7 @@ export async function createTestHandler(
     }
 
     // Apply defaults if not provided
-    const timeLimit =
-      data.time_limit || getDefaultTimeLimitByCategory(data.category);
+    const timeLimit = data.time_limit ?? 0;
     const cardColor =
       data.card_color || getRecommendedCardColorByCategory(data.category);
     const displayOrder = data.display_order ?? 0;
