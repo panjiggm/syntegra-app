@@ -196,6 +196,21 @@ export const GetQuestionByIdRequestSchema = z.object({
 
 // ==================== RESPONSE SCHEMAS ====================
 
+export const TestDurationInfoSchema = z.object({
+  total_questions: z.number(),
+  total_duration_minutes: z.number(),
+  total_duration_seconds: z.number(),
+  average_time_per_question: z.number(),
+});
+
+export const BulkTestDurationInfoSchema = z.object({
+  total_questions: z.number(),
+  total_duration_minutes: z.number(),
+  total_duration_seconds: z.number(),
+  average_time_per_question: z.number(),
+  questions_added: z.number(),
+});
+
 export const QuestionDataSchema = z.object({
   id: z.string().uuid(),
   test_id: z.string().uuid(),
@@ -224,6 +239,7 @@ export const QuestionDataSchema = z.object({
       })
       .nullable(),
   }),
+  test_duration_info: TestDurationInfoSchema.optional(),
 });
 
 // Create Question Response Schema
@@ -231,6 +247,19 @@ export const CreateQuestionResponseSchema = z.object({
   success: z.literal(true),
   message: z.string(),
   data: QuestionDataSchema,
+  session_constraints: z
+    .array(
+      z.object({
+        session_name: z.string().nullable(),
+        session_status: z
+          .enum(["active", "draft", "expired", "completed", "cancelled"])
+          .nullable(),
+        forced_question_type: QuestionTypeEnum.nullable(),
+        uniform_question_settings: z.any().nullable(),
+      })
+    )
+    .optional(),
+  warnings: z.array(z.string()).optional(),
   timestamp: z.string(),
 });
 
@@ -252,6 +281,10 @@ export const DeleteQuestionResponseSchema = z.object({
     question: z.string(),
     sequence: z.number(),
     deleted_at: z.string().datetime(),
+    test_duration_info: TestDurationInfoSchema.extend({
+      questions_remaining: z.number(),
+      deleted_question_time_limit: z.number(),
+    }),
   }),
   timestamp: z.string(),
 });
@@ -383,23 +416,39 @@ export const BulkCreateQuestionsRequestSchema = z.object({
   start_sequence: z.number().min(1).default(1), // Starting sequence number if auto_sequence is true
 });
 
+// Individual question response for bulk operations
+export const BulkQuestionResponseSchema = z.object({
+  id: z.string(),
+  question: z.string(),
+  question_type: z.enum([
+    "multiple_choice",
+    "true_false",
+    "text",
+    "rating_scale",
+    "drawing",
+    "sequence",
+    "matrix",
+  ]),
+  sequence: z.number(),
+  time_limit: z.number().nullable(),
+  is_required: z.boolean(),
+  created_at: z.string().datetime(),
+});
+
+// Bulk create questions response data
+export const BulkCreateQuestionsDataSchema = z.object({
+  created_count: z.number(),
+  questions: z.array(BulkQuestionResponseSchema),
+  test_id: z.string(),
+  new_total_questions: z.number(),
+  test_duration_info: BulkTestDurationInfoSchema.optional(),
+});
+
 // Bulk Create Questions Response Schema
 export const BulkCreateQuestionsResponseSchema = z.object({
   success: z.literal(true),
   message: z.string(),
-  data: z.object({
-    created_questions: z.array(QuestionDataSchema),
-    total_created: z.number(),
-    skipped_questions: z
-      .array(
-        z.object({
-          index: z.number(),
-          question: z.string(),
-          reason: z.string(),
-        })
-      )
-      .optional(),
-  }),
+  data: BulkCreateQuestionsDataSchema,
   timestamp: z.string(),
 });
 
@@ -502,33 +551,6 @@ export const BulkQuestionSchema = z.object({
   is_required: z.boolean().default(true),
 });
 
-// Individual question response for bulk operations
-export const BulkQuestionResponseSchema = z.object({
-  id: z.string(),
-  question: z.string(),
-  question_type: z.enum([
-    "multiple_choice",
-    "true_false",
-    "text",
-    "rating_scale",
-    "drawing",
-    "sequence",
-    "matrix",
-  ]),
-  sequence: z.number(),
-  time_limit: z.number().nullable(),
-  is_required: z.boolean(),
-  created_at: z.string().datetime(),
-});
-
-// Bulk create questions response data
-export const BulkCreateQuestionsDataSchema = z.object({
-  created_count: z.number(),
-  questions: z.array(BulkQuestionResponseSchema),
-  test_id: z.string(),
-  new_total_questions: z.number(),
-});
-
 // Database schema for creating questions
 export const CreateQuestionDBSchema = z.object({
   test_id: z.string(),
@@ -618,6 +640,7 @@ export type BulkCreateQuestionsRequest = z.infer<
 export type BulkCreateQuestionsResponse = z.infer<
   typeof BulkCreateQuestionsResponseSchema
 >;
+export type BulkTestDurationInfo = z.infer<typeof BulkTestDurationInfoSchema>;
 export type ReorderQuestionsRequest = z.infer<
   typeof ReorderQuestionsRequestSchema
 >;
@@ -638,6 +661,7 @@ export type BulkQuestionResponse = z.infer<typeof BulkQuestionResponseSchema>;
 export type BulkCreateQuestionsData = z.infer<
   typeof BulkCreateQuestionsDataSchema
 >;
+export type TestDurationInfo = z.infer<typeof TestDurationInfoSchema>;
 
 // ==================== DATABASE TYPES ====================
 export type CreateQuestionDB = {

@@ -7,6 +7,7 @@ import {
   type BulkCreateQuestionsResponse,
   type QuestionErrorResponse,
   type CreateQuestionDB,
+  getDefaultTimeLimitByQuestionType,
 } from "shared-types";
 
 // Individual question validation schemas
@@ -209,9 +210,32 @@ export async function bulkCreateQuestionsHandler(
     const env = getEnv(c);
     const db = getDbFromEnv(c.env);
 
+    // Get authenticated admin user
+    const auth = c.get("auth");
+    if (!auth || auth.user.role !== "admin") {
+      const errorResponse: QuestionErrorResponse = {
+        success: false,
+        message: "Access denied",
+        errors: [
+          {
+            field: "authorization",
+            message: "Only admin users can create questions",
+            code: "ACCESS_DENIED",
+          },
+        ],
+        timestamp: new Date().toISOString(),
+      };
+      return c.json(errorResponse, 403);
+    }
+
     // Verify test exists
     const [testExists] = await db
-      .select({ id: tests.id })
+      .select({
+        id: tests.id,
+        name: tests.name,
+        category: tests.category,
+        status: tests.status,
+      })
       .from(tests)
       .where(eq(tests.id, testId))
       .limit(1);
@@ -230,6 +254,23 @@ export async function bulkCreateQuestionsHandler(
         timestamp: new Date().toISOString(),
       };
       return c.json(errorResponse, 404);
+    }
+
+    // Check if test is archived
+    if (testExists.status === "archived") {
+      const errorResponse: QuestionErrorResponse = {
+        success: false,
+        message: "Cannot add questions to archived test",
+        errors: [
+          {
+            field: "status",
+            message: "Questions cannot be added to archived tests",
+            code: "TEST_ARCHIVED",
+          },
+        ],
+        timestamp: new Date().toISOString(),
+      };
+      return c.json(errorResponse, 400);
     }
 
     // Get current max sequence for auto-numbering
@@ -256,12 +297,17 @@ export async function bulkCreateQuestionsHandler(
           sequence = index + 1;
         }
 
+        // Apply default time limit if not provided
+        const timeLimit =
+          questionData.time_limit ||
+          getDefaultTimeLimitByQuestionType(questionData.question_type);
+
         const baseQuestion: CreateQuestionDB = {
           test_id: testId,
           question: questionData.question,
           question_type: questionData.question_type,
           sequence,
-          time_limit: questionData.time_limit || null,
+          time_limit: timeLimit, // ← Apply time limit with defaults
           image_url: questionData.image_url || null,
           audio_url: questionData.audio_url || null,
           is_required: questionData.is_required ?? true,
@@ -335,33 +381,63 @@ export async function bulkCreateQuestionsHandler(
       .values(questionsToInsert)
       .returning();
 
-    // Update test's total_questions count
-    const newTotalQuestions = await db
-      .select({ count: sql<number>`count(*)` })
+    // 🔄 AUTO-CALCULATE TEST DURATION: Get updated question count and total duration
+    const [testStatsResult] = await db
+      .select({
+        questionCount: sql<number>`count(*)`,
+        totalDurationSeconds: sql<number>`COALESCE(SUM(${questions.time_limit}), 0)`,
+      })
       .from(questions)
       .where(eq(questions.test_id, testId));
 
+    const newTotalQuestions = testStatsResult?.questionCount || 0;
+    const totalDurationSeconds = testStatsResult?.totalDurationSeconds || 0;
+
+    // Convert seconds to minutes (round up to ensure enough time)
+    const totalDurationMinutes = Math.ceil(totalDurationSeconds / 60);
+
+    // 🎯 UPDATE TEST: Both question count AND auto-calculated time limit
     await db
       .update(tests)
       .set({
-        total_questions: newTotalQuestions[0].count,
+        total_questions: newTotalQuestions,
+        time_limit: totalDurationMinutes, // ← AUTO-CALCULATED from questions
         updated_at: new Date(),
+        updated_by: auth.user.id,
       })
       .where(eq(tests.id, testId));
 
-    // Prepare response
+    // Prepare response with duration info
     const response: BulkCreateQuestionsResponse = {
       success: true,
-      message: `Successfully created ${insertedQuestions.length} questions`,
+      message: `Successfully created ${insertedQuestions.length} questions. Test duration updated to ${totalDurationMinutes} minutes (${newTotalQuestions} questions total).`,
       data: {
         total_created: insertedQuestions.length,
         created_questions: insertedQuestions.map((q) => ({
           ...q,
           is_required: q.is_required ?? true,
+          session_compliance: {
+            is_compliant: true,
+            issues: [],
+            applicable_constraint: null,
+          },
+          test_duration_info: {
+            total_questions: newTotalQuestions,
+            total_duration_minutes: totalDurationMinutes,
+            total_duration_seconds: totalDurationSeconds,
+            average_time_per_question:
+              newTotalQuestions > 0
+                ? Math.round(totalDurationSeconds / newTotalQuestions)
+                : 0,
+          },
         })),
       },
       timestamp: new Date().toISOString(),
     };
+
+    console.log(
+      `✅ Bulk questions created by admin ${auth.user.email}: ${insertedQuestions.length} questions for test ${testExists.name} (${testExists.category}). Test duration: ${totalDurationMinutes}min from ${newTotalQuestions} questions.`
+    );
 
     return c.json(response, 201);
   } catch (error) {

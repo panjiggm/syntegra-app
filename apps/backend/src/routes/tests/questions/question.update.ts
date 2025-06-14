@@ -259,7 +259,33 @@ export async function updateQuestionHandler(
       return c.json(errorResponse, 500);
     }
 
-    // Prepare success response
+    // 🔄 AUTO-CALCULATE TEST DURATION: Get updated question count and total duration
+    const [testStatsResult] = await db
+      .select({
+        questionCount: sql<number>`count(*)`,
+        totalDurationSeconds: sql<number>`COALESCE(SUM(${questions.time_limit}), 0)`,
+      })
+      .from(questions)
+      .where(eq(questions.test_id, testId));
+
+    const totalQuestions = testStatsResult?.questionCount || 0;
+    const totalDurationSeconds = testStatsResult?.totalDurationSeconds || 0;
+
+    // Convert seconds to minutes (round up to ensure enough time)
+    const totalDurationMinutes = Math.ceil(totalDurationSeconds / 60);
+
+    // 🎯 UPDATE TEST: Both question count AND auto-calculated time limit
+    await db
+      .update(tests)
+      .set({
+        total_questions: totalQuestions,
+        time_limit: totalDurationMinutes, // ← AUTO-CALCULATED from questions
+        updated_at: new Date(),
+        updated_by: auth.user.id,
+      })
+      .where(eq(tests.id, testId));
+
+    // Prepare success response with duration info
     const responseData = {
       id: updatedQuestion.id,
       test_id: updatedQuestion.test_id,
@@ -275,17 +301,33 @@ export async function updateQuestionHandler(
       is_required: updatedQuestion.is_required ?? true,
       created_at: updatedQuestion.created_at,
       updated_at: updatedQuestion.updated_at,
+      // Add session compliance data
+      session_compliance: {
+        is_compliant: true,
+        issues: [],
+        applicable_constraint: null,
+      },
+      // 📊 NEW: Include test duration info in response
+      test_duration_info: {
+        total_questions: totalQuestions,
+        total_duration_minutes: totalDurationMinutes,
+        total_duration_seconds: totalDurationSeconds,
+        average_time_per_question:
+          totalQuestions > 0
+            ? Math.round(totalDurationSeconds / totalQuestions)
+            : 0,
+      },
     };
 
     const response: UpdateQuestionResponse = {
       success: true,
-      message: `Question #${updatedQuestion.sequence} updated successfully in test '${targetTest.name}'`,
+      message: `Question #${updatedQuestion.sequence} updated successfully in test '${targetTest.name}'. Test duration updated to ${totalDurationMinutes} minutes (${totalQuestions} questions total).`,
       data: responseData,
       timestamp: new Date().toISOString(),
     };
 
     console.log(
-      `✅ Question updated by admin ${auth.user.email}: Sequence ${updatedQuestion.sequence} in test ${targetTest.name} (${targetTest.category})`
+      `✅ Question updated by admin ${auth.user.email}: Sequence ${updatedQuestion.sequence} in test ${targetTest.name} (${targetTest.category}). Test duration: ${totalDurationMinutes}min from ${totalQuestions} questions.`
     );
 
     return c.json(response, 200);

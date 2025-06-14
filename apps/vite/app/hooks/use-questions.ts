@@ -30,6 +30,12 @@ export interface QuestionData {
   is_required: boolean;
   created_at: string;
   updated_at: string;
+  test_duration_info?: {
+    total_questions: number;
+    total_duration_minutes: number;
+    total_duration_seconds: number;
+    average_time_per_question: number;
+  };
 }
 
 export interface GetQuestionsRequest {
@@ -97,6 +103,72 @@ export interface CreateQuestionResponse {
   success: boolean;
   message: string;
   data: QuestionData;
+  session_constraints?: Array<{
+    session_name: string | null;
+    session_status:
+      | "active"
+      | "draft"
+      | "expired"
+      | "completed"
+      | "cancelled"
+      | null;
+    forced_question_type: string | null;
+    uniform_question_settings: any;
+  }>;
+  warnings?: string[];
+  timestamp: string;
+}
+
+export interface BulkCreateQuestionsRequest {
+  questions: Array<{
+    question: string;
+    question_type:
+      | "multiple_choice"
+      | "true_false"
+      | "text"
+      | "rating_scale"
+      | "drawing"
+      | "sequence"
+      | "matrix";
+    options?: {
+      value: string;
+      label: string;
+      score?: number;
+    }[];
+    correct_answer?: string;
+    time_limit?: number;
+    image_url?: string;
+    audio_url?: string;
+    scoring_key?: Record<string, number>;
+    is_required?: boolean;
+  }>;
+  start_sequence?: number;
+  auto_sequence?: boolean;
+}
+
+export interface BulkCreateQuestionsResponse {
+  success: boolean;
+  message: string;
+  data: {
+    total_created: number;
+    created_questions: Array<{
+      id: string;
+      question: string;
+      question_type: string;
+      sequence: number;
+      time_limit?: number;
+      is_required: boolean;
+      created_at: string;
+    }>;
+    // NEW: Add test duration info
+    test_duration_info?: {
+      total_questions: number;
+      total_duration_minutes: number;
+      total_duration_seconds: number;
+      average_time_per_question: number;
+      questions_added: number;
+    };
+  };
   timestamp: string;
 }
 
@@ -234,10 +306,28 @@ export function useQuestions() {
         }
         return response;
       },
-      onSuccess: () => {
+      onSuccess: (response) => {
         queryClient.invalidateQueries({ queryKey: ["questions", testId] });
         queryClient.invalidateQueries({ queryKey: ["tests", testId] }); // Refresh test data
-        toast.success("Soal berhasil dibuat");
+
+        // Enhanced toast with duration info
+        if (response.data.test_duration_info) {
+          const { total_duration_minutes, total_questions } =
+            response.data.test_duration_info;
+          toast.success(`Soal berhasil dibuat!`, {
+            description: `Durasi test diperbarui: ${total_duration_minutes} menit (${total_questions} soal total)`,
+          });
+        } else {
+          toast.success("Soal berhasil dibuat");
+        }
+
+        // Show warnings if any
+        if (response.warnings && response.warnings.length > 0) {
+          toast.warning("Peringatan Session Constraint", {
+            description: response.warnings.join(". "),
+            duration: 5000,
+          });
+        }
       },
       onError: (error: Error) => {
         toast.error("Gagal membuat soal", {
@@ -266,10 +356,20 @@ export function useQuestions() {
         }
         return response;
       },
-      onSuccess: () => {
+      onSuccess: (response) => {
         queryClient.invalidateQueries({ queryKey: ["questions", testId] });
-        queryClient.invalidateQueries({ queryKey: ["tests", testId] });
-        toast.success("Soal berhasil diperbarui");
+        queryClient.invalidateQueries({ queryKey: ["tests", testId] }); // Refresh test data
+
+        // Enhanced toast with duration info
+        if (response.data.test_duration_info) {
+          const { total_duration_minutes, total_questions } =
+            response.data.test_duration_info;
+          toast.success(`Soal berhasil diperbarui!`, {
+            description: `Durasi test diperbarui: ${total_duration_minutes} menit (${total_questions} soal total)`,
+          });
+        } else {
+          toast.success("Soal berhasil diperbarui");
+        }
       },
       onError: (error: Error) => {
         toast.error("Gagal memperbarui soal", {
@@ -316,21 +416,79 @@ export function useQuestions() {
   const useDeleteQuestion = (testId: string) => {
     return useMutation({
       mutationFn: async (questionId: string) => {
-        const response = await apiClient.delete<DeleteQuestionResponse>(
-          `/tests/${testId}/questions/${questionId}`
-        );
+        const response = await apiClient.delete<{
+          success: boolean;
+          message: string;
+          test_duration_info?: {
+            total_questions: number;
+            total_duration_minutes: number;
+            total_duration_seconds: number;
+            average_time_per_question: number;
+          };
+          timestamp: string;
+        }>(`/tests/${testId}/questions/${questionId}`);
+
         if (!response.success) {
           throw new Error(response.message || "Failed to delete question");
         }
         return response;
       },
-      onSuccess: () => {
+      onSuccess: (response) => {
         queryClient.invalidateQueries({ queryKey: ["questions", testId] });
         queryClient.invalidateQueries({ queryKey: ["tests", testId] });
-        toast.success("Soal berhasil dihapus");
+
+        // Enhanced toast with duration info
+        if (response.test_duration_info) {
+          const { total_duration_minutes, total_questions } =
+            response.test_duration_info;
+          toast.success(`Soal berhasil dihapus!`, {
+            description: `Durasi test diperbarui: ${total_duration_minutes} menit (${total_questions} soal tersisa)`,
+          });
+        } else {
+          toast.success("Soal berhasil dihapus");
+        }
       },
       onError: (error: Error) => {
         toast.error("Gagal menghapus soal", {
+          description: error.message,
+        });
+      },
+    });
+  };
+
+  const useBulkCreateQuestions = (testId: string) => {
+    return useMutation({
+      mutationFn: async (data: BulkCreateQuestionsRequest) => {
+        const response = await apiClient.post<BulkCreateQuestionsResponse>(
+          `/tests/${testId}/questions/bulk`,
+          data
+        );
+        if (!response.success) {
+          throw new Error(
+            response.message || "Failed to bulk create questions"
+          );
+        }
+        return response;
+      },
+      onSuccess: (response) => {
+        queryClient.invalidateQueries({ queryKey: ["questions", testId] });
+        queryClient.invalidateQueries({ queryKey: ["tests", testId] }); // Refresh test data
+
+        // Enhanced toast with duration info
+        if (response.data.test_duration_info) {
+          const { total_duration_minutes, total_questions, questions_added } =
+            response.data.test_duration_info;
+
+          toast.success(`${questions_added} soal berhasil dibuat!`, {
+            description: `Durasi test diperbarui: ${total_duration_minutes} menit (${total_questions} soal total)`,
+            duration: 4000,
+          });
+        } else {
+          toast.success(`${response.data.total_created} soal berhasil dibuat`);
+        }
+      },
+      onError: (error: Error) => {
+        toast.error("Gagal membuat soal secara bulk", {
           description: error.message,
         });
       },
@@ -341,27 +499,25 @@ export function useQuestions() {
   const useBulkUpdateQuestions = (testId: string) => {
     return useMutation({
       mutationFn: async (
-        questions: Array<{ id: string; sequence: number }>
+        updates: Array<{ questionId: string; data: UpdateQuestionRequest }>
       ) => {
-        const response = await apiClient.put(
-          `/tests/${testId}/questions/bulk/sequence`,
-          { questions }
+        // Process bulk updates...
+        const response = await apiClient.patch(
+          `/tests/${testId}/questions/bulk`,
+          updates
         );
-        if (!response.success) {
-          throw new Error(
-            response.message || "Failed to update question order"
-          );
-        }
         return response;
       },
-      onSuccess: () => {
+      onSuccess: (response) => {
         queryClient.invalidateQueries({ queryKey: ["questions", testId] });
-        toast.success("Urutan soal berhasil diperbarui");
-      },
-      onError: (error: Error) => {
-        toast.error("Gagal memperbarui urutan soal", {
-          description: error.message,
-        });
+        queryClient.invalidateQueries({ queryKey: ["tests", testId] });
+
+        // Show duration update info
+        if (response.test_duration_info) {
+          toast.success(`${response.updated_count} soal berhasil diperbarui!`, {
+            description: `Durasi test: ${response.test_duration_info.total_duration_minutes} menit`,
+          });
+        }
       },
     });
   };
@@ -374,6 +530,7 @@ export function useQuestions() {
     useUpdateQuestion,
     useUpdateQuestionSequence,
     useDeleteQuestion,
+    useBulkCreateQuestions,
     useBulkUpdateQuestions,
   };
 }

@@ -114,6 +114,7 @@ export async function deleteQuestionHandler(
         question: questions.question,
         sequence: questions.sequence,
         question_type: questions.question_type,
+        time_limit: questions.time_limit, // ← Track time limit for logging
         created_at: questions.created_at,
       })
       .from(questions)
@@ -184,30 +185,36 @@ export async function deleteQuestionHandler(
       return c.json(errorResponse, 500);
     }
 
-    // Update test's total_questions count
-    const [updatedQuestionCount] = await db
+    // 🔄 AUTO-CALCULATE TEST DURATION: Get updated question count and total duration
+    const [testStatsResult] = await db
       .select({
-        count: sql<number>`count(*)`,
+        questionCount: sql<number>`count(*)`,
+        totalDurationSeconds: sql<number>`COALESCE(SUM(${questions.time_limit}), 0)`,
       })
       .from(questions)
       .where(eq(questions.test_id, testId));
 
-    const newTotalQuestions = updatedQuestionCount?.count || 0;
+    const newTotalQuestions = testStatsResult?.questionCount || 0;
+    const totalDurationSeconds = testStatsResult?.totalDurationSeconds || 0;
 
-    // Update the test with the new question count
+    // Convert seconds to minutes (round up to ensure enough time)
+    const totalDurationMinutes = Math.ceil(totalDurationSeconds / 60);
+
+    // 🎯 UPDATE TEST: Both question count AND auto-calculated time limit
     await db
       .update(tests)
       .set({
         total_questions: newTotalQuestions,
+        time_limit: totalDurationMinutes, // ← AUTO-CALCULATED from remaining questions
         updated_at: new Date(),
         updated_by: auth.user.id,
       })
       .where(eq(tests.id, testId));
 
-    // Prepare success response
+    // Prepare success response with duration info
     const response: DeleteQuestionResponse = {
       success: true,
-      message: `Question #${deletedQuestion.sequence} has been permanently deleted from test '${targetTest.name}'`,
+      message: `Question #${deletedQuestion.sequence} has been permanently deleted from test '${targetTest.name}'. Test duration updated to ${totalDurationMinutes} minutes (${newTotalQuestions} questions remaining).`,
       data: {
         id: deletedQuestion.id,
         test_id: deletedQuestion.test_id,
@@ -217,10 +224,6 @@ export async function deleteQuestionHandler(
       },
       timestamp: new Date().toISOString(),
     };
-
-    console.log(
-      `✅ Question permanently deleted by admin ${auth.user.email}: Sequence ${deletedQuestion.sequence} from test ${targetTest.name} (${targetTest.category})`
-    );
 
     return c.json(response, 200);
   } catch (error) {
