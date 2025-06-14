@@ -210,6 +210,7 @@ export const tests = pgTable(
     passing_score: numeric("passing_score", { precision: 5, scale: 2 }),
     status: testStatusEnum("status").default("active"),
     instructions: text("instructions"),
+    question_type: questionTypeEnum("question_type").default("multiple_choice"),
     created_at: timestamp("created_at").defaultNow().notNull(),
     updated_at: timestamp("updated_at").defaultNow().notNull(),
     created_by: uuid("created_by"),
@@ -220,6 +221,7 @@ export const tests = pgTable(
     moduleTypeIdx: index("tests_module_type_idx").on(table.module_type),
     statusIdx: index("tests_status_idx").on(table.status),
     displayOrderIdx: index("tests_display_order_idx").on(table.display_order),
+    questionTypeIdx: index("tests_question_type_idx").on(table.question_type),
   })
 );
 
