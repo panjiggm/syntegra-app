@@ -147,6 +147,7 @@ app.get("/", (c) => {
             "PUT /api/v1/tests/:testId/questions/:questionId/sequence",
           delete: "DELETE /api/v1/tests/:testId/questions/:questionId",
           stats: "GET /api/v1/tests/:testId/questions/stats",
+          bulkDelete: "DELETE /api/v1/tests/:testId/questions/bulk-delete",
         },
       },
       attempts: {

@@ -15,6 +15,7 @@ import {
   UpdateQuestionSequenceRequestSchema,
   UpdateQuestionSequenceByIdRequestSchema,
   type QuestionErrorResponse,
+  BulkDeleteQuestionsRequestSchema,
 } from "shared-types";
 import { createQuestionHandler } from "./question.create";
 import { getQuestionsListHandler } from "./question.list";
@@ -27,6 +28,7 @@ import { reorderQuestionsHandler } from "./question.reorder";
 import { updateQuestionSequenceHandler } from "./question.sequence";
 import { authenticateUser, requireAdmin } from "@/middleware/auth";
 import { generalApiRateLimit } from "@/middleware/rateLimiter";
+import { bulkDeleteQuestionsHandler } from "./question.bulk-delete";
 
 const questionRoutes = new Hono<{ Bindings: CloudflareBindings }>();
 
@@ -382,6 +384,31 @@ questionRoutes.delete(
     }
   }),
   deleteQuestionHandler
+);
+
+// Bulk Delete Questions
+
+questionRoutes.delete(
+  "/bulk-delete",
+  generalApiRateLimit,
+  authenticateUser,
+  requireAdmin,
+  zValidator("json", BulkDeleteQuestionsRequestSchema, (result, c) => {
+    if (!result.success) {
+      const errorResponse: QuestionErrorResponse = {
+        success: false,
+        message: "Validation failed",
+        errors: result.error.errors.map((err) => ({
+          field: err.path.join("."),
+          message: err.message,
+          code: err.code,
+        })),
+        timestamp: new Date().toISOString(),
+      };
+      return c.json(errorResponse, 400);
+    }
+  }),
+  bulkDeleteQuestionsHandler
 );
 
 // ==================== ERROR HANDLERS ====================

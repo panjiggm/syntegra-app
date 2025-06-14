@@ -263,6 +263,18 @@ export const DeleteQuestionResponseSchema = z.object({
   timestamp: z.string(),
 });
 
+export const BulkDeleteQuestionsRequestSchema = z.object({
+  questionIds: z.array(z.string().uuid()),
+});
+
+export const BulkDeleteQuestionsResponseSchema = z.object({
+  success: z.literal(true),
+  message: z.string(),
+  data: z.object({
+    deleted_questions: z.array(QuestionDataSchema),
+  }),
+});
+
 // Get Question By ID Response Schema
 export const GetQuestionByIdResponseSchema = z.object({
   success: z.literal(true),
@@ -601,6 +613,13 @@ export type BulkQuestionResponse = z.infer<typeof BulkQuestionResponseSchema>;
 export type BulkCreateQuestionsData = z.infer<
   typeof BulkCreateQuestionsDataSchema
 >;
+export type BulkDeleteQuestionsRequest = z.infer<
+  typeof BulkDeleteQuestionsRequestSchema
+>;
+export type BulkDeleteQuestionsResponse = z.infer<
+  typeof BulkDeleteQuestionsResponseSchema
+>;
+
 export type TestDurationInfo = z.infer<typeof TestDurationInfoSchema>;
 
 // ==================== DATABASE TYPES ====================
