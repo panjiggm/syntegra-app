@@ -70,6 +70,7 @@ export async function deleteTestHandler(
         name: tests.name,
         category: tests.category,
         status: tests.status,
+        display_order: tests.display_order,
       })
       .from(tests)
       .where(eq(tests.id, testId))
@@ -181,6 +182,7 @@ export async function deleteTestHandler(
           name: tests.name,
           category: tests.category,
           updated_at: tests.updated_at,
+          display_order: tests.display_order,
         });
 
       if (!archivedTest) {
@@ -192,9 +194,25 @@ export async function deleteTestHandler(
         return c.json(errorResponse, 500);
       }
 
+      // 🔄 RE-ORDER: Update display_order for remaining active tests
+      await db.execute(sql`
+        UPDATE ${tests} 
+        SET 
+          display_order = reordered.new_order,
+          updated_at = NOW()
+        FROM (
+          SELECT 
+            id, 
+            ROW_NUMBER() OVER (ORDER BY display_order ASC, created_at ASC) as new_order
+          FROM ${tests} 
+          WHERE status != 'archived'
+        ) as reordered
+        WHERE ${tests}.id = reordered.id AND ${tests}.status != 'archived'
+      `);
+
       const response: DeleteTestResponse = {
         success: true,
-        message: `Test '${archivedTest.name}' has been archived (soft deleted) because it has existing test attempts or is used in sessions`,
+        message: `Test '${archivedTest.name}' has been archived (soft deleted) because it has existing test attempts or is used in sessions. Display order has been reordered.`,
         data: {
           id: archivedTest.id,
           name: archivedTest.name,
@@ -218,6 +236,9 @@ export async function deleteTestHandler(
       // Start a transaction to ensure data consistency
       const deletedAt = new Date().toISOString();
 
+      // Get the display_order of the test being deleted for re-ordering
+      const deletedDisplayOrder = existingTest.display_order;
+
       // First, delete all questions related to this test
       await db.delete(questions).where(eq(questions.test_id, testId));
 
@@ -240,9 +261,25 @@ export async function deleteTestHandler(
         return c.json(errorResponse, 500);
       }
 
+      // 🔄 RE-ORDER: Update display_order for remaining tests
+      await db.execute(sql`
+        UPDATE ${tests} 
+        SET 
+          display_order = reordered.new_order,
+          updated_at = NOW()
+        FROM (
+          SELECT 
+            id, 
+            ROW_NUMBER() OVER (ORDER BY display_order ASC, created_at ASC) as new_order
+          FROM ${tests} 
+          WHERE status != 'archived'
+        ) as reordered
+        WHERE ${tests}.id = reordered.id AND ${tests}.status != 'archived'
+      `);
+
       const response: DeleteTestResponse = {
         success: true,
-        message: `Test '${deletedTest.name}' has been permanently deleted`,
+        message: `Test '${deletedTest.name}' has been permanently deleted. Display order has been reordered.`,
         data: {
           id: deletedTest.id,
           name: deletedTest.name,
