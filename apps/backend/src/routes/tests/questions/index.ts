@@ -388,7 +388,7 @@ questionRoutes.delete(
 
 // Bulk Delete Questions
 
-questionRoutes.delete(
+questionRoutes.post(
   "/bulk-delete",
   generalApiRateLimit,
   authenticateUser,

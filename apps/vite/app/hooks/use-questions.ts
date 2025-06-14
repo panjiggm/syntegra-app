@@ -518,11 +518,9 @@ export function useQuestions() {
   const useBulkDeleteQuestions = (testId: string) => {
     return useMutation({
       mutationFn: async (data: BulkDeleteQuestionsRequest) => {
-        const response = await apiClient.delete(
+        const response = await apiClient.post(
           `/tests/${testId}/questions/bulk-delete`,
-          {
-            data,
-          }
+          data
         );
 
         return response;
@@ -531,9 +529,9 @@ export function useQuestions() {
         queryClient.invalidateQueries({ queryKey: ["questions", testId] });
         queryClient.invalidateQueries({ queryKey: ["tests", testId] });
 
-        toast.success(`${response.deleted_count} soal berhasil dihapus!`, {
-          description: `Durasi test: ${response.test_duration_info.total_duration_minutes} menit`,
-        });
+        toast.success(
+          `${response.data.deleted_questions.length} soal berhasil dihapus!`
+        );
       },
       onError: (error: Error) => {
         toast.error("Gagal menghapus soal secara bulk", {

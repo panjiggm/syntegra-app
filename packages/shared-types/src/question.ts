@@ -264,7 +264,7 @@ export const DeleteQuestionResponseSchema = z.object({
 });
 
 export const BulkDeleteQuestionsRequestSchema = z.object({
-  questionIds: z.array(z.string().uuid()),
+  questionIds: z.array(z.string()),
 });
 
 export const BulkDeleteQuestionsResponseSchema = z.object({
