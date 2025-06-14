@@ -54,6 +54,7 @@ import {
 
 // Hooks
 import { useTests, type TestData } from "~/hooks/use-tests";
+import { QuestionTypeBadge } from "~/components/question-type-badge";
 
 interface TableTestProps {
   data: TestData[];
@@ -215,7 +216,7 @@ export function TableTest({
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-12">
+              <TableHead className="w-8">
                 <Checkbox
                   checked={allSelected}
                   ref={(el) => {
@@ -225,6 +226,7 @@ export function TableTest({
                   onCheckedChange={(checked) => {
                     onSelectAll?.(!!checked);
                   }}
+                  className="cursor-pointer"
                 />
               </TableHead>
               <TableHead>
@@ -246,6 +248,9 @@ export function TableTest({
                   Tipe Modul
                   {getSortIcon("module_type")}
                 </Button>
+              </TableHead>
+              <TableHead className="h-auto p-0 font-semibold hover:bg-transparent">
+                Tipe Soal
               </TableHead>
               <TableHead>
                 <Button
@@ -316,13 +321,14 @@ export function TableTest({
                   <TableCell>
                     <Checkbox
                       checked={selectedTests.includes(test.id)}
+                      className="cursor-pointer"
                       onCheckedChange={(checked) => {
                         onSelectTest?.(test.id, !!checked);
                       }}
                     />
                   </TableCell>
                   <TableCell>
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2">
                       {test.icon && (
                         <span className="text-lg">{test.icon}</span>
                       )}
@@ -347,6 +353,9 @@ export function TableTest({
                     >
                       {formatModuleType(test.module_type)}
                     </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <QuestionTypeBadge questionType={test.question_type} />
                   </TableCell>
                   <TableCell>
                     <Badge variant="outline" className="font-mono text-xs">
@@ -387,7 +396,7 @@ export function TableTest({
                           locale: id,
                         })}
                       </div>
-                      <div className="text-muted-foreground">
+                      <div className="text-muted-foreground text-xs">
                         {formatDistance(new Date(test.created_at), new Date(), {
                           addSuffix: true,
                           locale: id,
@@ -398,11 +407,8 @@ export function TableTest({
                   <TableCell>
                     <TestTableActions
                       test={test}
-                      onEdit={onEdit}
                       onView={onView}
-                      onDuplicate={handleDuplicate}
                       onDelete={(test) => setDeleteTest(test)}
-                      isDuplicating={duplicateTestMutation.isPending}
                     />
                   </TableCell>
                 </TableRow>
@@ -445,25 +451,15 @@ export function TableTest({
 // Test Table Actions Component
 interface TestTableActionsProps {
   test: TestData;
-  onEdit?: (test: TestData) => void;
   onView?: (test: TestData) => void;
-  onDuplicate?: (test: TestData) => void;
   onDelete?: (test: TestData) => void;
-  isDuplicating?: boolean;
 }
 
-function TestTableActions({
-  test,
-  onEdit,
-  onView,
-  onDuplicate,
-  onDelete,
-  isDuplicating = false,
-}: TestTableActionsProps) {
+function TestTableActions({ test, onView, onDelete }: TestTableActionsProps) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" className="h-8 w-8 p-0">
+        <Button variant="ghost" className="h-8 w-8 p-0 cursor-pointer">
           <span className="sr-only">Buka menu</span>
           <MoreHorizontal className="h-4 w-4" />
         </Button>

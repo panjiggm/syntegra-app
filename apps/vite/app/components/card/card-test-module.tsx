@@ -46,6 +46,16 @@ interface TestData {
   subcategory?: string[] | undefined;
   total_questions?: number | undefined;
   passing_score?: number | undefined;
+  question_type?:
+    | "multiple_choice"
+    | "true_false"
+    | "text"
+    | "rating_scale"
+    | "drawing"
+    | "sequence"
+    | "matrix"
+    | null
+    | undefined;
   status?: "active" | "inactive" | "archived" | "draft" | undefined;
   instructions?: string | undefined;
   created_at?: string | undefined;
@@ -165,7 +175,10 @@ const CardTestModule = ({ test }: { test: TestData }) => {
 
         <div className={`mt-2 pt-2 border-t border-gray-300`}>
           <p className={`text-xs `}>• {test.module_type}</p>
-          <p className={`text-xs `}>• {test.category}</p>
+          <p className={`text-xs `}>• {test.category?.split("_").join(" ")}</p>
+          <p className={`text-xs `}>
+            • {test.question_type?.split("_").join(" ")}
+          </p>
         </div>
       </div>
     </div>

@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import CardTestModule from "~/components/card/card-test-module";
 import type { TestData } from "~/hooks/use-tests";
+import { QuestionTypeBadge } from "~/components/question-type-badge";
 
 // Module type labels mapping
 const MODULE_TYPE_LABELS = {
@@ -208,6 +209,14 @@ export function TestOverview({ test }: TestOverviewProps) {
                     Kategori
                   </label>
                   <p className="text-sm">{CATEGORY_LABELS[test.category]}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">
+                    Tipe Soal
+                  </label>
+                  <div>
+                    <QuestionTypeBadge questionType={test.question_type} />
+                  </div>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-muted-foreground">
