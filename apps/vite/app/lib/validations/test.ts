@@ -84,6 +84,18 @@ export const createTestSchema = z.object({
     .optional()
     .or(z.literal(0)),
 
+  question_type: z
+    .enum([
+      "multiple_choice",
+      "true_false",
+      "text",
+      "rating_scale",
+      "drawing",
+      "sequence",
+      "matrix",
+    ])
+    .optional(),
+
   display_order: z
     .number({
       invalid_type_error: "Urutan tampilan harus berupa angka",
@@ -113,6 +125,7 @@ export const createTestDefaultValues: Partial<CreateTestFormData> = {
   icon: "",
   card_color: "",
   passing_score: 0,
+  question_type: undefined,
   display_order: 0,
   status: "active",
 };

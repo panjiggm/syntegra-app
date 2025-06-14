@@ -138,8 +138,8 @@ export interface BulkCreateQuestionsResponse {
   success: boolean;
   message: string;
   data: {
-    total_created: number;
-    created_questions: Array<{
+    created_count: number;
+    questions: Array<{
       id: string;
       question: string;
       question_type: string;
@@ -148,13 +148,13 @@ export interface BulkCreateQuestionsResponse {
       is_required: boolean;
       created_at: string;
     }>;
-    // NEW: Add test duration info
+    test_id: string;
+    new_total_questions: number;
     test_duration_info?: {
       total_questions: number;
       total_duration_minutes: number;
       total_duration_seconds: number;
       average_time_per_question: number;
-      questions_added: number;
     };
   };
   timestamp: string;
@@ -468,15 +468,18 @@ export function useQuestions() {
 
         // Enhanced toast with duration info
         if (response.data.test_duration_info) {
-          const { total_duration_minutes, total_questions, questions_added } =
+          const { total_duration_minutes, total_questions } =
             response.data.test_duration_info;
 
-          toast.success(`${questions_added} soal berhasil dibuat!`, {
-            description: `Durasi test diperbarui: ${total_duration_minutes} menit (${total_questions} soal total)`,
-            duration: 4000,
-          });
+          toast.success(
+            `${response.data.created_count} soal berhasil dibuat!`,
+            {
+              description: `Durasi test diperbarui: ${total_duration_minutes} menit (${total_questions} soal total)`,
+              duration: 4000,
+            }
+          );
         } else {
-          toast.success(`${response.data.total_created} soal berhasil dibuat`);
+          toast.success(`${response.data.created_count} soal berhasil dibuat`);
         }
       },
       onError: (error: Error) => {

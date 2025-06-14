@@ -40,6 +40,15 @@ export interface TestData {
   display_order: number;
   instructions?: string;
   passing_score?: number;
+  question_type?:
+    | "multiple_choice"
+    | "true_false"
+    | "text"
+    | "rating_scale"
+    | "drawing"
+    | "sequence"
+    | "matrix"
+    | null;
   difficulty_level?: "easy" | "medium" | "hard" | "expert";
   tags?: string[];
   test_prerequisites?: string[];
@@ -349,6 +358,37 @@ export function useTests() {
     });
   };
 
+  // Create test
+  const useCreateTest = () => {
+    return useMutation({
+      mutationFn: async (data: Partial<TestData>) => {
+        const response = await apiClient.post(`/tests`, data);
+        if (!response.success) {
+          throw new Error(response.message || "Failed to create test");
+        }
+        return response.data;
+      },
+      onSuccess: (newTest) => {
+        // Invalidate lists and stats to reflect changes
+        queryClient.invalidateQueries({ queryKey: queryKeys.tests.lists() });
+        queryClient.invalidateQueries({ queryKey: queryKeys.tests.stats() });
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.tests.filterOptions(),
+        });
+
+        toast.success("Tes berhasil dibuat!", {
+          description: `${newTest.name} telah ditambahkan ke sistem`,
+        });
+      },
+      onError: (error: Error) => {
+        toast.error("Gagal membuat tes", {
+          description: error.message,
+          duration: 5000,
+        });
+      },
+    });
+  };
+
   // Update test
   const useUpdateTest = () => {
     return useMutation({
@@ -407,6 +447,7 @@ export function useTests() {
     useGetTestFilterOptions,
 
     // Mutations
+    useCreateTest,
     useDeleteTest,
     useDuplicateTest,
     useUpdateTest,
