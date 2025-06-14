@@ -201,15 +201,10 @@ export async function bulkDeleteQuestionsHandler(
       return c.json(errorResponse, 409);
     }
 
-    // Calculate total time limit of questions being deleted
-    const totalDeletedTimeLimit = existingQuestions.reduce(
-      (sum, question) => sum + (question.time_limit || 0),
-      0
-    );
-
-    // Delete all questions (hard delete since no dependencies)
+    // Start database transaction
     const deletedAt = new Date().toISOString();
 
+    // Delete all questions (hard delete since no dependencies)
     const deletedQuestions = await db
       .delete(questions)
       .where(inArray(questions.id, body.questionIds))
@@ -228,6 +223,23 @@ export async function bulkDeleteQuestionsHandler(
       };
       return c.json(errorResponse, 500);
     }
+
+    // 🔄 RE-SEQUENCE: Update sequence untuk semua question yang tersisa
+    // Menggunakan ROW_NUMBER() untuk generate urutan baru berdasarkan sequence lama
+    await db.execute(sql`
+      UPDATE ${questions} 
+      SET 
+        sequence = reordered.new_sequence,
+        updated_at = NOW()
+      FROM (
+        SELECT 
+          id, 
+          ROW_NUMBER() OVER (ORDER BY sequence ASC, created_at ASC) as new_sequence
+        FROM ${questions} 
+        WHERE test_id = ${testId}
+      ) as reordered
+      WHERE ${questions}.id = reordered.id
+    `);
 
     // 🔄 AUTO-CALCULATE TEST DURATION: Get updated question count and total duration
     const [testStatsResult] = await db
@@ -263,7 +275,7 @@ export async function bulkDeleteQuestionsHandler(
     // Prepare success response with duration info
     const response: BulkDeleteQuestionsResponse = {
       success: true,
-      message: `Successfully deleted ${deletedQuestions.length} questions from test '${targetTest.name}'. Test duration updated to ${totalDurationMinutes} minutes (${newTotalQuestions} questions remaining).`,
+      message: `Successfully deleted ${deletedQuestions.length} questions from test '${targetTest.name}'. Test duration updated to ${totalDurationMinutes} minutes (${newTotalQuestions} questions remaining). Question sequences have been reordered.`,
       data: {
         deleted_questions: sortedDeletedQuestions.map((q) => ({
           id: q.id,
