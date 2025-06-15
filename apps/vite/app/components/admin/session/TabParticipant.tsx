@@ -58,7 +58,7 @@ import {
 import type { Session } from "~/hooks/use-sessions";
 import { useSessionParticipants } from "~/hooks/use-session-participants";
 import { useBulkParticipantsDialogStore } from "~/stores/use-bulk-participants-dialog-store";
-import { DialogBulkParticipants } from "./DialogBulkParticipants";
+import { DrawerBulkParticipants } from "./DrawerBulkParticipants";
 import { formatDateTime } from "~/lib/utils/date";
 import { toast } from "sonner";
 
@@ -176,7 +176,7 @@ export const TabParticipant = ({ session }: TabParticipantProps) => {
   return (
     <div className="space-y-6">
       {/* Bulk Participants Dialog */}
-      <DialogBulkParticipants />
+      <DrawerBulkParticipants />
 
       <Card>
         <CardHeader className="flex items-center justify-between">

@@ -148,6 +148,63 @@ interface RemoveParticipantResponse {
 export function useSessionParticipants() {
   const queryClient = useQueryClient();
 
+  // Get available users for session (users not already in session)
+  const useGetAvailableUsers = (
+    sessionId: string,
+    params?: {
+      page?: number;
+      limit?: number;
+      search?: string;
+      role?: "participant" | "admin";
+    }
+  ) => {
+    return useQuery({
+      queryKey: ["available-users", sessionId, params],
+      queryFn: async () => {
+        const queryParams = new URLSearchParams();
+
+        if (params?.page) queryParams.set("page", params.page.toString());
+        if (params?.limit) queryParams.set("limit", params.limit.toString());
+        if (params?.search) queryParams.set("search", params.search);
+        if (params?.role) queryParams.set("role", params.role);
+
+        const response = await apiClient.get<{
+          success: boolean;
+          message: string;
+          data: Array<{
+            id: string;
+            nik: string;
+            name: string;
+            email: string;
+            phone: string | null;
+            gender: "male" | "female" | "other" | null;
+            birth_date: string | null;
+            is_active: boolean;
+          }>;
+          meta: {
+            current_page: number;
+            per_page: number;
+            total: number;
+            total_pages: number;
+            has_next_page: boolean;
+            has_prev_page: boolean;
+          };
+          timestamp: string;
+        }>(`/users/available/${sessionId}?${queryParams.toString()}`);
+
+        if (!response.success) {
+          throw new Error(
+            response.message || "Failed to fetch available users"
+          );
+        }
+
+        return response;
+      },
+      enabled: !!sessionId,
+      staleTime: 2 * 60 * 1000, // 2 minutes
+    });
+  };
+
   // Get session participants (Query)
   const useGetSessionParticipants = (
     sessionId: string,
@@ -474,6 +531,7 @@ export function useSessionParticipants() {
   return {
     // Queries
     useGetSessionParticipants,
+    useGetAvailableUsers,
 
     // Mutations
     useAddParticipant,

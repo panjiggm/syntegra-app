@@ -20,6 +20,7 @@ import { deleteUserHandler } from "./user.delete";
 import { getUserSchemaHandler } from "./user.schema";
 import { getAdminStatusHandler } from "./user.status";
 import { getUserDetailHandler } from "./user.detail";
+import { getAvailableUsersForSessionHandler } from "./user.available";
 import {
   authenticateUser,
   requireAdmin,
@@ -87,6 +88,15 @@ userRoutes.get(
     }
   }),
   getUsersListHandler
+);
+
+// Get Available Users for Session (ADMIN ONLY - excludes users already in session)
+userRoutes.get(
+  "/available/:sessionId",
+  generalApiRateLimit,
+  authenticateUser,
+  requireAdmin,
+  getAvailableUsersForSessionHandler
 );
 
 // ==================== INDIVIDUAL USER ROUTES ====================
