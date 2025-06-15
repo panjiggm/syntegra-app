@@ -2,7 +2,9 @@
   "name": "shared-types",
   "version": "1.0.0",
   "description": "Shared TypeScript types for Syntegra Psikotes application",
+  "type": "module",
   "main": "dist/index.js",
+  "module": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsc",
@@ -20,7 +22,11 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
-      "require": "./dist/index.js"
+      "require": "./dist/index.js",
+      "default": "./dist/index.js"
     }
-  }
+  },
+  "files": [
+    "dist"
+  ]
 }
