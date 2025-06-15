@@ -27,16 +27,13 @@ import {
   Trash2,
   Copy,
   Calendar,
-  CheckCircle,
-  Play,
-  XCircle,
 } from "lucide-react";
 
 // Date utilities
 import { formatTime, formatDate } from "~/lib/utils/date";
-import { getSessionStatusInfo } from "~/lib/utils/session";
 import { Link } from "react-router";
 import { useSessionDialogStore } from "~/stores/use-session-dialog-store";
+import { SessionStatusBadge } from "~/components/session-status-badge";
 
 interface TableSessionsProps {
   sessions: any[];
@@ -62,52 +59,6 @@ export const TableSessions = ({
   onCopyLink,
 }: TableSessionsProps) => {
   const { openDeleteSessionModal } = useSessionDialogStore();
-
-  const getStatusBadge = (session: any) => {
-    try {
-      const statusInfo = getSessionStatusInfo(
-        session.start_time,
-        session.end_time
-      );
-
-      const iconMap = {
-        draft: <Edit className="h-3 w-3" />,
-        active: <Play className="h-3 w-3" />,
-        completed: <CheckCircle className="h-3 w-3" />,
-      };
-
-      const variantMap = {
-        draft: "outline" as const,
-        active: "default" as const,
-        completed: "secondary" as const,
-      };
-
-      const colorMap = {
-        draft: "text-gray-700",
-        active: "bg-green-100 text-green-700",
-        completed: "bg-blue-100 text-blue-700",
-      };
-
-      return (
-        <Badge
-          variant={variantMap[statusInfo.status]}
-          className={`gap-1 ${colorMap[statusInfo.status]}`}
-          title={statusInfo.description}
-        >
-          {iconMap[statusInfo.status]}
-          {statusInfo.label}
-        </Badge>
-      );
-    } catch (error) {
-      console.error("Error getting status badge:", error);
-      return (
-        <Badge variant="outline" className="gap-1">
-          <XCircle className="h-3 w-3" />
-          Error
-        </Badge>
-      );
-    }
-  };
 
   return (
     <Card>
@@ -198,10 +149,12 @@ export const TableSessions = ({
                             {session.target_position || "Umum"}
                           </Badge>
                         </TableCell>
-                        <TableCell>{getStatusBadge(session)}</TableCell>
+                        <TableCell>
+                          <SessionStatusBadge session={session} />
+                        </TableCell>
                         <TableCell>
                           <div className="text-sm">
-                            {session.total_participants || 0} peserta
+                            {session.current_participants || 0} peserta
                           </div>
                         </TableCell>
                         <TableCell>
@@ -214,12 +167,12 @@ export const TableSessions = ({
                             <DropdownMenuContent align="end">
                               <DropdownMenuLabel>Aksi</DropdownMenuLabel>
                               <DropdownMenuSeparator />
-                              <DropdownMenuItem
-                                onClick={() => onEdit(session.id)}
-                              >
-                                <Edit className="h-4 w-4 mr-2" />
-                                Edit
-                              </DropdownMenuItem>
+                              <Link to={`/admin/sessions/${session.id}/edit`}>
+                                <DropdownMenuItem>
+                                  <Edit className="h-4 w-4 mr-2" />
+                                  Edit
+                                </DropdownMenuItem>
+                              </Link>
                               <DropdownMenuItem
                                 onClick={() => onCopyLink(session.session_code)}
                               >

@@ -119,15 +119,21 @@ export const HeaderSessionTest = ({
       </div>
 
       <div className="flex gap-2">
-        <Button variant="outline" onClick={handleRefresh}>
+        <Button
+          variant="outline"
+          onClick={handleRefresh}
+          className="cursor-pointer"
+        >
           <RotateCcw className="h-4 w-4 mr-2" />
           Refresh
         </Button>
         {session.status === "draft" && (
-          <Button variant="outline" onClick={handleEdit}>
-            <Edit className="h-4 w-4 mr-2" />
-            Edit
-          </Button>
+          <Link to={`/admin/sessions/${sessionId}/edit`}>
+            <Button variant="outline" className="cursor-pointer">
+              <Edit className="h-4 w-4 mr-2" />
+              Edit
+            </Button>
+          </Link>
         )}
         {["draft", "cancelled"].includes(session.status) && (
           <Button

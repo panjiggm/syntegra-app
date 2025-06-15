@@ -22,6 +22,7 @@ import { HeaderSessionTest } from "~/components/admin/session/HeaderSessionTest"
 // Hooks and Utils
 import { useSessions } from "~/hooks/use-sessions";
 import { DialogDeleteSession } from "~/components/admin/session/DialogDeleteSession";
+import { Badge } from "~/components/ui/badge";
 
 // Meta function for SEO
 export function meta({ params }: Route.MetaArgs) {
@@ -140,7 +141,7 @@ export default function AdminSessionDetailPage() {
             value="participants"
             className="flex items-center gap-2 px-8"
           >
-            Peserta
+            Peserta <Badge>{session.current_participants || 0}</Badge>
           </TabsTrigger>
           <TabsTrigger
             value="settings"
