@@ -313,7 +313,7 @@ export const sessionModules = pgTable(
       .references(() => tests.id),
     sequence: integer("sequence").notNull(),
     is_required: boolean("is_required").default(true),
-    weight: numeric("weight", { precision: 3, scale: 2 }).default("1.00"), // for weighted scoring
+    weight: numeric("weight", { precision: 5, scale: 2 }).default("1.00"),
     created_at: timestamp("created_at").defaultNow().notNull(),
   },
   (table) => ({

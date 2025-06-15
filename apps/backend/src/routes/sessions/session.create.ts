@@ -322,7 +322,7 @@ export async function createSessionHandler(
           test_id: module.test_id,
           sequence: module.sequence,
           is_required: module.is_required,
-          weight: module.weight.toString(), // Convert to string for database
+          weight: module.weight.toFixed(2),
         }));
 
       const createdModules = await db

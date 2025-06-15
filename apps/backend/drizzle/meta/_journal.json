@@ -78,6 +78,13 @@
       "when": 1749902968732,
       "tag": "0010_clammy_onslaught",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1749996914445,
+      "tag": "0011_jittery_thunderbolt_ross",
+      "breakpoints": true
     }
   ]
 }
