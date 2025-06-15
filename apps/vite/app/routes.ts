@@ -42,6 +42,10 @@ export default [
     route("/admin/sessions", "routes/admin.sessions.tsx"),
     route("/admin/sessions/new", "routes/admin.sessions.new.tsx"),
     route("/admin/sessions/:sessionId", "routes/admin.sessions.$sessionId.tsx"),
+    route(
+      "/admin/sessions/:sessionId/edit",
+      "routes/admin.sessions.$sessionId.edit.tsx"
+    ),
 
     // Live Test Monitoring
     route("/admin/live-test", "routes/admin.live-test.tsx"),
