@@ -43,10 +43,7 @@ export const CreateTestRequestSchema = z.object({
   description: z.string().optional(),
   module_type: ModuleTypeEnum,
   category: CategoryEnum,
-  time_limit: z
-    .number()
-    .min(1, "Time limit must be at least 1 minute")
-    .optional(),
+  time_limit: z.number().min(0, "Time limit default adalah 0").optional(),
   icon: z
     .string()
     .max(10, "Icon must be an emoji (max 10 characters)")
@@ -86,10 +83,7 @@ export const UpdateTestRequestSchema = z
     description: z.string().optional(),
     module_type: ModuleTypeEnum.optional(),
     category: CategoryEnum.optional(),
-    time_limit: z
-      .number()
-      .min(1, "Time limit must be at least 1 minute")
-      .optional(),
+    time_limit: z.number().min(0, "Time limit default adalah 0").optional(),
     icon: z
       .string()
       .max(10, "Icon must be an emoji (max 10 characters)")

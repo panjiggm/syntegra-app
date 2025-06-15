@@ -224,6 +224,12 @@ export const QuestionDataSchema = z.object({
   audio_url: z.string().nullable(),
   scoring_key: ScoringKeySchema.nullable(),
   is_required: z.boolean(),
+  // Question type specific fields
+  sequence_items: z.array(z.string()).optional(),
+  rating_min: z.number().optional(),
+  rating_max: z.number().optional(),
+  rating_min_label: z.string().optional(),
+  rating_max_label: z.string().optional(),
   created_at: z.date(),
   updated_at: z.date(),
   test_duration_info: TestDurationInfoSchema.optional(),

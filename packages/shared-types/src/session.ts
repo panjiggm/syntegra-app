@@ -1,5 +1,11 @@
 import { z } from "zod";
-import { ErrorDetailSchema } from ".";
+
+// Local ErrorDetailSchema to avoid circular dependency
+const ErrorDetailSchema = z.object({
+  field: z.string().optional(),
+  message: z.string(),
+  code: z.string().optional(),
+});
 
 // ==================== ENUMS ====================
 export const SessionStatusEnum = z.enum([
