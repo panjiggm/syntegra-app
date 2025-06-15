@@ -51,6 +51,7 @@ import {
 
 // Hooks and Types
 import { useUsers } from "~/hooks/use-users";
+import { useWilayah } from "~/hooks/use-wilayah";
 import type { Route } from "./+types/admin.users.new";
 
 export function meta({}: Route.MetaArgs) {
@@ -130,6 +131,10 @@ const createUserSchema = z
 
     // Address
     address: z.string().max(500).optional(),
+    province_code: z.string().optional(),
+    regency_code: z.string().optional(),
+    district_code: z.string().optional(),
+    village_code: z.string().optional(),
     province: z.string().max(100).optional(),
     regency: z.string().max(100).optional(),
     district: z.string().max(100).optional(),
@@ -203,6 +208,10 @@ export default function AdminUsersNewPage() {
   const [showPassword, setShowPassword] = useState(false);
 
   const { useCreateAdmin, useCreateParticipant } = useUsers();
+
+  // Wilayah hooks
+  const { useProvinces, useRegencies, useDistricts, useVillages } =
+    useWilayah();
   const createAdminMutation = useCreateAdmin();
   const createParticipantMutation = useCreateParticipant();
 
@@ -222,16 +231,85 @@ export default function AdminUsersNewPage() {
   const isAdmin = watchedRole === "admin";
   const isParticipant = watchedRole === "participant";
 
+  // Watch form values for cascading dropdown logic
+  const watchedProvinceCode = form.watch("province_code");
+  const watchedRegencyCode = form.watch("regency_code");
+  const watchedDistrictCode = form.watch("district_code");
+  const watchedVillageCode = form.watch("village_code");
+
+  // API queries for wilayah data
+  const provincesQuery = useProvinces();
+  const regenciesQuery = useRegencies(watchedProvinceCode || "");
+  const districtsQuery = useDistricts(watchedRegencyCode || "");
+  const villagesQuery = useVillages(watchedDistrictCode || "");
+
   const isSubmitting =
     createAdminMutation.isPending || createParticipantMutation.isPending;
 
+  // Cascading dropdown logic - reset dependent fields when parent changes
+  useEffect(() => {
+    if (watchedProvinceCode) {
+      form.setValue("regency_code", "");
+      form.setValue("district_code", "");
+      form.setValue("village_code", "");
+    }
+  }, [watchedProvinceCode, form]);
+
+  useEffect(() => {
+    if (watchedRegencyCode) {
+      form.setValue("district_code", "");
+      form.setValue("village_code", "");
+    }
+  }, [watchedRegencyCode, form]);
+
+  useEffect(() => {
+    if (watchedDistrictCode) {
+      form.setValue("village_code", "");
+    }
+  }, [watchedDistrictCode, form]);
+
+  // Auto-fill postal code when village is selected
+  useEffect(() => {
+    if (watchedVillageCode && villagesQuery.data) {
+      const selectedVillage = villagesQuery.data.find(
+        (v) => v.code === watchedVillageCode
+      );
+      if (selectedVillage?.postal_code) {
+        form.setValue("postal_code", selectedVillage.postal_code);
+      }
+    }
+  }, [watchedVillageCode, villagesQuery.data, form]);
+
   const onSubmit = async (data: CreateUserFormData) => {
     try {
+      // Find names for the selected codes
+      const selectedProvince = provincesQuery.data?.find(
+        (p) => p.code === data.province_code
+      );
+      const selectedRegency = regenciesQuery.data?.find(
+        (r) => r.code === data.regency_code
+      );
+      const selectedDistrict = districtsQuery.data?.find(
+        (d) => d.code === data.district_code
+      );
+      const selectedVillage = villagesQuery.data?.find(
+        (v) => v.code === data.village_code
+      );
+
+      // Prepare data with both codes and names
+      const submitData = {
+        ...data,
+        province: selectedProvince?.name || data.province || undefined,
+        regency: selectedRegency?.name || data.regency || undefined,
+        district: selectedDistrict?.name || data.district || undefined,
+        village: selectedVillage?.name || data.village || undefined,
+      };
+
       if (data.role === "admin") {
-        await createAdminMutation.mutateAsync(data);
+        await createAdminMutation.mutateAsync(submitData);
         toast.success("Admin berhasil dibuat!");
       } else {
-        await createParticipantMutation.mutateAsync(data);
+        await createParticipantMutation.mutateAsync(submitData);
         toast.success("Peserta berhasil didaftarkan!");
       }
 
@@ -682,13 +760,37 @@ export default function AdminUsersNewPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
-                  name="province"
+                  name="province_code"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Provinsi</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Nama provinsi" {...field} />
-                      </FormControl>
+                      <Select
+                        value={field.value}
+                        onValueChange={field.onChange}
+                        disabled={provincesQuery.isLoading}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue
+                              placeholder={
+                                provincesQuery.isLoading
+                                  ? "Memuat provinsi..."
+                                  : "Pilih provinsi"
+                              }
+                            />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {provincesQuery.data?.map((province) => (
+                            <SelectItem
+                              key={province.code}
+                              value={province.code}
+                            >
+                              {province.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -696,13 +798,38 @@ export default function AdminUsersNewPage() {
 
                 <FormField
                   control={form.control}
-                  name="regency"
+                  name="regency_code"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Kabupaten/Kota</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Nama kabupaten/kota" {...field} />
-                      </FormControl>
+                      <Select
+                        value={field.value}
+                        onValueChange={field.onChange}
+                        disabled={
+                          !watchedProvinceCode || regenciesQuery.isLoading
+                        }
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue
+                              placeholder={
+                                !watchedProvinceCode
+                                  ? "Pilih provinsi dulu"
+                                  : regenciesQuery.isLoading
+                                    ? "Memuat kab/kota..."
+                                    : "Pilih kabupaten/kota"
+                              }
+                            />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {regenciesQuery.data?.map((regency) => (
+                            <SelectItem key={regency.code} value={regency.code}>
+                              {regency.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -712,13 +839,41 @@ export default function AdminUsersNewPage() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <FormField
                   control={form.control}
-                  name="district"
+                  name="district_code"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Kecamatan</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Nama kecamatan" {...field} />
-                      </FormControl>
+                      <Select
+                        value={field.value}
+                        onValueChange={field.onChange}
+                        disabled={
+                          !watchedRegencyCode || districtsQuery.isLoading
+                        }
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue
+                              placeholder={
+                                !watchedRegencyCode
+                                  ? "Pilih kab/kota dulu"
+                                  : districtsQuery.isLoading
+                                    ? "Memuat kecamatan..."
+                                    : "Pilih kecamatan"
+                              }
+                            />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {districtsQuery.data?.map((district) => (
+                            <SelectItem
+                              key={district.code}
+                              value={district.code}
+                            >
+                              {district.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -726,13 +881,38 @@ export default function AdminUsersNewPage() {
 
                 <FormField
                   control={form.control}
-                  name="village"
+                  name="village_code"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Kelurahan/Desa</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Nama kelurahan/desa" {...field} />
-                      </FormControl>
+                      <Select
+                        value={field.value}
+                        onValueChange={field.onChange}
+                        disabled={
+                          !watchedDistrictCode || villagesQuery.isLoading
+                        }
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue
+                              placeholder={
+                                !watchedDistrictCode
+                                  ? "Pilih kecamatan dulu"
+                                  : villagesQuery.isLoading
+                                    ? "Memuat kelurahan..."
+                                    : "Pilih kelurahan/desa"
+                              }
+                            />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {villagesQuery.data?.map((village) => (
+                            <SelectItem key={village.code} value={village.code}>
+                              {village.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -745,13 +925,29 @@ export default function AdminUsersNewPage() {
                     <FormItem>
                       <FormLabel>Kode Pos</FormLabel>
                       <FormControl>
-                        <Input placeholder="12345" maxLength={10} {...field} />
+                        <Input placeholder="12345" maxLength={5} {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
               </div>
+
+              {/* Error loading wilayah data */}
+              {(provincesQuery.error ||
+                regenciesQuery.error ||
+                districtsQuery.error ||
+                villagesQuery.error) && (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                  <h4 className="font-medium text-red-900 mb-2">
+                    Gagal Memuat Data Wilayah
+                  </h4>
+                  <p className="text-sm text-red-800">
+                    Terjadi masalah saat memuat data wilayah. Silakan refresh
+                    halaman atau coba lagi nanti.
+                  </p>
+                </div>
+              )}
             </CardContent>
           </Card>
 

@@ -55,6 +55,7 @@ import {
 import { apiClient } from "~/lib/api-client";
 import { useUsers } from "~/hooks/use-users";
 import { useAuth } from "~/contexts/auth-context";
+import { useWilayah } from "~/hooks/use-wilayah";
 import type { Route } from "./+types/admin.users.$userId.edit";
 
 export function meta({ params }: Route.MetaArgs) {
@@ -112,6 +113,10 @@ const updateUserSchema = z
 
     // Address
     address: z.string().max(500).optional(),
+    province_code: z.string().optional(),
+    regency_code: z.string().optional(),
+    district_code: z.string().optional(),
+    village_code: z.string().optional(),
     province: z.string().max(100).optional(),
     regency: z.string().max(100).optional(),
     district: z.string().max(100).optional(),
@@ -251,6 +256,10 @@ export default function AdminUsersEditPage() {
   const { useUpdateUser } = useUsers();
   const updateUserMutation = useUpdateUser();
 
+  // Wilayah hooks
+  const { useProvinces, useRegencies, useDistricts, useVillages } =
+    useWilayah();
+
   // Fetch user details
   const {
     data: userDetail,
@@ -285,6 +294,10 @@ export default function AdminUsersEditPage() {
       religion: undefined,
       education: undefined,
       address: "",
+      province_code: "",
+      regency_code: "",
+      district_code: "",
+      village_code: "",
       province: "",
       regency: "",
       district: "",
@@ -294,6 +307,18 @@ export default function AdminUsersEditPage() {
       email_verified: false,
     },
   });
+
+  // Watch form values for cascading dropdown logic
+  const watchedProvinceCode = form.watch("province_code");
+  const watchedRegencyCode = form.watch("regency_code");
+  const watchedDistrictCode = form.watch("district_code");
+  const watchedVillageCode = form.watch("village_code");
+
+  // API queries for wilayah data
+  const provincesQuery = useProvinces();
+  const regenciesQuery = useRegencies(watchedProvinceCode || "");
+  const districtsQuery = useDistricts(watchedRegencyCode || "");
+  const villagesQuery = useVillages(watchedDistrictCode || "");
 
   // Populate form when user data is loaded
   useEffect(() => {
@@ -311,6 +336,10 @@ export default function AdminUsersEditPage() {
         religion: (userDetail.religion || undefined) as any,
         education: (userDetail.education || undefined) as any,
         address: userDetail.address || "",
+        province_code: "", // Will be set by reverse lookup
+        regency_code: "", // Will be set by reverse lookup
+        district_code: "", // Will be set by reverse lookup
+        village_code: "", // Will be set by reverse lookup
         province: userDetail.province || "",
         regency: userDetail.regency || "",
         district: userDetail.district || "",
@@ -325,6 +354,40 @@ export default function AdminUsersEditPage() {
     }
   }, [userDetail, form]);
 
+  // Cascading dropdown logic - reset dependent fields when parent changes
+  useEffect(() => {
+    if (watchedProvinceCode) {
+      form.setValue("regency_code", "");
+      form.setValue("district_code", "");
+      form.setValue("village_code", "");
+    }
+  }, [watchedProvinceCode, form]);
+
+  useEffect(() => {
+    if (watchedRegencyCode) {
+      form.setValue("district_code", "");
+      form.setValue("village_code", "");
+    }
+  }, [watchedRegencyCode, form]);
+
+  useEffect(() => {
+    if (watchedDistrictCode) {
+      form.setValue("village_code", "");
+    }
+  }, [watchedDistrictCode, form]);
+
+  // Auto-fill postal code when village is selected
+  useEffect(() => {
+    if (watchedVillageCode && villagesQuery.data) {
+      const selectedVillage = villagesQuery.data.find(
+        (v) => v.code === watchedVillageCode
+      );
+      if (selectedVillage?.postal_code) {
+        form.setValue("postal_code", selectedVillage.postal_code);
+      }
+    }
+  }, [watchedVillageCode, villagesQuery.data, form]);
+
   const isSubmitting = updateUserMutation.isPending;
   const isAdmin = userDetail?.role === "admin";
   const isParticipant = userDetail?.role === "participant";
@@ -336,6 +399,20 @@ export default function AdminUsersEditPage() {
     if (!userId) return;
 
     try {
+      // Find names for the selected codes
+      const selectedProvince = provincesQuery.data?.find(
+        (p) => p.code === data.province_code
+      );
+      const selectedRegency = regenciesQuery.data?.find(
+        (r) => r.code === data.regency_code
+      );
+      const selectedDistrict = districtsQuery.data?.find(
+        (d) => d.code === data.district_code
+      );
+      const selectedVillage = villagesQuery.data?.find(
+        (v) => v.code === data.village_code
+      );
+
       // Prepare update data
       const updateData: any = {
         name: data.name,
@@ -348,10 +425,10 @@ export default function AdminUsersEditPage() {
         religion: data.religion,
         education: data.education,
         address: data.address || undefined,
-        province: data.province || undefined,
-        regency: data.regency || undefined,
-        district: data.district || undefined,
-        village: data.village || undefined,
+        province: selectedProvince?.name || data.province || undefined,
+        regency: selectedRegency?.name || data.regency || undefined,
+        district: selectedDistrict?.name || data.district || undefined,
+        village: selectedVillage?.name || data.village || undefined,
         postal_code: data.postal_code || undefined,
       };
 
@@ -765,13 +842,37 @@ export default function AdminUsersEditPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
-                  name="province"
+                  name="province_code"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Provinsi</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Nama provinsi" {...field} />
-                      </FormControl>
+                      <Select
+                        value={field.value}
+                        onValueChange={field.onChange}
+                        disabled={provincesQuery.isLoading}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue
+                              placeholder={
+                                provincesQuery.isLoading
+                                  ? "Memuat provinsi..."
+                                  : "Pilih provinsi"
+                              }
+                            />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {provincesQuery.data?.map((province) => (
+                            <SelectItem
+                              key={province.code}
+                              value={province.code}
+                            >
+                              {province.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -779,13 +880,38 @@ export default function AdminUsersEditPage() {
 
                 <FormField
                   control={form.control}
-                  name="regency"
+                  name="regency_code"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Kabupaten/Kota</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Nama kabupaten/kota" {...field} />
-                      </FormControl>
+                      <Select
+                        value={field.value}
+                        onValueChange={field.onChange}
+                        disabled={
+                          !watchedProvinceCode || regenciesQuery.isLoading
+                        }
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue
+                              placeholder={
+                                !watchedProvinceCode
+                                  ? "Pilih provinsi dulu"
+                                  : regenciesQuery.isLoading
+                                    ? "Memuat kab/kota..."
+                                    : "Pilih kabupaten/kota"
+                              }
+                            />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {regenciesQuery.data?.map((regency) => (
+                            <SelectItem key={regency.code} value={regency.code}>
+                              {regency.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -795,13 +921,41 @@ export default function AdminUsersEditPage() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <FormField
                   control={form.control}
-                  name="district"
+                  name="district_code"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Kecamatan</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Nama kecamatan" {...field} />
-                      </FormControl>
+                      <Select
+                        value={field.value}
+                        onValueChange={field.onChange}
+                        disabled={
+                          !watchedRegencyCode || districtsQuery.isLoading
+                        }
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue
+                              placeholder={
+                                !watchedRegencyCode
+                                  ? "Pilih kab/kota dulu"
+                                  : districtsQuery.isLoading
+                                    ? "Memuat kecamatan..."
+                                    : "Pilih kecamatan"
+                              }
+                            />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {districtsQuery.data?.map((district) => (
+                            <SelectItem
+                              key={district.code}
+                              value={district.code}
+                            >
+                              {district.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -809,13 +963,38 @@ export default function AdminUsersEditPage() {
 
                 <FormField
                   control={form.control}
-                  name="village"
+                  name="village_code"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Kelurahan/Desa</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Nama kelurahan/desa" {...field} />
-                      </FormControl>
+                      <Select
+                        value={field.value}
+                        onValueChange={field.onChange}
+                        disabled={
+                          !watchedDistrictCode || villagesQuery.isLoading
+                        }
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue
+                              placeholder={
+                                !watchedDistrictCode
+                                  ? "Pilih kecamatan dulu"
+                                  : villagesQuery.isLoading
+                                    ? "Memuat kelurahan..."
+                                    : "Pilih kelurahan/desa"
+                              }
+                            />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {villagesQuery.data?.map((village) => (
+                            <SelectItem key={village.code} value={village.code}>
+                              {village.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -828,13 +1007,29 @@ export default function AdminUsersEditPage() {
                     <FormItem>
                       <FormLabel>Kode Pos</FormLabel>
                       <FormControl>
-                        <Input placeholder="12345" maxLength={10} {...field} />
+                        <Input placeholder="12345" maxLength={5} {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
               </div>
+
+              {/* Error loading wilayah data */}
+              {(provincesQuery.error ||
+                regenciesQuery.error ||
+                districtsQuery.error ||
+                villagesQuery.error) && (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                  <h4 className="font-medium text-red-900 mb-2">
+                    Gagal Memuat Data Wilayah
+                  </h4>
+                  <p className="text-sm text-red-800">
+                    Terjadi masalah saat memuat data wilayah. Silakan refresh
+                    halaman atau coba lagi nanti.
+                  </p>
+                </div>
+              )}
             </CardContent>
           </Card>
 
