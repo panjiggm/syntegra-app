@@ -300,7 +300,10 @@ export function useQuestions() {
       },
       onSuccess: (response) => {
         queryClient.invalidateQueries({ queryKey: ["questions", testId] });
-        queryClient.invalidateQueries({ queryKey: ["tests", testId] }); // Refresh test data
+        queryClient.invalidateQueries({ queryKey: queryKeys.tests.all }); // Refresh test data
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.tests.detail(testId),
+        });
 
         // Enhanced toast with duration info
         if (response.data.test_duration_info) {
