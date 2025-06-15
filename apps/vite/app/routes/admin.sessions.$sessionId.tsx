@@ -135,7 +135,10 @@ export default function AdminSessionDetailPage() {
             Overview
           </TabsTrigger>
           <TabsTrigger value="modules" className="flex items-center gap-2 px-8">
-            Modul Tes
+            Modul Tes{" "}
+            <Badge variant="outline">
+              {session.session_modules.length || 0}
+            </Badge>
           </TabsTrigger>
           <TabsTrigger
             value="participants"
