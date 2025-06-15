@@ -11,7 +11,6 @@ import { DialogCreateSession } from "~/components/admin/sessions/DialogCreateSes
 
 // Hooks and Stores
 import { useSessions } from "~/hooks/use-sessions";
-import { useSessionDialogStore } from "~/stores/use-session-dialog-store";
 
 // Utils
 import { toast } from "sonner";
@@ -37,7 +36,6 @@ interface GetSessionsRequest {
 
 export default function AdminSessionsPage() {
   const [selectedDate, setSelectedDate] = useState(new Date());
-  const { openCreateSession, openEditDialog } = useSessionDialogStore();
 
   // Filter states
   const [filters, setFilters] = useState<GetSessionsRequest>({
@@ -119,11 +117,6 @@ export default function AdminSessionsPage() {
     return sessionsResponse.data;
   }, [sessionsResponse]);
 
-  // Action handlers
-  const handleEdit = (sessionId: string) => {
-    openEditDialog(sessionId);
-  };
-
   const handleCopyLink = (sessionCode: string) => {
     const link = `${window.location.origin}/session/${sessionCode}`;
     navigator.clipboard.writeText(link);
@@ -182,9 +175,7 @@ export default function AdminSessionsPage() {
             selectedDate={selectedDate}
             sessionsResponse={sessionsResponse}
             onRefetch={handleRefresh}
-            onNewSession={openCreateSession}
             onPageChange={handlePageChange}
-            onEdit={handleEdit}
             onCopyLink={handleCopyLink}
           />
         </div>

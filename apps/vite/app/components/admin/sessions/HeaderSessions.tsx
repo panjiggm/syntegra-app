@@ -1,6 +1,7 @@
 import { Button } from "~/components/ui/button";
 import { Plus, RefreshCw } from "lucide-react";
 import { Skeleton } from "~/components/ui/skeleton";
+import { Link } from "react-router";
 
 interface HeaderSessionsProps {
   isLoading: boolean;
@@ -45,10 +46,12 @@ export const HeaderSessions = ({
           <RefreshCw className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
           Refresh
         </Button>
-        <Button onClick={openCreateSession} className="gap-2">
-          <Plus className="h-4 w-4" />
-          Buat Jadwal Baru
-        </Button>
+        <Link to="/admin/sessions/new">
+          <Button className="gap-2 cursor-pointer">
+            <Plus className="h-4 w-4" />
+            Buat Jadwal Baru
+          </Button>
+        </Link>
       </div>
     </div>
   );

@@ -42,9 +42,7 @@ interface TableSessionsProps {
   selectedDate: Date;
   sessionsResponse: any;
   onRefetch: () => void;
-  onNewSession: () => void;
   onPageChange: (page: number) => void;
-  onEdit: (sessionId: string) => void;
   onCopyLink: (sessionCode: string) => void;
 }
 
@@ -54,8 +52,6 @@ export const TableSessions = ({
   error,
   selectedDate,
   onRefetch,
-  onNewSession,
-  onEdit,
   onCopyLink,
 }: TableSessionsProps) => {
   const { openDeleteSessionModal } = useSessionDialogStore();
@@ -79,10 +75,6 @@ export const TableSessions = ({
                 className={`h-4 w-4 mr-2 ${isLoading ? "animate-spin" : ""}`}
               />
               Refresh
-            </Button>
-            <Button size="sm" onClick={onNewSession}>
-              <Plus className="h-4 w-4 mr-2" />
-              Buat Jadwal
             </Button>
           </div>
         </div>
