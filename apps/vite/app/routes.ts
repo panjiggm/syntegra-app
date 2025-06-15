@@ -40,6 +40,7 @@ export default [
 
     // sessions
     route("/admin/sessions", "routes/admin.sessions.tsx"),
+    route("/admin/sessions/new", "routes/admin.sessions.new.tsx"),
     route("/admin/sessions/:sessionId", "routes/admin.sessions.$sessionId.tsx"),
 
     // Live Test Monitoring
