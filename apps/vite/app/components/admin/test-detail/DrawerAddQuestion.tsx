@@ -35,7 +35,11 @@ import {
 import { toast } from "sonner";
 import { useQuestionDialogStore } from "~/stores/use-question-dialog-store";
 import { useQuestions } from "~/hooks/use-questions";
-import { getDefaultTimeLimitByQuestionType } from "shared-types";
+import {
+  getDefaultTimeLimitByQuestionType,
+  QUESTION_TYPE_LABELS,
+  type QuestionType,
+} from "~/lib/utils/question";
 import { QuestionTypeBadge } from "~/components/question-type-badge";
 
 // Question form schema berdasarkan question_type
@@ -77,17 +81,6 @@ const questionSchema = z.object({
 });
 
 type QuestionFormData = z.infer<typeof questionSchema>;
-
-// Question type labels dalam bahasa Indonesia
-const QUESTION_TYPE_LABELS = {
-  multiple_choice: "Pilihan Ganda",
-  true_false: "Benar/Salah",
-  text: "Esai",
-  rating_scale: "Skala Rating",
-  drawing: "Gambar",
-  sequence: "Urutan",
-  matrix: "Matriks",
-} as const;
 
 // Tips untuk setiap jenis soal
 const QUESTION_TYPE_TIPS = {
