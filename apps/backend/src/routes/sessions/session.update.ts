@@ -21,6 +21,13 @@ import {
   isSessionExpired,
   getTimeRemaining,
 } from "shared-types";
+import {
+  isAfter,
+  isBefore,
+  differenceInHours,
+  parseISO,
+  isValid,
+} from "date-fns";
 
 export async function updateSessionHandler(
   c: Context<{ Bindings: CloudflareBindings }>
@@ -162,21 +169,54 @@ export async function updateSessionHandler(
       }
     }
 
-    // Validate session timing if dates are being updated
+    // Validate session timing if dates are being updated using date-fns
     if (data.start_time || data.end_time) {
       const startTime = data.start_time
-        ? new Date(data.start_time)
+        ? parseISO(data.start_time)
         : existingSession.start_time;
       const endTime = data.end_time
-        ? new Date(data.end_time)
+        ? parseISO(data.end_time)
         : existingSession.end_time;
       const now = new Date();
+
+      // Validate date parsing if new dates are provided
+      if (data.start_time && !isValid(startTime)) {
+        const errorResponse: SessionErrorResponse = {
+          success: false,
+          message: "Invalid start time format",
+          errors: [
+            {
+              field: "start_time",
+              message: "Start time must be a valid ISO date string",
+              code: "INVALID_DATE_FORMAT",
+            },
+          ],
+          timestamp: new Date().toISOString(),
+        };
+        return c.json(errorResponse, 400);
+      }
+
+      if (data.end_time && !isValid(endTime)) {
+        const errorResponse: SessionErrorResponse = {
+          success: false,
+          message: "Invalid end time format",
+          errors: [
+            {
+              field: "end_time",
+              message: "End time must be a valid ISO date string",
+              code: "INVALID_DATE_FORMAT",
+            },
+          ],
+          timestamp: new Date().toISOString(),
+        };
+        return c.json(errorResponse, 400);
+      }
 
       // Only validate future start time for draft sessions
       if (
         existingSession.status === "draft" &&
         data.start_time &&
-        startTime <= now
+        !isAfter(startTime, now)
       ) {
         const errorResponse: SessionErrorResponse = {
           success: false,
@@ -193,7 +233,8 @@ export async function updateSessionHandler(
         return c.json(errorResponse, 400);
       }
 
-      if (endTime <= startTime) {
+      // Check if end time is after start time
+      if (!isAfter(endTime, startTime)) {
         const errorResponse: SessionErrorResponse = {
           success: false,
           message: "Invalid end time",
@@ -209,9 +250,8 @@ export async function updateSessionHandler(
         return c.json(errorResponse, 400);
       }
 
-      // Calculate session duration and validate it's reasonable
-      const sessionDurationHours =
-        (endTime.getTime() - startTime.getTime()) / (1000 * 60 * 60);
+      // Calculate and validate session duration using date-fns
+      const sessionDurationHours = differenceInHours(endTime, startTime);
       if (sessionDurationHours > 12) {
         const errorResponse: SessionErrorResponse = {
           success: false,

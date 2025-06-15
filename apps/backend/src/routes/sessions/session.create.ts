@@ -21,6 +21,13 @@ import {
   isSessionExpired,
   getTimeRemaining,
 } from "shared-types";
+import {
+  isAfter,
+  isBefore,
+  differenceInHours,
+  parseISO,
+  isValid,
+} from "date-fns";
 
 export async function createSessionHandler(
   c: Context<{ Bindings: CloudflareBindings }>
@@ -184,12 +191,46 @@ export async function createSessionHandler(
       return c.json(errorResponse, 400);
     }
 
-    // Validate session timing
-    const startTime = new Date(data.start_time);
-    const endTime = new Date(data.end_time);
+    // Validate session timing using date-fns
+    const startTime = parseISO(data.start_time);
+    const endTime = parseISO(data.end_time);
     const now = new Date();
 
-    if (startTime <= now) {
+    // Validate date parsing
+    if (!isValid(startTime)) {
+      const errorResponse: SessionErrorResponse = {
+        success: false,
+        message: "Invalid start time format",
+        errors: [
+          {
+            field: "start_time",
+            message: "Start time must be a valid ISO date string",
+            code: "INVALID_DATE_FORMAT",
+          },
+        ],
+        timestamp: new Date().toISOString(),
+      };
+      return c.json(errorResponse, 400);
+    }
+
+    if (!isValid(endTime)) {
+      const errorResponse: SessionErrorResponse = {
+        success: false,
+        message: "Invalid end time format",
+        errors: [
+          {
+            field: "end_time",
+            message: "End time must be a valid ISO date string",
+            code: "INVALID_DATE_FORMAT",
+          },
+        ],
+        timestamp: new Date().toISOString(),
+      };
+      return c.json(errorResponse, 400);
+    }
+
+    // Check if start time is in the future
+    if (!isAfter(startTime, now)) {
       const errorResponse: SessionErrorResponse = {
         success: false,
         message: "Invalid start time",
@@ -205,7 +246,8 @@ export async function createSessionHandler(
       return c.json(errorResponse, 400);
     }
 
-    if (endTime <= startTime) {
+    // Check if end time is after start time
+    if (!isAfter(endTime, startTime)) {
       const errorResponse: SessionErrorResponse = {
         success: false,
         message: "Invalid end time",
@@ -221,9 +263,8 @@ export async function createSessionHandler(
       return c.json(errorResponse, 400);
     }
 
-    // Calculate session duration and validate it's reasonable
-    const sessionDurationHours =
-      (endTime.getTime() - startTime.getTime()) / (1000 * 60 * 60);
+    // Calculate and validate session duration using date-fns
+    const sessionDurationHours = differenceInHours(endTime, startTime);
     if (sessionDurationHours > 12) {
       const errorResponse: SessionErrorResponse = {
         success: false,
