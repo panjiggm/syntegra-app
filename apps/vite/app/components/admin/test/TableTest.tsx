@@ -282,16 +282,6 @@ export function TableTest({
                   {getSortIcon("total_questions")}
                 </Button>
               </TableHead>
-              <TableHead className="text-center">
-                <Button
-                  variant="ghost"
-                  onClick={() => handleSort("status")}
-                  className="h-auto p-0 font-semibold hover:bg-transparent"
-                >
-                  Status
-                  {getSortIcon("status")}
-                </Button>
-              </TableHead>
               <TableHead>
                 <Button
                   variant="ghost"
@@ -377,17 +367,6 @@ export function TableTest({
                         {test.total_questions}
                       </span>
                     </div>
-                  </TableCell>
-                  <TableCell className="text-center">
-                    <Badge
-                      variant="outline"
-                      className={getStatusColor(test.status)}
-                    >
-                      {test.status === "active" && "Aktif"}
-                      {test.status === "inactive" && "Nonaktif"}
-                      {test.status === "draft" && "Draft"}
-                      {test.status === "archived" && "Arsip"}
-                    </Badge>
                   </TableCell>
                   <TableCell>
                     <div className="text-sm">

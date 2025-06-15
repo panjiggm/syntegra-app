@@ -59,11 +59,10 @@ export const createTestSchema = z.object({
       required_error: "Batas waktu wajib diisi",
       invalid_type_error: "Batas waktu harus berupa angka",
     })
-    .min(0, "Batas waktu minimal 0 menit")
+    .min(0, "Time limit default adalah 0")
     .max(480, "Batas waktu maksimal 480 menit (8 jam)")
     .int("Batas waktu harus berupa bilangan bulat")
-    .optional()
-    .or(z.literal(0)),
+    .optional(),
 
   icon: z
     .string()
@@ -147,19 +146,19 @@ export const categoryOptionsByModuleType = {
   intelligence: [
     { value: "wais", label: "WAIS (Wechsler Adult Intelligence Scale)" },
     { value: "raven", label: "Raven's Progressive Matrices" },
-    { value: "iq", label: "IQ Test" },
     { value: "army_alpha", label: "Army Alpha" },
+    { value: "iq", label: "IQ Test" },
   ],
   personality: [
     { value: "mbti", label: "MBTI (Myers-Briggs Type Indicator)" },
     { value: "big_five", label: "Big Five Personality" },
-    { value: "disc", label: "DISC Assessment" },
+    { value: "papi_kostick", label: "PAPI Kostick" },
     { value: "epps", label: "EPPS (Edwards Personal Preference Schedule)" },
+    { value: "disc", label: "DISC Assessment" },
   ],
   aptitude: [
     { value: "kraepelin", label: "Kraepelin Test" },
     { value: "pauli", label: "Pauli Test" },
-    { value: "papi_kostick", label: "PAPI Kostick" },
   ],
   interest: [{ value: "riasec", label: "RIASEC (Holland Interest)" }],
   projective: [

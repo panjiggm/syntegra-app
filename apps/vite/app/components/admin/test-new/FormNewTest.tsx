@@ -322,13 +322,6 @@ export function FormNewTest({
                           Pilihan Ganda
                         </SelectItem>
                         <SelectItem value="true_false">Benar/Salah</SelectItem>
-                        <SelectItem value="text">Esai</SelectItem>
-                        <SelectItem value="rating_scale">
-                          Skala Rating
-                        </SelectItem>
-                        <SelectItem value="drawing">Gambar</SelectItem>
-                        <SelectItem value="sequence">Urutan</SelectItem>
-                        <SelectItem value="matrix">Matriks</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormDescription>

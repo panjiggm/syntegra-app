@@ -93,6 +93,7 @@ export default function AdminTestsNewPage() {
         card_color: data.card_color || undefined,
         passing_score: data.passing_score || undefined,
         display_order: data.display_order || undefined,
+        time_limit: data.time_limit === 0 ? 1 : data.time_limit,
       };
 
       await createTestMutation.mutateAsync(submitData);

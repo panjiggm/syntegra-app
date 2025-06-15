@@ -23,6 +23,7 @@ import { DialogAddQuestion } from "~/components/admin/test-detail/DialogAddQuest
 import { DialogDeleteQuestion } from "~/components/admin/test-detail/DialogDeleteQuestion";
 import { DialogViewQuestion } from "~/components/admin/test-detail/DialogViewQuestion";
 import { QuestionTypeBadge } from "~/components/question-type-badge";
+import { DrawerAddQuestion } from "~/components/admin/test-detail/DrawerAddQuestion";
 
 // Module type labels mapping
 const MODULE_TYPE_LABELS = {
@@ -315,9 +316,10 @@ export default function TestDetailPage() {
       </Tabs>
 
       <DialogDeleteTest />
-      <DialogAddQuestion />
+      {/* <DialogAddQuestion /> */}
       <DialogDeleteQuestion />
       <DialogViewQuestion />
+      <DrawerAddQuestion />
     </div>
   );
 }

@@ -60,12 +60,28 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "~/components/ui/tooltip";
-import { toast } from "sonner";
 
 interface TestData {
   id: string;
   name: string;
+  description?: string;
+  module_type: string;
+  category: string;
+  question_type?:
+    | "multiple_choice"
+    | "true_false"
+    | "text"
+    | "rating_scale"
+    | "drawing"
+    | "sequence"
+    | "matrix"
+    | undefined
+    | null;
+  time_limit?: number;
   total_questions?: number;
+  status: "active" | "inactive" | "archived" | "draft";
+  created_at?: string;
+  updated_at?: string;
 }
 
 interface TestBankSoalProps {
@@ -300,7 +316,7 @@ export function TestBankSoal({ testId, test }: TestBankSoalProps) {
             </Button>
           )}
 
-          <Button onClick={() => openCreateDialog(testId)}>
+          <Button onClick={() => openCreateDialog(testId, test)}>
             <Plus className="h-4 w-4 mr-2" />
             Tambah Soal
           </Button>
@@ -413,11 +429,6 @@ export function TestBankSoal({ testId, test }: TestBankSoalProps) {
                       Pilihan Ganda
                     </SelectItem>
                     <SelectItem value="true_false">Benar/Salah</SelectItem>
-                    <SelectItem value="text">Esai</SelectItem>
-                    <SelectItem value="rating_scale">Skala Rating</SelectItem>
-                    <SelectItem value="drawing">Gambar</SelectItem>
-                    <SelectItem value="sequence">Urutan</SelectItem>
-                    <SelectItem value="matrix">Matriks</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -525,7 +536,7 @@ export function TestBankSoal({ testId, test }: TestBankSoalProps) {
                   "Mulai dengan menambahkan soal pertama untuk tes ini"
                 )}
               </p>
-              <Button onClick={() => openCreateDialog(testId)}>
+              <Button onClick={() => openCreateDialog(testId, test)}>
                 <Plus className="h-4 w-4 mr-2" />
                 Tambah Soal Pertama
               </Button>
@@ -646,7 +657,9 @@ export function TestBankSoal({ testId, test }: TestBankSoalProps) {
                             Lihat Detail
                           </DropdownMenuItem>
                           <DropdownMenuItem
-                            onClick={() => openEditDialog(testId, question.id)}
+                            onClick={() =>
+                              openEditDialog(testId, question.id, test)
+                            }
                           >
                             <Edit className="mr-2 h-4 w-4" />
                             Edit Soal
