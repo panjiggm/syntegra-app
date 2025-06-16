@@ -109,7 +109,7 @@ const CARD_COLOR_VARIANTS = {
     "bg-gradient-to-br from-stone-500 to-stone-600 text-stone-100",
 } as const;
 
-const getGradientClass = (cardColor?: string): string => {
+export const getGradientClass = (cardColor?: string): string => {
   if (!cardColor) {
     return "bg-gradient-to-br from-gray-500 to-gray-600"; // default
   }
