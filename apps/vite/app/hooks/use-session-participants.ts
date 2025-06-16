@@ -282,6 +282,11 @@ export function useSessionParticipants() {
           queryKey: queryKeys.sessions.detail(sessionId),
         });
 
+        // Invalidate available users
+        queryClient.invalidateQueries({
+          queryKey: ["available-users", sessionId],
+        });
+
         toast.success("Peserta berhasil ditambahkan!", {
           description: `${response.data.user.name} telah ditambahkan ke sesi`,
         });
@@ -364,6 +369,11 @@ export function useSessionParticipants() {
         // Invalidate specific session
         queryClient.invalidateQueries({
           queryKey: queryKeys.sessions.detail(sessionId),
+        });
+
+        // Invalidate available users
+        queryClient.invalidateQueries({
+          queryKey: ["available-users", sessionId],
         });
 
         const { total_added, skipped_participants } = response.data;
