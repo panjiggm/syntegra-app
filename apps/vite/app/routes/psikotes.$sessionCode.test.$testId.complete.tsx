@@ -6,7 +6,6 @@ import type { Route } from "./+types/psikotes.$sessionCode.test.$testId.complete
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { Button } from "~/components/ui/button";
 import { Badge } from "~/components/ui/badge";
-import { LoadingSpinner } from "~/components/ui/loading-spinner";
 import { Progress } from "~/components/ui/progress";
 import { Separator } from "~/components/ui/separator";
 
@@ -25,8 +24,8 @@ import {
 } from "lucide-react";
 
 // Hooks
-import { useSessions } from "~/hooks/use-sessions";
 import { useAuth } from "~/contexts/auth-context";
+import { usePsikotesContext } from "~/routes/_psikotes";
 
 // Utils
 import {
@@ -46,15 +45,12 @@ export function meta({ params }: Route.MetaArgs) {
 }
 
 export default function TestCompletePage() {
-  const { sessionCode, testId } = useParams();
+  const { testId } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { sessionData, sessionCode } = usePsikotesContext();
 
   const [testResult, setTestResult] = useState<any>(null);
-  const [sessionInfo, setSessionInfo] = useState<any>(null);
-
-  const { useGetPublicSessionByCode } = useSessions();
-  const sessionQuery = useGetPublicSessionByCode(sessionCode || "");
 
   // Load test result from session storage or API
   useEffect(() => {
@@ -66,17 +62,12 @@ export default function TestCompletePage() {
         console.error("Failed to parse stored result:", error);
       }
     }
-
-    // Also load session info
-    if (sessionQuery.data) {
-      setSessionInfo(sessionQuery.data);
-    }
-  }, [testId, sessionQuery.data]);
+  }, [testId]);
 
   // Mock test result if not available (for demo)
   useEffect(() => {
-    if (!testResult && sessionQuery.data) {
-      const currentTest = sessionQuery.data.session_modules?.find(
+    if (!testResult && sessionData) {
+      const currentTest = sessionData.session_modules?.find(
         (module: any) => module.test.id === testId
       );
 
@@ -106,12 +97,12 @@ export default function TestCompletePage() {
         setTestResult(mockResult);
       }
     }
-  }, [testResult, sessionQuery.data, testId]);
+  }, [testResult, sessionData, testId]);
 
   const getNextTest = (currentSequence: number) => {
-    if (!sessionQuery.data?.session_modules) return null;
+    if (!sessionData?.session_modules) return null;
 
-    const nextModule = sessionQuery.data.session_modules.find(
+    const nextModule = sessionData.session_modules.find(
       (module: any) => module.sequence === currentSequence + 1
     );
 
@@ -140,10 +131,10 @@ export default function TestCompletePage() {
     alert("Fitur share hasil akan tersedia segera");
   };
 
-  if (sessionQuery.isLoading || !testResult) {
+  if (!testResult) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <LoadingSpinner size="lg" />
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
       </div>
     );
   }
@@ -383,7 +374,7 @@ export default function TestCompletePage() {
         </Card>
 
         {/* Session Progress */}
-        {sessionInfo && (
+        {sessionData && (
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -394,7 +385,7 @@ export default function TestCompletePage() {
             <CardContent>
               <div className="space-y-4">
                 <div className="grid gap-2">
-                  {sessionInfo.session_modules?.map(
+                  {sessionData.session_modules?.map(
                     (module: any, index: number) => (
                       <div
                         key={module.id}
@@ -402,7 +393,7 @@ export default function TestCompletePage() {
                           module.test.id === testId
                             ? "bg-green-50 border-green-200"
                             : index <
-                                sessionInfo.session_modules.findIndex(
+                                sessionData.session_modules.findIndex(
                                   (m: any) => m.test.id === testId
                                 )
                               ? "bg-gray-50 border-gray-200"
@@ -414,7 +405,7 @@ export default function TestCompletePage() {
                             module.test.id === testId
                               ? "bg-green-600 text-white"
                               : index <
-                                  sessionInfo.session_modules.findIndex(
+                                  sessionData.session_modules.findIndex(
                                     (m: any) => m.test.id === testId
                                   )
                                 ? "bg-gray-400 text-white"

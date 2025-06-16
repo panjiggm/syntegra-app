@@ -1,12 +1,11 @@
-import { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router";
+import { useState } from "react";
+import { useNavigate } from "react-router";
 import type { Route } from "./+types/psikotes.$sessionCode.tests";
 
 // UI Components
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { Button } from "~/components/ui/button";
 import { Badge } from "~/components/ui/badge";
-import { LoadingSpinner } from "~/components/ui/loading-spinner";
 import { Progress } from "~/components/ui/progress";
 
 // Icons
@@ -15,28 +14,20 @@ import {
   Users,
   BookOpen,
   CheckCircle,
-  AlertCircle,
+  RefreshCw,
   PlayCircle,
   FileText,
   Timer,
   ArrowRight,
-  LogOut,
-  LayoutDashboard,
-  RefreshCw,
+  AlertCircle,
 } from "lucide-react";
 
 // Hooks
-import { useSessions } from "~/hooks/use-sessions";
 import { useAuth } from "~/contexts/auth-context";
+import { usePsikotesContext } from "~/routes/_psikotes";
 
 // Utils
-import { formatDateTime, formatTime } from "~/lib/utils/date";
-import {
-  hasSessionStarted,
-  hasSessionEnded,
-  isSessionActive,
-} from "~/lib/utils/session";
-import { toast } from "sonner";
+import { formatTime } from "~/lib/utils/date";
 
 export function meta({ params }: Route.MetaArgs) {
   return [
@@ -53,80 +44,17 @@ export async function loader({ params }: Route.LoaderArgs) {
 }
 
 export default function PsikotesTestsPage() {
-  const { sessionCode } = useParams();
   const navigate = useNavigate();
-  const { user, isAuthenticated, logout } = useAuth();
+  const { user } = useAuth();
+  const { sessionData, sessionCode, refetchSession, isRefreshing } =
+    usePsikotesContext();
 
-  const [participantStatus, setParticipantStatus] = useState<string | null>(
-    null
-  );
-  const [isRefreshing, setIsRefreshing] = useState(false);
   const [selectedModules, setSelectedModules] = useState<Set<string>>(
     new Set()
   );
 
-  const { useGetPublicSessionByCode, useCheckParticipant } = useSessions();
-  const checkParticipant = useCheckParticipant();
-
-  // Get session data
-  const {
-    data: sessionData,
-    isLoading: isValidatingSession,
-    error: sessionError,
-    refetch,
-  } = useGetPublicSessionByCode(sessionCode || "");
-
-  // Session timing checks
-  const sessionHasStarted = sessionData?.start_time
-    ? hasSessionStarted(sessionData.start_time)
-    : false;
-  const sessionHasEnded = sessionData?.end_time
-    ? hasSessionEnded(sessionData.end_time)
-    : false;
-  const sessionIsActive = sessionData
-    ? isSessionActive(sessionData.start_time, sessionData.end_time)
-    : false;
-
-  // Check participant registration
-  useEffect(() => {
-    if (sessionCode && user?.phone) {
-      checkParticipantRegistration(sessionCode, user.phone);
-    }
-  }, [sessionCode, user]);
-
-  const checkParticipantRegistration = async (
-    sessionCode: string,
-    phone: string
-  ) => {
-    try {
-      const checkResult = await checkParticipant.mutateAsync({
-        sessionCode,
-        phone: phone.trim(),
-      });
-
-      if (checkResult.data.participant_exists) {
-        setParticipantStatus(
-          checkResult.data.participant?.status || "registered"
-        );
-      } else {
-        setParticipantStatus(null);
-      }
-    } catch (error) {
-      console.error("Error checking participant registration:", error);
-      setParticipantStatus(null);
-    }
-  };
-
   const handleRefresh = async () => {
-    setIsRefreshing(true);
-    try {
-      await refetch();
-    } catch (error) {
-      console.error("Error refreshing session data:", error);
-      toast.error("Gagal memperbarui data sesi");
-    } finally {
-      setIsRefreshing(false);
-    }
+    await refetchSession();
   };
 
   const handleStartTest = (testId: string, moduleName: string) => {
@@ -162,199 +90,6 @@ export default function PsikotesTestsPage() {
     // TODO: Calculate based on actual completion data
     return 0; // 0% for now
   };
-
-  // Loading state
-  if (isValidatingSession) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br flex items-center justify-center p-4">
-        <Card className="w-full max-w-md">
-          <CardContent className="flex flex-col items-center justify-center p-8">
-            <LoadingSpinner size="lg" />
-            <p className="mt-4 text-muted-foreground">Memvalidasi sesi...</p>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  // Session not found or error
-  if (sessionError || (!isValidatingSession && !sessionData)) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br flex flex-col items-center justify-center p-4">
-        <Card className="w-full max-w-md">
-          <CardHeader className="text-center">
-            <div className="mx-auto w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mb-4">
-              <AlertCircle className="h-6 w-6 text-red-600" />
-            </div>
-            <CardTitle className="text-red-800">Sesi Tidak Ditemukan</CardTitle>
-          </CardHeader>
-          <CardContent className="text-center space-y-4">
-            <p className="text-muted-foreground">
-              Sesi psikotes dengan kode <strong>{sessionCode}</strong> tidak
-              ditemukan atau sudah berakhir.
-            </p>
-            <Button
-              variant="outline"
-              onClick={() => navigate("/")}
-              className="w-full"
-            >
-              Kembali ke Beranda
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  // Session has ended
-  if (sessionHasEnded) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br flex flex-col items-center justify-center p-4">
-        <Card className="w-full max-w-md">
-          <CardHeader className="text-center">
-            <div className="mx-auto w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-              <Clock className="h-6 w-6 text-gray-600" />
-            </div>
-            <CardTitle className="text-gray-800">Sesi Telah Berakhir</CardTitle>
-          </CardHeader>
-          <CardContent className="text-center space-y-4">
-            <p className="text-muted-foreground">
-              Sesi psikotes <strong>{sessionData?.session_name}</strong> telah
-              berakhir pada {formatDateTime(sessionData?.end_time || "")}.
-            </p>
-            <div className="flex flex-col gap-2">
-              <Button
-                onClick={() => navigate("/participant/dashboard")}
-                className="w-full"
-              >
-                <LayoutDashboard className="h-4 w-4 mr-2" />
-                Ke Dashboard
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => logout()}
-                className="w-full"
-              >
-                <LogOut className="h-4 w-4 mr-2" />
-                Logout
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  // User not authenticated
-  if (!isAuthenticated) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br flex items-center justify-center p-4">
-        <Card className="w-full max-w-md">
-          <CardHeader className="text-center">
-            <div className="mx-auto w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mb-4">
-              <AlertCircle className="h-6 w-6 text-blue-600" />
-            </div>
-            <CardTitle>Akses Dibatasi</CardTitle>
-          </CardHeader>
-          <CardContent className="text-center space-y-4">
-            <p className="text-muted-foreground">
-              Anda perlu login untuk mengakses halaman ini.
-            </p>
-            <Button
-              onClick={() => navigate(`/psikotes/${sessionCode}`)}
-              className="w-full"
-            >
-              Kembali ke Login
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  // User not registered in session
-  if (participantStatus === null) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br flex flex-col items-center justify-center p-4">
-        <Card className="w-full max-w-md">
-          <CardHeader className="text-center">
-            <div className="mx-auto w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center mb-4">
-              <AlertCircle className="h-6 w-6 text-yellow-600" />
-            </div>
-            <CardTitle className="text-yellow-800">Akses Ditolak</CardTitle>
-          </CardHeader>
-          <CardContent className="text-center space-y-4">
-            <p className="text-muted-foreground">
-              Anda tidak terdaftar sebagai peserta dalam sesi psikotes ini.
-            </p>
-            <div className="flex flex-col gap-2">
-              <Button
-                onClick={() => navigate("/participant/dashboard")}
-                className="w-full"
-              >
-                <LayoutDashboard className="h-4 w-4 mr-2" />
-                Ke Dashboard
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => logout()}
-                className="w-full"
-              >
-                <LogOut className="h-4 w-4 mr-2" />
-                Logout
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  // Session not active yet
-  if (!sessionIsActive) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br flex flex-col items-center justify-center p-4">
-        <Card className="w-full max-w-md">
-          <CardHeader className="text-center">
-            <div className="mx-auto w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center mb-4">
-              <Clock className="h-6 w-6 text-yellow-600" />
-            </div>
-            <CardTitle className="text-yellow-800">Sesi Belum Aktif</CardTitle>
-          </CardHeader>
-          <CardContent className="text-center space-y-4">
-            <p className="text-muted-foreground">
-              Sesi psikotes akan dimulai pada{" "}
-              {formatDateTime(sessionData?.start_time || "")}.
-            </p>
-            <Button
-              onClick={handleRefresh}
-              variant="outline"
-              className="w-full"
-            >
-              <RefreshCw
-                className={`h-4 w-4 mr-2 ${isRefreshing ? "animate-spin" : ""}`}
-              />
-              Refresh
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  // Guard clause to ensure sessionData exists
-  if (!sessionData) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br flex items-center justify-center p-4">
-        <Card className="w-full max-w-md">
-          <CardContent className="flex flex-col items-center justify-center p-8">
-            <LoadingSpinner size="lg" />
-            <p className="mt-4 text-muted-foreground">Memvalidasi sesi...</p>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
 
   // Main tests page
   return (
@@ -535,9 +270,6 @@ export default function PsikotesTestsPage() {
                                   Wajib
                                 </Badge>
                               )}
-                              {/* <Badge variant="outline" className="text-xs">
-                                Bobot: {module.weight}%
-                              </Badge> */}
                             </div>
                           </div>
 
@@ -549,7 +281,7 @@ export default function PsikotesTestsPage() {
                                   module.test.name
                                 )
                               }
-                              className="curson-pointer"
+                              className="cursor-pointer"
                             >
                               <PlayCircle className="h-4 w-4 mr-2" />
                               Mulai Tes

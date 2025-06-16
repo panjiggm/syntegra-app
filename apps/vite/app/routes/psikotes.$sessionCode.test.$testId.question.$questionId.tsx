@@ -2,9 +2,9 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import type { LoaderFunctionArgs, MetaFunction } from "react-router";
 import { useLoaderData, useNavigate, useParams } from "react-router";
 import { useQuestions } from "~/hooks/use-questions";
-import { useSessions } from "~/hooks/use-sessions";
 import { useTestAttempt } from "~/hooks/use-test-attempt";
 import { useAuth } from "~/contexts/auth-context";
+import { usePsikotesContext } from "~/routes/_psikotes";
 import {
   Clock,
   CheckCircle,
@@ -13,8 +13,6 @@ import {
   AlertTriangle,
   Save,
 } from "lucide-react";
-import { formatDistanceToNow, parseISO, isAfter } from "date-fns";
-import { id } from "date-fns/locale";
 import { toast } from "sonner";
 import { Button } from "~/components/ui/button";
 import { LoadingSpinner } from "~/components/ui/loading-spinner";
@@ -60,7 +58,6 @@ export default function QuestionPage() {
   const autoSaveRef = useRef<NodeJS.Timeout | null>(null);
 
   // Hooks
-  const { useGetPublicSessionByCode } = useSessions();
   const { useGetQuestions, useGetQuestionById } = useQuestions();
   const {
     useGetAttempt,
@@ -73,7 +70,6 @@ export default function QuestionPage() {
   } = useTestAttempt();
 
   // Queries
-  const sessionQuery = useGetPublicSessionByCode(sessionCode);
   const questionsQuery = useGetQuestions(testId, {
     sort_by: "sequence",
     sort_order: "asc",
@@ -329,7 +325,6 @@ export default function QuestionPage() {
 
   // Loading states
   if (
-    sessionQuery.isLoading ||
     questionsQuery.isLoading ||
     currentQuestionQuery.isLoading ||
     (attemptId && attemptQuery.isLoading)
@@ -342,11 +337,7 @@ export default function QuestionPage() {
   }
 
   // Error states
-  if (
-    sessionQuery.error ||
-    questionsQuery.error ||
-    currentQuestionQuery.error
-  ) {
+  if (questionsQuery.error || currentQuestionQuery.error) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
@@ -354,8 +345,7 @@ export default function QuestionPage() {
             Terjadi Kesalahan
           </h2>
           <p className="text-gray-600 mb-4">
-            {sessionQuery.error?.message ||
-              questionsQuery.error?.message ||
+            {questionsQuery.error?.message ||
               currentQuestionQuery.error?.message}
           </p>
           <Button onClick={() => navigate(`/psikotes/${sessionCode}`)}>
@@ -366,13 +356,12 @@ export default function QuestionPage() {
     );
   }
 
-  const sessionData = sessionQuery.data;
   const questions = questionsQuery.data?.data || [];
   const currentQuestion = currentQuestionQuery.data?.data;
   const progress = progressQuery.data;
   const attempt = attemptQuery.data;
 
-  if (!sessionData || !currentQuestion || !questions.length) {
+  if (!currentQuestion || !questions.length) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <LoadingSpinner size="lg" />

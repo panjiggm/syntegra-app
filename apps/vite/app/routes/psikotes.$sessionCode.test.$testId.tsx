@@ -7,14 +7,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { Button } from "~/components/ui/button";
 import { Badge } from "~/components/ui/badge";
 import { LoadingSpinner } from "~/components/ui/loading-spinner";
-import { Progress } from "~/components/ui/progress";
 import { Separator } from "~/components/ui/separator";
 
 // Icons
 import {
-  Clock,
   FileText,
-  BookOpen,
   CheckCircle,
   AlertCircle,
   PlayCircle,
@@ -26,16 +23,15 @@ import {
   Eye,
   Lightbulb,
   ChevronRight,
-  LogOut,
+  BookOpen,
 } from "lucide-react";
 
 // Hooks
-import { useSessions } from "~/hooks/use-sessions";
 import { useQuestions } from "~/hooks/use-questions";
 import { useAuth } from "~/contexts/auth-context";
+import { usePsikotesContext } from "~/routes/_psikotes";
 
 // Utils
-import { isSessionActive } from "~/lib/utils/session";
 import { useTestAttempt } from "~/hooks/use-test-attempt";
 import { toast } from "sonner";
 
@@ -53,29 +49,18 @@ export async function loader({ params }: Route.LoaderArgs) {
 }
 
 export default function PsikotesTestDetailPage() {
-  const { sessionCode, testId } = useParams();
+  const { testId } = useParams();
   const navigate = useNavigate();
-  const { user, isAuthenticated } = useAuth();
+  const { user } = useAuth();
+  const { sessionData, sessionCode } = usePsikotesContext();
 
-  const [participantStatus, setParticipantStatus] = useState<string | null>(
-    null
-  );
   const [currentTest, setCurrentTest] = useState<any>(null);
   const [isStarting, setIsStarting] = useState(false);
   const [countdown, setCountdown] = useState<number | null>(null);
   const [isReady, setIsReady] = useState(false);
   const [isStartingAttempt, setIsStartingAttempt] = useState(false);
 
-  const { useGetPublicSessionByCode, useCheckParticipant } = useSessions();
   const { useGetQuestions } = useQuestions();
-  const checkParticipant = useCheckParticipant();
-
-  // Get session data
-  const {
-    data: sessionData,
-    isLoading: isValidatingSession,
-    error: sessionError,
-  } = useGetPublicSessionByCode(sessionCode || "");
 
   // Get questions data to find first question
   const { data: questionsData, isLoading: isLoadingQuestions } =
@@ -85,11 +70,6 @@ export default function PsikotesTestDetailPage() {
       limit: 1,
       page: 1,
     });
-
-  // Session timing checks
-  const sessionIsActive = sessionData
-    ? isSessionActive(sessionData.start_time, sessionData.end_time)
-    : false;
 
   const { useStartAttempt } = useTestAttempt();
   const startAttempt = useStartAttempt();
@@ -103,36 +83,6 @@ export default function PsikotesTestDetailPage() {
       setCurrentTest(test);
     }
   }, [sessionData, testId]);
-
-  // Check participant registration
-  useEffect(() => {
-    if (sessionCode && user?.phone) {
-      checkParticipantRegistration(sessionCode, user.phone);
-    }
-  }, [sessionCode, user]);
-
-  const checkParticipantRegistration = async (
-    sessionCode: string,
-    phone: string
-  ) => {
-    try {
-      const checkResult = await checkParticipant.mutateAsync({
-        sessionCode,
-        phone: phone.trim(),
-      });
-
-      if (checkResult.data.participant_exists) {
-        setParticipantStatus(
-          checkResult.data.participant?.status || "registered"
-        );
-      } else {
-        setParticipantStatus(null);
-      }
-    } catch (error) {
-      console.error("Error checking participant registration:", error);
-      setParticipantStatus(null);
-    }
-  };
 
   // Countdown effect
   useEffect(() => {
@@ -329,50 +279,20 @@ export default function PsikotesTestDetailPage() {
   };
 
   // Loading state
-  if (isValidatingSession || isLoadingQuestions) {
+  if (isLoadingQuestions) {
     return (
       <div className="min-h-screen bg-gradient-to-br flex items-center justify-center p-4">
         <Card className="w-full max-w-md">
           <CardContent className="flex flex-col items-center justify-center p-8">
             <LoadingSpinner size="lg" />
-            <p className="mt-4 text-muted-foreground">
-              {isValidatingSession ? "Memvalidasi sesi..." : "Memuat soal..."}
-            </p>
+            <p className="mt-4 text-muted-foreground">Memuat soal...</p>
           </CardContent>
         </Card>
       </div>
     );
   }
 
-  // Session not found
-  if (sessionError || !sessionData) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br flex flex-col items-center justify-center p-4">
-        <Card className="w-full max-w-md">
-          <CardHeader className="text-center">
-            <div className="mx-auto w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mb-4">
-              <AlertCircle className="h-6 w-6 text-red-600" />
-            </div>
-            <CardTitle className="text-red-800">Sesi Tidak Ditemukan</CardTitle>
-          </CardHeader>
-          <CardContent className="text-center space-y-4">
-            <p className="text-muted-foreground">
-              Sesi psikotes tidak ditemukan atau sudah berakhir.
-            </p>
-            <Button
-              variant="outline"
-              onClick={() => navigate("/")}
-              className="w-full"
-            >
-              Kembali ke Beranda
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  // Test not found
+  // Test not found in session modules
   if (!currentTest) {
     return (
       <div className="min-h-screen bg-gradient-to-br flex flex-col items-center justify-center p-4">
@@ -431,33 +351,6 @@ export default function PsikotesTestDetailPage() {
     );
   }
 
-  // User validation checks
-  if (!isAuthenticated || participantStatus === null || !sessionIsActive) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br flex flex-col items-center justify-center p-4">
-        <Card className="w-full max-w-md">
-          <CardHeader className="text-center">
-            <div className="mx-auto w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center mb-4">
-              <AlertCircle className="h-6 w-6 text-yellow-600" />
-            </div>
-            <CardTitle className="text-yellow-800">Akses Ditolak</CardTitle>
-          </CardHeader>
-          <CardContent className="text-center space-y-4">
-            <p className="text-muted-foreground">
-              Anda tidak memiliki akses ke tes ini atau sesi tidak aktif.
-            </p>
-            <Button
-              onClick={() => navigate(`/psikotes/${sessionCode}`)}
-              className="w-full"
-            >
-              Kembali ke Login
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
   const sampleQuestion = getSampleQuestion(currentTest.test.category);
   const testRules = getTestRules(currentTest.test.category);
 
@@ -502,7 +395,12 @@ export default function PsikotesTestDetailPage() {
                 <span>Progress Keseluruhan</span>
                 <span>{calculateOverallProgress()}%</span>
               </div>
-              <Progress value={calculateOverallProgress()} className="h-2" />
+              <div className="w-full bg-gray-200 rounded-full h-2">
+                <div
+                  className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                  style={{ width: `${calculateOverallProgress()}%` }}
+                ></div>
+              </div>
             </div>
           </CardHeader>
         </Card>
