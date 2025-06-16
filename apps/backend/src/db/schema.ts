@@ -75,6 +75,13 @@ export const participantStatusEnum = pgEnum("participant_status", [
   "no_show",
 ]);
 
+export const testProgressStatusEnum = pgEnum("test_progress_status", [
+  "not_started",
+  "in_progress",
+  "completed",
+  "auto_completed", // completed by time limit
+]);
+
 export const moduleTypeEnum = pgEnum("module_type", [
   "intelligence",
   "personality",
@@ -539,6 +546,57 @@ export const sessionParticipants = pgTable(
   })
 );
 
+// Participant Test Progress Table (for tracking individual test progress per participant)
+export const participantTestProgress = pgTable(
+  "participant_test_progress",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    participant_id: uuid("participant_id")
+      .notNull()
+      .references(() => sessionParticipants.id),
+    session_id: uuid("session_id")
+      .notNull()
+      .references(() => testSessions.id),
+    test_id: uuid("test_id")
+      .notNull()
+      .references(() => tests.id),
+    user_id: uuid("user_id")
+      .notNull()
+      .references(() => users.id),
+    status: testProgressStatusEnum("status").notNull().default("not_started"),
+    started_at: timestamp("started_at"),
+    completed_at: timestamp("completed_at"),
+    expected_completion_at: timestamp("expected_completion_at"), // started_at + time_limit
+    answered_questions: integer("answered_questions").default(0),
+    total_questions: integer("total_questions").default(0),
+    time_spent: integer("time_spent").default(0), // in seconds
+    is_auto_completed: boolean("is_auto_completed").default(false),
+    last_activity_at: timestamp("last_activity_at"),
+    created_at: timestamp("created_at").defaultNow().notNull(),
+    updated_at: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    participantTestUnique: uniqueIndex("participant_test_unique").on(
+      table.participant_id,
+      table.test_id
+    ),
+    sessionUserTestUnique: uniqueIndex("session_user_test_unique").on(
+      table.session_id,
+      table.user_id,
+      table.test_id
+    ),
+    participantIdx: index("progress_participant_idx").on(table.participant_id),
+    sessionIdx: index("progress_session_idx").on(table.session_id),
+    testIdx: index("progress_test_idx").on(table.test_id),
+    userIdx: index("progress_user_idx").on(table.user_id),
+    statusIdx: index("progress_status_idx").on(table.status),
+    startedAtIdx: index("progress_started_at_idx").on(table.started_at),
+    expectedCompletionIdx: index("progress_expected_completion_idx").on(
+      table.expected_completion_at
+    ),
+  })
+);
+
 // Audit Logs Table
 export const auditLogs = pgTable(
   "audit_logs",
@@ -705,9 +763,31 @@ export const sessionResultsRelations = relations(
   })
 );
 
+export const participantTestProgressRelations = relations(
+  participantTestProgress,
+  ({ one }) => ({
+    participant: one(sessionParticipants, {
+      fields: [participantTestProgress.participant_id],
+      references: [sessionParticipants.id],
+    }),
+    session: one(testSessions, {
+      fields: [participantTestProgress.session_id],
+      references: [testSessions.id],
+    }),
+    test: one(tests, {
+      fields: [participantTestProgress.test_id],
+      references: [tests.id],
+    }),
+    user: one(users, {
+      fields: [participantTestProgress.user_id],
+      references: [users.id],
+    }),
+  })
+);
+
 export const sessionParticipantsRelations = relations(
   sessionParticipants,
-  ({ one }) => ({
+  ({ one, many }) => ({
     session: one(testSessions, {
       fields: [sessionParticipants.session_id],
       references: [testSessions.id],
@@ -716,6 +796,7 @@ export const sessionParticipantsRelations = relations(
       fields: [sessionParticipants.user_id],
       references: [users.id],
     }),
+    testProgress: many(participantTestProgress),
   })
 );
 
@@ -743,5 +824,9 @@ export type SessionResult = typeof sessionResults.$inferSelect;
 export type NewSessionResult = typeof sessionResults.$inferInsert;
 export type SessionParticipant = typeof sessionParticipants.$inferSelect;
 export type NewSessionParticipant = typeof sessionParticipants.$inferInsert;
+export type ParticipantTestProgress =
+  typeof participantTestProgress.$inferSelect;
+export type NewParticipantTestProgress =
+  typeof participantTestProgress.$inferInsert;
 export type AuditLog = typeof auditLogs.$inferSelect;
 export type NewAuditLog = typeof auditLogs.$inferInsert;
