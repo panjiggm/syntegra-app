@@ -106,7 +106,7 @@ export const RecommendationSchema = z.object({
 
 // Individual Report Request
 export const GetIndividualReportRequestSchema = z.object({
-  user_id: z.string().uuid("Invalid user ID format"),
+  userId: z.string().uuid("Invalid user ID format"),
 });
 
 export const GetIndividualReportQuerySchema = z.object({
@@ -123,7 +123,7 @@ export const GetIndividualReportQuerySchema = z.object({
 
 // Session Summary Report Request
 export const GetSessionSummaryReportRequestSchema = z.object({
-  session_id: z.string().uuid("Invalid session ID format"),
+  sessionId: z.string().uuid("Invalid session ID format"),
 });
 
 export const GetSessionSummaryReportQuerySchema = z.object({
@@ -137,7 +137,7 @@ export const GetSessionSummaryReportQuerySchema = z.object({
 
 // Comparative Analysis Report Request
 export const GetComparativeReportRequestSchema = z.object({
-  session_id: z.string().uuid("Invalid session ID format"),
+  sessionId: z.string().uuid("Invalid session ID format"),
 });
 
 export const GetComparativeReportQuerySchema = z.object({
@@ -153,7 +153,7 @@ export const GetComparativeReportQuerySchema = z.object({
 
 // Batch Results Report Request
 export const GetBatchReportRequestSchema = z.object({
-  session_id: z.string().uuid("Invalid session ID format"),
+  sessionId: z.string().uuid("Invalid session ID format"),
 });
 
 export const GetBatchReportQuerySchema = z.object({
