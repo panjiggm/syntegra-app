@@ -25,7 +25,7 @@ import {
 
 // Hooks
 import { useAuth } from "~/contexts/auth-context";
-import { usePsikotesContext } from "~/routes/_psikotes";
+import { usePsikotesContext } from "./_psikotes";
 
 // Utils
 import {

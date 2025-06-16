@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { useNavigate } from "react-router";
-import type { Route } from "./+types/psikotes.$sessionCode.tests";
+import { useNavigate, useParams } from "react-router";
+import type { Route } from "./+types/psikotes.$sessionCode.$sessionId";
 
 // UI Components
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
@@ -26,7 +26,12 @@ import {
 
 // Hooks
 import { useAuth } from "~/contexts/auth-context";
-import { usePsikotesContext } from "./_psikotes";
+import { useSessions } from "~/hooks/use-sessions";
+import {
+  useParticipantTestProgress,
+  type ParticipantTestProgress,
+} from "~/hooks/use-participant-test-progress";
+import { toast } from "sonner";
 
 // Utils
 import { formatTime } from "~/lib/utils/date";
@@ -49,73 +54,220 @@ export async function loader({ params }: Route.LoaderArgs) {
   return null;
 }
 
-export default function PsikotesTestsPage() {
+export default function PsikotesSessionByIdPage() {
   const navigate = useNavigate();
+  const { sessionCode, sessionId } = useParams();
   const { user } = useAuth();
 
-  // Add error handling for context
-  let contextData;
-  try {
-    contextData = usePsikotesContext();
-  } catch (error) {
-    console.error("PsikotesContext error:", error);
+  const { useGetSessionById } = useSessions();
+  const {
+    useGetParticipantTestProgress,
+    useStartTest,
+    isTestTimeExpired,
+    calculateTimeRemaining,
+  } = useParticipantTestProgress();
+
+  // Get session data by ID instead of code
+  const {
+    data: sessionData,
+    isLoading: isLoadingSession,
+    error: sessionError,
+    refetch: refetchSession,
+  } = useGetSessionById(sessionId || "");
+
+  // TODO: Get participant ID from session participants table
+  // For now, we'll use a placeholder - this should be fetched based on user and session
+  const participantId = user?.id || ""; // This needs to be implemented
+
+  // Get test progress for this participant
+  const {
+    data: testProgressData,
+    isLoading: isLoadingProgress,
+    error: progressError,
+  } = useGetParticipantTestProgress(sessionId || "", participantId);
+
+  const startTestMutation = useStartTest();
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await refetchSession();
+    } catch (error) {
+      console.error("Error refreshing session data:", error);
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
+  const handleStartTest = async (testId: string, moduleName: string) => {
+    if (!sessionId || !participantId) {
+      toast.error("Missing required data to start test");
+      return;
+    }
+
+    try {
+      await startTestMutation.mutateAsync({
+        sessionId,
+        participantId,
+        testId,
+      });
+
+      // Navigate to test page after successful start
+      navigate(`/psikotes/${sessionCode}/test/${testId}`);
+    } catch (error) {
+      console.error("Failed to start test:", error);
+      // Error is already handled by the mutation's onError
+    }
+  };
+
+  const getModuleStatusBadge = (
+    testId: string,
+    testProgress?: ParticipantTestProgress
+  ) => {
+    if (!testProgress) {
+      return (
+        <Badge
+          variant="outline"
+          className="bg-blue-50 text-blue-700 border-blue-200"
+        >
+          <PlayCircle className="h-3 w-3 mr-1" />
+          Tersedia
+        </Badge>
+      );
+    }
+
+    switch (testProgress.status) {
+      case "not_started":
+        return (
+          <Badge
+            variant="outline"
+            className="bg-yellow-50 text-yellow-700 border-yellow-200"
+          >
+            <Timer className="h-3 w-3 mr-1" />
+            Belum Dimulai
+          </Badge>
+        );
+
+      case "in_progress":
+        const timeExpired =
+          testProgress.is_time_expired ||
+          (testProgress.started_at &&
+            isTestTimeExpired(
+              testProgress.started_at,
+              testProgress.test.time_limit
+            ));
+
+        if (timeExpired) {
+          return (
+            <Badge
+              variant="outline"
+              className="bg-red-50 text-red-700 border-red-200"
+            >
+              <AlertCircle className="h-3 w-3 mr-1" />
+              Waktu Habis
+            </Badge>
+          );
+        }
+
+        return (
+          <Badge
+            variant="outline"
+            className="bg-orange-50 text-orange-700 border-orange-200"
+          >
+            <Clock className="h-3 w-3 mr-1" />
+            Sedang Dikerjakan
+          </Badge>
+        );
+
+      case "completed":
+        return (
+          <Badge
+            variant="outline"
+            className="bg-green-50 text-green-700 border-green-200"
+          >
+            <CheckCircle className="h-3 w-3 mr-1" />
+            Selesai
+          </Badge>
+        );
+
+      case "auto_completed":
+        return (
+          <Badge
+            variant="outline"
+            className="bg-gray-50 text-gray-700 border-gray-200"
+          >
+            <Clock className="h-3 w-3 mr-1" />
+            Otomatis Selesai
+          </Badge>
+        );
+
+      default:
+        return (
+          <Badge
+            variant="outline"
+            className="bg-blue-50 text-blue-700 border-blue-200"
+          >
+            <PlayCircle className="h-3 w-3 mr-1" />
+            Tersedia
+          </Badge>
+        );
+    }
+  };
+
+  const calculateProgress = () => {
+    if (!testProgressData || testProgressData.length === 0) return 0;
+
+    const completedTests = testProgressData.filter(
+      (progress) =>
+        progress.status === "completed" || progress.status === "auto_completed"
+    ).length;
+
+    return Math.round((completedTests / testProgressData.length) * 100);
+  };
+
+  // Loading state
+  if (isLoadingSession || isLoadingProgress) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4">
-        <Card className="w-full max-w-md">
-          <CardContent className="text-center p-8">
-            <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-            <h2 className="text-lg font-semibold mb-2">Context Error</h2>
-            <p className="text-muted-foreground mb-4">
-              Terjadi kesalahan dalam memuat data sesi. Silakan muat ulang
-              halaman.
+      <div className="container mx-auto max-w-7xl px-4 py-6">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <RefreshCw className="h-8 w-8 animate-spin mx-auto mb-4 text-blue-600" />
+            <p className="text-muted-foreground">
+              {isLoadingSession
+                ? "Memuat data sesi..."
+                : "Memuat progress tes..."}
             </p>
-            <Button onClick={() => window.location.reload()}>Muat Ulang</Button>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </div>
     );
   }
 
-  const { sessionData, sessionCode, refetchSession, isRefreshing } =
-    contextData;
-
-  const handleRefresh = async () => {
-    await refetchSession();
-  };
-
-  const handleStartTest = (testId: string, moduleName: string) => {
-    navigate(`/psikotes/${sessionCode}/test/${testId}`);
-  };
-
-  const getModuleStatusBadge = (moduleIndex: number) => {
-    // TODO: This would be based on actual completion status from API
-    // For now, showing sample statuses
-    if (moduleIndex === 0) {
-      return (
-        <Badge
-          variant="outline"
-          className="bg-yellow-50 text-yellow-700 border-yellow-200"
-        >
-          <Timer className="h-3 w-3 mr-1" />
-          Belum Dimulai
-        </Badge>
-      );
-    }
+  // Error state
+  if (sessionError || !sessionData) {
     return (
-      <Badge
-        variant="outline"
-        className="bg-blue-50 text-blue-700 border-blue-200"
-      >
-        <PlayCircle className="h-3 w-3 mr-1" />
-        Tersedia
-      </Badge>
+      <div className="container mx-auto max-w-7xl px-4 py-6">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <Card className="w-full max-w-md">
+            <CardContent className="text-center p-8">
+              <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+              <h2 className="text-lg font-semibold mb-2">Error</h2>
+              <p className="text-muted-foreground mb-4">
+                Gagal memuat data sesi. Silakan coba lagi.
+              </p>
+              <Button onClick={handleRefresh} disabled={isRefreshing}>
+                <RefreshCw
+                  className={`h-4 w-4 mr-2 ${isRefreshing ? "animate-spin" : ""}`}
+                />
+                Coba Lagi
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
     );
-  };
-
-  const calculateProgress = () => {
-    // TODO: Calculate based on actual completion data
-    return 0; // 0% for now
-  };
+  }
 
   console.log("sessionData : ", sessionData);
 
@@ -221,8 +373,14 @@ export default function PsikotesTestsPage() {
               </div>
               <Progress value={calculateProgress()} className="h-2" />
               <p className="text-xs text-muted-foreground">
-                Anda telah menyelesaikan 0 dari{" "}
-                {sessionData.session_modules?.length || 0} tes yang tersedia.
+                Anda telah menyelesaikan{" "}
+                {testProgressData?.filter(
+                  (progress) =>
+                    progress.status === "completed" ||
+                    progress.status === "auto_completed"
+                ).length || 0}{" "}
+                dari {sessionData.session_modules?.length || 0} tes yang
+                tersedia.
               </p>
             </div>
           </CardContent>
@@ -233,8 +391,8 @@ export default function PsikotesTestsPage() {
           <CardHeader>
             <CardTitle className="text-lg">Tes yang Tersedia</CardTitle>
             <p className="text-sm text-muted-foreground">
-              Klik tombol "Mulai Tes" untuk memulai mengerjakan tes. Pastikan
-              koneksi internet stabil.
+              Klik card untuk memulai mengerjakan tes. Pastikan koneksi internet
+              stabil.
             </p>
           </CardHeader>
           <CardContent>
@@ -247,15 +405,39 @@ export default function PsikotesTestsPage() {
                     const test = module.test;
                     const gradientClass = getGradientClass(test.card_color);
 
+                    // Find test progress for this specific test
+                    const testProgress = testProgressData?.find(
+                      (progress) => progress.test_id === test.id
+                    );
+
                     console.log("test : ", test);
 
                     return (
-                      <div className="w-full max-w-2xs">
+                      <div
+                        key={module.id}
+                        className="w-full max-w-2xs"
+                        onClick={() => {
+                          // Only allow starting if test is not completed
+                          if (
+                            !testProgress ||
+                            (testProgress.status !== "completed" &&
+                              testProgress.status !== "auto_completed")
+                          ) {
+                            handleStartTest(test.id, test.name);
+                          }
+                        }}
+                      >
                         <div
-                          className={`rounded-xl p-4 shadow-lg transition-all duration-200 cursor-pointer hover:shadow-xl transform hover:scale-105 ${gradientClass}`}
+                          className={`rounded-xl p-4 shadow-lg transition-all duration-200 ${
+                            testProgress?.status === "completed" ||
+                            testProgress?.status === "auto_completed"
+                              ? "cursor-not-allowed opacity-75"
+                              : "cursor-pointer hover:shadow-xl transform hover:scale-105"
+                          } ${gradientClass}`}
                         >
                           <div className="flex justify-between items-start mb-3">
                             <span className="text-3xl">{test.icon}</span>
+                            {getModuleStatusBadge(test.id, testProgress)}
                           </div>
 
                           <h3 className={`font-bold text-md mb-1 line-clamp-1`}>
@@ -289,6 +471,14 @@ export default function PsikotesTestsPage() {
                               • {test.question_type?.split("_").join(" ")}
                             </p>
                           </div>
+
+                          {module.is_required && (
+                            <div className="mt-2">
+                              <Badge variant="destructive" className="text-xs">
+                                Wajib
+                              </Badge>
+                            </div>
+                          )}
                         </div>
                       </div>
                     );

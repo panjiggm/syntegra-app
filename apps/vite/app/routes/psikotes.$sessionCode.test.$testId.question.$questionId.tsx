@@ -4,7 +4,7 @@ import { useLoaderData, useNavigate, useParams } from "react-router";
 import { useQuestions } from "~/hooks/use-questions";
 import { useTestAttempt } from "~/hooks/use-test-attempt";
 import { useAuth } from "~/contexts/auth-context";
-import { usePsikotesContext } from "~/routes/_psikotes";
+import { usePsikotesContext } from "./_psikotes";
 import {
   Clock,
   CheckCircle,

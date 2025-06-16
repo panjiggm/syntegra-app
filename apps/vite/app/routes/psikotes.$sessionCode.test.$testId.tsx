@@ -29,7 +29,7 @@ import {
 // Hooks
 import { useQuestions } from "~/hooks/use-questions";
 import { useAuth } from "~/contexts/auth-context";
-import { usePsikotesContext } from "~/routes/_psikotes";
+import { usePsikotesContext } from "./_psikotes";
 
 // Utils
 import { useTestAttempt } from "~/hooks/use-test-attempt";

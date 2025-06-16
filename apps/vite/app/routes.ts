@@ -61,6 +61,10 @@ export default [
   layout("routes/_psikotes.tsx", [
     route("/psikotes/:sessionCode", "routes/psikotes.$sessionCode.tsx"),
     route(
+      "/psikotes/:sessionCode/:sessionId",
+      "routes/psikotes.$sessionCode.$sessionId.tsx"
+    ),
+    route(
       "/psikotes/:sessionCode/tests",
       "routes/psikotes.$sessionCode.tests.tsx"
     ),

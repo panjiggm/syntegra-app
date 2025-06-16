@@ -189,7 +189,8 @@ export default function PsikotesLayout() {
               checkResult.data.participant?.name || "Peserta"
             }!`,
           });
-          navigate(`/psikotes/${sessionCode}/tests`);
+          // Redirect to main route, then it will auto-redirect to sessionId route
+          navigate(`/psikotes/${sessionCode}`);
         } catch (loginError) {
           console.error("Login error:", loginError);
           toast.error("Gagal melakukan login", {
@@ -535,9 +536,7 @@ export default function PsikotesLayout() {
   return (
     <PsikotesContext.Provider value={contextValue}>
       <ParticipantRoute>
-        <div className="container mx-auto max-w-7xl px-4 py-6">
-          <Outlet />
-        </div>
+        <Outlet />
       </ParticipantRoute>
     </PsikotesContext.Provider>
   );
