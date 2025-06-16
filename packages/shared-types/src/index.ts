@@ -66,6 +66,9 @@ export * from "./session";
 // Export all session-participants related types and schemas
 export * from "./session-participants";
 
+// Export all participant test progress related types and schemas
+export * from "./participant-test-progress";
+
 // Export all answer-related types and schemas
 export * from "./answer";
 
