@@ -17,7 +17,7 @@ export const sessionModuleSchema = z.object({
       invalid_type_error: "Bobot harus berupa angka",
     })
     .min(0.1, "Bobot minimal 0.1")
-    .max(10, "Bobot maksimal 10"),
+    .max(100, "Bobot maksimal 100"),
 });
 
 // Main session schema

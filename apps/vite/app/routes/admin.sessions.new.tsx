@@ -101,6 +101,8 @@ export default function AdminSessionsNewPage() {
     },
   });
 
+  console.log("form.formState.errors", form.formState.errors);
+
   const { fields, append, remove } = useFieldArray({
     control: form.control,
     name: "session_modules",

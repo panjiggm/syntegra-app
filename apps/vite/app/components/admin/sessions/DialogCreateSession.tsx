@@ -111,7 +111,7 @@ export const DialogCreateSession = () => {
 
     if (totalModules === 0) return;
 
-    const totalWeight = 10;
+    const totalWeight = 100;
     const baseWeight = Math.floor(totalWeight / totalModules);
     const remainder = totalWeight % totalModules;
 
@@ -635,7 +635,7 @@ export const DialogCreateSession = () => {
                                               type="number"
                                               step="0.1"
                                               min="0.1"
-                                              max="10"
+                                              max="100"
                                               disabled
                                               className="w-full"
                                               {...field}

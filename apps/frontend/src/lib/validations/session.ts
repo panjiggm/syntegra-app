@@ -11,7 +11,7 @@ export const SessionModuleSchema = z.object({
   weight: z
     .number()
     .min(0.1, "Bobot minimal 0.1")
-    .max(5.0, "Bobot maksimal 5.0"),
+    .max(100, "Bobot maksimal 100"),
 });
 
 // Create Session Form Schema

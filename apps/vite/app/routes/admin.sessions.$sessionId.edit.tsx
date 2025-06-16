@@ -153,7 +153,7 @@ export default function AdminSessionsEditPage() {
   const redistributeWeights = (moduleCount: number) => {
     if (moduleCount === 0) return;
 
-    const evenWeight = Math.round((10 / moduleCount) * 10) / 10;
+    const evenWeight = Math.round((100 / moduleCount) * 100) / 100;
     const currentModules = form.getValues("session_modules");
 
     currentModules.forEach((_, index) => {

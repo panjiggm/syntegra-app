@@ -176,7 +176,7 @@ export const SessionModuleSelector = () => {
                             })
                           }
                           min="0.1"
-                          max="5.0"
+                          max="100"
                           step="0.1"
                           className="w-16 h-8"
                         />

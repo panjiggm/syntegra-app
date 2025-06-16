@@ -23,7 +23,7 @@ export const SessionModuleSchema = z.object({
   test_id: z.string().uuid("Invalid test ID format"),
   sequence: z.number().min(1, "Sequence must be at least 1"),
   is_required: z.boolean().default(true),
-  weight: z.number().min(0.1).max(10).default(1.0), // Weight for scoring
+  weight: z.number().min(0.1).max(100).default(1.0), // Weight for scoring
 });
 
 // Create Session Request Schema
