@@ -4,20 +4,29 @@ import { useLoaderData, useNavigate, useParams } from "react-router";
 import { useQuestions } from "~/hooks/use-questions";
 import { useTestAttempt } from "~/hooks/use-test-attempt";
 import { useAuth } from "~/contexts/auth-context";
-import { usePsikotesContext } from "./_psikotes";
+import { useSessions } from "~/hooks/use-sessions";
+import { useParticipantTestProgress } from "~/hooks/use-participant-test-progress";
 import {
   Clock,
   CheckCircle,
   ArrowLeft,
+  ArrowRight,
   LogOut,
   AlertTriangle,
   Save,
+  Flag,
+  RotateCcw,
+  Menu,
+  X,
+  Grid3X3,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "~/components/ui/button";
 import { LoadingSpinner } from "~/components/ui/loading-spinner";
 import { Badge } from "~/components/ui/badge";
 import { Separator } from "~/components/ui/separator";
+import { Card, CardContent } from "~/components/ui/card";
+import { Progress } from "~/components/ui/progress";
 
 export const meta: MetaFunction = () => {
   return [
@@ -33,11 +42,7 @@ export async function loader({ params }: LoaderFunctionArgs) {
     throw new Response("Missing required parameters", { status: 400 });
   }
 
-  return {
-    sessionCode,
-    testId,
-    questionId,
-  };
+  return { sessionCode, testId, questionId };
 }
 
 export default function QuestionPage() {
@@ -45,100 +50,154 @@ export default function QuestionPage() {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
 
-  // States
+  // ==================== STATES ====================
   const [selectedAnswer, setSelectedAnswer] = useState<string>("");
   const [attemptId, setAttemptId] = useState<string | null>(null);
   const [isAutoSaving, setIsAutoSaving] = useState(false);
-  const [timeSpent, setTimeSpent] = useState(0);
-  const [questionStartTime, setQuestionStartTime] = useState<Date | null>(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [questionStartTime, setQuestionStartTime] = useState<Date | null>(null);
+  const [displayTimeRemaining, setDisplayTimeRemaining] = useState<number>(0);
+  const [isNavigationOpen, setIsNavigationOpen] = useState(false);
 
-  // Refs for timers
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
-  const autoSaveRef = useRef<NodeJS.Timeout | null>(null);
+  // ==================== REFS ====================
+  const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const countdownIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Hooks
+  // ==================== HOOKS ====================
   const { useGetQuestions, useGetQuestionById } = useQuestions();
   const {
-    useGetAttempt,
-    useGetAttemptProgress,
     useSubmitAnswer,
     useAutoSave,
+    useGetAttemptProgress,
     useGetAnswer,
-    useUpdateAttempt,
     useFinishAttempt,
   } = useTestAttempt();
+  const { useGetPublicSessionByCode } = useSessions();
+  const { useGetTestProgress, useUpdateTestProgress, useCompleteTest } =
+    useParticipantTestProgress();
 
-  // Queries
+  // ==================== SESSION DATA ====================
+  // Get session data to obtain session ID
+  const {
+    data: sessionData,
+    isLoading: isLoadingSession,
+    error: sessionError,
+  } = useGetPublicSessionByCode(sessionCode);
+
+  const sessionId = sessionData?.id;
+
+  // ==================== QUERIES ====================
   const questionsQuery = useGetQuestions(testId, {
     sort_by: "sequence",
     sort_order: "asc",
     limit: 100,
   });
+
   const currentQuestionQuery = useGetQuestionById(testId, questionId);
 
-  // Mutations
+  const testProgressQuery = useGetTestProgress(
+    sessionId || "", // Use sessionId instead of sessionCode
+    user?.id || "",
+    testId
+  );
+
+  const answerQuery = useGetAnswer(attemptId || "", questionId);
+  const progressQuery = useGetAttemptProgress(attemptId || "");
+
+  // ==================== MUTATIONS ====================
   const submitAnswer = useSubmitAnswer();
   const autoSave = useAutoSave();
-  const updateAttempt = useUpdateAttempt();
+  const updateProgress = useUpdateTestProgress();
+  const completeTest = useCompleteTest();
   const finishAttempt = useFinishAttempt();
 
-  // Get attempt data
-  const attemptQuery = useGetAttempt(attemptId || "");
-  const progressQuery = useGetAttemptProgress(attemptId || "");
-  const answerQuery = useGetAnswer(attemptId || "", questionId);
+  // ==================== COMPUTED VALUES ====================
+  const questions = questionsQuery.data?.data || [];
+  const currentQuestion = currentQuestionQuery.data?.data;
+  const testProgress = testProgressQuery.data;
+  const progress = progressQuery.data;
 
-  // Get attempt ID from sessionStorage on mount
+  const currentIndex = questions.findIndex((q) => q.id === questionId);
+  const currentQuestionNumber = currentIndex + 1;
+  const totalQuestions = questions.length;
+  const answeredCount = progress?.answered_question_ids?.length || 0;
+  const progressPercentage =
+    totalQuestions > 0 ? (answeredCount / totalQuestions) * 100 : 0;
+
+  // Timer computed values - use API data directly
+  const timeRemaining = testProgress?.time_remaining || 0;
+  const isTimeExpired = testProgress?.is_time_expired || false;
+  const isTimeCritical = displayTimeRemaining <= 300; // 5 minutes
+  const isTimeAlmostUp = displayTimeRemaining <= 60; // 1 minute
+
+  console.log("testProgress : ", testProgress);
+  console.log("progress : ", progress);
+
+  // ==================== TIMER SYNC ====================
+  // Sync display timer with API data
+  useEffect(() => {
+    if (timeRemaining !== undefined) {
+      console.log("Timer sync - API time remaining:", timeRemaining, "seconds");
+      console.log("Timer sync - Is time expired:", isTimeExpired);
+      console.log("Timer sync - Test progress status:", testProgress?.status);
+      setDisplayTimeRemaining(timeRemaining);
+    }
+  }, [timeRemaining, isTimeExpired, testProgress?.status]);
+
+  // Real-time countdown display
+  useEffect(() => {
+    if (displayTimeRemaining > 0 && !isTimeExpired) {
+      countdownIntervalRef.current = setInterval(() => {
+        setDisplayTimeRemaining((prev) => {
+          const newTime = Math.max(0, prev - 1);
+          if (newTime % 30 === 0) {
+            // Log every 30 seconds
+            console.log(
+              "Countdown update - Display time remaining:",
+              newTime,
+              "seconds"
+            );
+          }
+          return newTime;
+        });
+      }, 1000);
+    } else {
+      if (countdownIntervalRef.current) {
+        clearInterval(countdownIntervalRef.current);
+        countdownIntervalRef.current = null;
+      }
+    }
+
+    return () => {
+      if (countdownIntervalRef.current) {
+        clearInterval(countdownIntervalRef.current);
+      }
+    };
+  }, [displayTimeRemaining, isTimeExpired]);
+
+  // ==================== INITIALIZATION ====================
   useEffect(() => {
     const storedAttemptId = sessionStorage.getItem(`attempt_${testId}`);
     if (storedAttemptId) {
       setAttemptId(storedAttemptId);
     } else {
-      // No attempt found, redirect to test detail
       navigate(`/psikotes/${sessionCode}/test/${testId}`);
     }
   }, [testId, sessionCode, navigate]);
 
-  // Set question start time and update status to in_progress
   useEffect(() => {
-    if (attemptId && currentQuestionQuery.data) {
+    if (currentQuestion) {
       setQuestionStartTime(new Date());
-
-      // Update attempt status to in_progress if it's the first question
-      if (attemptQuery.data?.status === "started") {
-        updateAttempt.mutate({
-          attemptId,
-          data: { status: "in_progress" },
-        });
-      }
     }
-  }, [attemptId, currentQuestionQuery.data?.data.id]);
+  }, [questionId, currentQuestion?.id]);
 
-  // Timer for tracking time spent
-  useEffect(() => {
-    if (questionStartTime) {
-      timerRef.current = setInterval(() => {
-        setTimeSpent(
-          Math.floor((Date.now() - questionStartTime.getTime()) / 1000)
-        );
-      }, 1000);
-    }
-
-    return () => {
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-      }
-    };
-  }, [questionStartTime]);
-
-  // Load existing answer when question changes
+  // ==================== ANSWER MANAGEMENT ====================
   useEffect(() => {
     if (answerQuery.data?.answer) {
       const existingAnswer = answerQuery.data.answer;
       if (existingAnswer.answer) {
         setSelectedAnswer(existingAnswer.answer);
       } else if (existingAnswer.answer_data) {
-        // Handle complex answer data if needed
         setSelectedAnswer(JSON.stringify(existingAnswer.answer_data));
       }
       setHasUnsavedChanges(false);
@@ -148,67 +207,110 @@ export default function QuestionPage() {
     }
   }, [questionId, answerQuery.data]);
 
-  // Auto-save functionality
-  const triggerAutoSave = useCallback(() => {
+  // ==================== AUTO-SAVE ====================
+  const triggerAutoSave = useCallback(async () => {
     if (!attemptId || !selectedAnswer.trim() || isAutoSaving) return;
 
     setIsAutoSaving(true);
-    autoSave.mutate(
-      {
+    try {
+      await autoSave.mutateAsync({
         attemptId,
         data: {
           question_id: questionId,
           answer: selectedAnswer,
-          time_taken: timeSpent,
+          time_taken: questionStartTime
+            ? Math.floor((Date.now() - questionStartTime.getTime()) / 1000)
+            : 0,
         },
-      },
-      {
-        onSuccess: () => {
-          setHasUnsavedChanges(false);
-          setIsAutoSaving(false);
-        },
-        onError: () => {
-          setIsAutoSaving(false);
-        },
+      });
+
+      // Update progress tracking
+      if (user?.id && sessionId) {
+        await updateProgress.mutateAsync({
+          sessionId: sessionId,
+          participantId: user.id,
+          testId,
+          answered_questions: answeredCount,
+          time_spent: testProgress?.time_spent || 0,
+        });
       }
-    );
+
+      setHasUnsavedChanges(false);
+    } catch (error) {
+      console.error("Auto-save failed:", error);
+    } finally {
+      setIsAutoSaving(false);
+    }
   }, [
     attemptId,
-    questionId,
     selectedAnswer,
-    timeSpent,
-    autoSave,
+    questionId,
+    questionStartTime,
     isAutoSaving,
+    autoSave,
+    sessionId,
+    user?.id,
+    testId,
+    answeredCount,
+    testProgress?.time_spent,
+    updateProgress,
   ]);
 
-  // Auto-save when answer changes (debounced)
   useEffect(() => {
-    if (hasUnsavedChanges) {
-      if (autoSaveRef.current) {
-        clearTimeout(autoSaveRef.current);
+    if (hasUnsavedChanges && selectedAnswer.trim()) {
+      if (autoSaveTimeoutRef.current) {
+        clearTimeout(autoSaveTimeoutRef.current);
       }
 
-      autoSaveRef.current = setTimeout(() => {
+      autoSaveTimeoutRef.current = setTimeout(() => {
         triggerAutoSave();
-      }, 3000); // Auto-save after 3 seconds of inactivity
+      }, 2000); // Auto-save after 2 seconds
     }
 
     return () => {
-      if (autoSaveRef.current) {
-        clearTimeout(autoSaveRef.current);
+      if (autoSaveTimeoutRef.current) {
+        clearTimeout(autoSaveTimeoutRef.current);
       }
     };
-  }, [hasUnsavedChanges, triggerAutoSave]);
+  }, [hasUnsavedChanges, selectedAnswer, triggerAutoSave]);
 
-  // Handle answer change
+  // ==================== EVENT HANDLERS ====================
   const handleAnswerChange = (value: string) => {
     setSelectedAnswer(value);
     setHasUnsavedChanges(true);
   };
 
-  // Handle navigation
+  const handleTimeExpiry = useCallback(async () => {
+    if (!user?.id || !sessionId) return;
+
+    try {
+      await completeTest.mutateAsync({
+        sessionId: sessionId,
+        participantId: user.id,
+        testId,
+        is_auto_completed: true,
+      });
+
+      toast.error("Waktu habis!", {
+        description: "Test telah diselesaikan secara otomatis.",
+      });
+
+      navigate(`/psikotes/${sessionCode}/${sessionId}/complete`);
+    } catch (error) {
+      console.error("Auto-completion failed:", error);
+      toast.error("Gagal menyelesaikan test secara otomatis");
+    }
+  }, [sessionId, user?.id, testId, completeTest, navigate, sessionCode]);
+
+  // ==================== TIME EXPIRY CHECK ====================
+  useEffect(() => {
+    if (isTimeExpired) {
+      handleTimeExpiry();
+    }
+  }, [isTimeExpired, handleTimeExpiry]);
+
   const handleNext = async () => {
-    if (!attemptId || !questionsQuery.data) return;
+    if (!attemptId) return;
 
     // Save current answer first
     if (selectedAnswer.trim()) {
@@ -218,17 +320,17 @@ export default function QuestionPage() {
           data: {
             question_id: questionId,
             answer: selectedAnswer,
-            time_taken: timeSpent,
+            time_taken: questionStartTime
+              ? Math.floor((Date.now() - questionStartTime.getTime()) / 1000)
+              : 0,
           },
         });
       } catch (error) {
         console.error("Failed to save answer:", error);
+        toast.error("Gagal menyimpan jawaban");
         return;
       }
     }
-
-    const questions = questionsQuery.data.data;
-    const currentIndex = questions.findIndex((q) => q.id === questionId);
 
     if (currentIndex < questions.length - 1) {
       const nextQuestion = questions[currentIndex + 1];
@@ -236,17 +338,11 @@ export default function QuestionPage() {
         `/psikotes/${sessionCode}/test/${testId}/question/${nextQuestion.id}`
       );
     } else {
-      // Last question - finish test
       handleFinishTest();
     }
   };
 
   const handlePrevious = () => {
-    if (!questionsQuery.data) return;
-
-    const questions = questionsQuery.data.data;
-    const currentIndex = questions.findIndex((q) => q.id === questionId);
-
     if (currentIndex > 0) {
       const prevQuestion = questions[currentIndex - 1];
       navigate(
@@ -262,37 +358,39 @@ export default function QuestionPage() {
   };
 
   const handleFinishTest = async () => {
-    if (!attemptId || !progressQuery.data) return;
+    if (!user?.id || !sessionId) return;
+
+    // Show confirmation dialog
+    const confirmed = confirm(
+      `Apakah Anda yakin ingin menyelesaikan test ini?\n\nAnda telah menjawab ${answeredCount} dari ${totalQuestions} soal.\n\nSetelah diselesaikan, Anda tidak dapat mengubah jawaban lagi.`
+    );
+
+    if (!confirmed) return;
 
     try {
-      const result = await finishAttempt.mutateAsync({
-        attemptId,
+      await completeTest.mutateAsync({
+        sessionId: sessionId,
+        participantId: user.id,
+        testId,
+        is_auto_completed: false,
+      });
+
+      // Finish attempt
+      await finishAttempt.mutateAsync({
+        attemptId: attemptId || "",
         data: {
           completion_type: "completed",
-          questions_answered: progressQuery.data.questions_answered,
-          time_spent: progressQuery.data.time_spent || 0,
-          final_browser_info: {
-            user_agent: navigator.userAgent,
-            platform: navigator.platform,
-            language: navigator.language,
-            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-            completedAt: new Date().toISOString(),
-            finalUrl: window.location.href,
-          },
+          questions_answered: answeredCount,
+          time_spent: testProgress?.time_spent || 0,
         },
       });
 
-      // Clear session storage
+      toast.success("Test berhasil diselesaikan!");
       sessionStorage.removeItem(`attempt_${testId}`);
-
-      // Navigate to completion page
-      if (result.next_test) {
-        navigate(`/psikotes/${sessionCode}/test/${result.next_test.id}`);
-      } else {
-        navigate(`/psikotes/${sessionCode}/test/complete`);
-      }
+      navigate(`/psikotes/${sessionCode}/${sessionId}/complete`);
     } catch (error) {
       console.error("Failed to finish test:", error);
+      toast.error("Gagal menyelesaikan test");
     }
   };
 
@@ -310,7 +408,60 @@ export default function QuestionPage() {
     }
   };
 
-  // Handle page unload warning
+  // ==================== TIME WARNING EFFECTS ====================
+  useEffect(() => {
+    if (displayTimeRemaining === 300) {
+      toast.warning("Waktu tersisa 5 menit!", {
+        description: "Segera selesaikan test Anda.",
+      });
+    } else if (displayTimeRemaining === 60) {
+      toast.error("Waktu tersisa 1 menit!", {
+        description: "Test akan otomatis selesai jika waktu habis.",
+      });
+    }
+  }, [displayTimeRemaining]);
+
+  // ==================== KEYBOARD NAVIGATION ====================
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Prevent keyboard navigation when typing in text areas
+      if (
+        e.target instanceof HTMLTextAreaElement ||
+        e.target instanceof HTMLInputElement
+      ) {
+        return;
+      }
+
+      if (e.key === "ArrowLeft" && currentIndex > 0) {
+        e.preventDefault();
+        handlePrevious();
+      } else if (
+        e.key === "ArrowRight" &&
+        currentIndex < questions.length - 1
+      ) {
+        e.preventDefault();
+        handleNext();
+      } else if (e.key === "Enter" && e.ctrlKey) {
+        e.preventDefault();
+        if (currentIndex === questions.length - 1) {
+          handleFinishTest();
+        } else {
+          handleNext();
+        }
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [
+    currentIndex,
+    questions.length,
+    handleNext,
+    handlePrevious,
+    handleFinishTest,
+  ]);
+
+  // ==================== PAGE UNLOAD WARNING ====================
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       if (hasUnsavedChanges) {
@@ -323,163 +474,300 @@ export default function QuestionPage() {
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
   }, [hasUnsavedChanges]);
 
-  // Loading states
+  // ==================== LOADING STATES ====================
   if (
+    isLoadingSession ||
     questionsQuery.isLoading ||
     currentQuestionQuery.isLoading ||
-    (attemptId && attemptQuery.isLoading)
+    testProgressQuery.isLoading
   ) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <LoadingSpinner size="lg" />
-      </div>
-    );
-  }
-
-  // Error states
-  if (questionsQuery.error || currentQuestionQuery.error) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
-          <h2 className="text-xl font-semibold text-red-600 mb-2">
-            Terjadi Kesalahan
-          </h2>
-          <p className="text-gray-600 mb-4">
-            {questionsQuery.error?.message ||
-              currentQuestionQuery.error?.message}
+          <LoadingSpinner size="lg" />
+          <p className="mt-4 text-muted-foreground">
+            {isLoadingSession
+              ? "Memuat sesi..."
+              : testProgressQuery.isLoading
+                ? "Memuat progress test..."
+                : "Memuat soal..."}
           </p>
-          <Button onClick={() => navigate(`/psikotes/${sessionCode}`)}>
-            Kembali ke Sesi
-          </Button>
         </div>
       </div>
     );
   }
 
-  const questions = questionsQuery.data?.data || [];
-  const currentQuestion = currentQuestionQuery.data?.data;
-  const progress = progressQuery.data;
-  const attempt = attemptQuery.data;
-
-  if (!currentQuestion || !questions.length) {
+  // ==================== ERROR STATES ====================
+  if (sessionError || questionsQuery.error || currentQuestionQuery.error) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <LoadingSpinner size="lg" />
+        <Card className="w-full max-w-md">
+          <CardContent className="text-center p-6">
+            <AlertTriangle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+            <h2 className="text-xl font-semibold text-red-600 mb-2">
+              Terjadi Kesalahan
+            </h2>
+            <p className="text-gray-600 mb-4">
+              {sessionError?.message ||
+                questionsQuery.error?.message ||
+                currentQuestionQuery.error?.message}
+            </p>
+            <Button onClick={() => navigate(`/psikotes/${sessionCode}`)}>
+              Kembali ke Sesi
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     );
   }
 
-  const currentIndex = questions.findIndex((q) => q.id === questionId);
-  const currentQuestionNumber = currentIndex + 1;
-  const totalQuestions = questions.length;
-  const answeredCount = progress?.questions_answered || 0;
-
-  // Check if attempt is expired
-  if (attempt?.is_expired || progress?.is_expired) {
+  // ==================== NO DATA STATES ====================
+  if (!sessionData || !sessionId || !currentQuestion || !questions.length) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <AlertTriangle className="h-16 w-16 text-red-500 mx-auto mb-4" />
-          <h2 className="text-xl font-semibold text-red-600 mb-2">
-            Waktu Habis
-          </h2>
-          <p className="text-gray-600 mb-4">
-            Waktu pengerjaan tes telah berakhir.
-          </p>
-          <Button onClick={() => navigate(`/psikotes/${sessionCode}/tests`)}>
-            Kembali ke Daftar Tes
-          </Button>
-        </div>
+        <Card className="w-full max-w-md">
+          <CardContent className="text-center p-6">
+            <AlertTriangle className="h-12 w-12 text-yellow-500 mx-auto mb-4" />
+            <h2 className="text-xl font-semibold text-yellow-600 mb-2">
+              {!sessionData || !sessionId
+                ? "Sesi Tidak Ditemukan"
+                : "Soal Tidak Ditemukan"}
+            </h2>
+            <p className="text-gray-600 mb-4">
+              {!sessionData || !sessionId
+                ? "Sesi yang Anda cari tidak tersedia."
+                : "Soal yang Anda cari tidak tersedia."}
+            </p>
+            <Button onClick={() => navigate(`/psikotes/${sessionCode}/tests`)}>
+              Kembali ke Daftar Tes
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     );
   }
 
-  const timeRemaining = progress?.time_remaining || 0;
-  const progressPercentage = progress?.progress_percentage || 0;
+  // ==================== TIME EXPIRED STATE ====================
+  if (isTimeExpired) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Card className="w-full max-w-md">
+          <CardContent className="text-center p-6">
+            <Clock className="h-12 w-12 text-red-500 mx-auto mb-4" />
+            <h2 className="text-xl font-semibold text-red-600 mb-2">
+              Waktu Habis
+            </h2>
+            <p className="text-gray-600 mb-4">
+              Waktu pengerjaan tes telah berakhir.
+            </p>
+            <Button onClick={() => navigate(`/psikotes/${sessionCode}/tests`)}>
+              Kembali ke Daftar Tes
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
+  // ==================== RENDER MAIN UI ====================
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <div className="bg-white border-b border-gray-200 px-6 py-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-6">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() =>
-                navigate(`/psikotes/${sessionCode}/test/${testId}`)
-              }
-            >
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Kembali
-            </Button>
-
-            <div>
-              <h1 className="text-xl font-semibold text-gray-900">
-                {attempt?.test.name || "Loading..."}
-              </h1>
-              <p className="text-sm text-gray-600">
-                Soal {currentQuestionNumber} dari {totalQuestions}
-              </p>
+      <div className="container mx-auto max-w-7xl bg-white border-b border-gray-200 sticky top-0 z-20">
+        <div className="px-4 sm:px-6">
+          {/* Desktop Header */}
+          <div className="hidden md:flex items-center justify-between py-4">
+            {/* Left Section */}
+            <div className="flex items-center gap-4">
+              <div>
+                <h1 className="text-lg font-semibold text-gray-900">
+                  {testProgress?.test?.name || "Test"}
+                </h1>
+                <p className="text-sm text-gray-600">
+                  Soal {currentQuestionNumber} dari {totalQuestions}
+                </p>
+              </div>
             </div>
 
-            <div className="flex items-center space-x-4 text-sm">
-              <div className="flex items-center space-x-1">
+            {/* Center Section - Progress */}
+            <div className="flex items-center space-x-6">
+              <div className="flex items-center space-x-2">
                 <CheckCircle className="h-4 w-4 text-green-500" />
-                <span>
+                <span className="text-sm text-gray-600">
                   {answeredCount}/{totalQuestions} terjawab
                 </span>
               </div>
 
-              <div className="flex items-center space-x-1">
-                <Clock className="h-4 w-4 text-blue-500" />
-                <span>
-                  {Math.floor(timeRemaining / 60)}:
-                  {(timeRemaining % 60).toString().padStart(2, "0")}
+              <div className="flex items-center space-x-2">
+                <div className="w-32 bg-gray-200 rounded-full h-2">
+                  <div
+                    className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                    style={{ width: `${progressPercentage}%` }}
+                  />
+                </div>
+                <span className="text-sm text-gray-600 w-10">
+                  {Math.round(progressPercentage)}%
                 </span>
               </div>
+            </div>
 
-              {hasUnsavedChanges && (
-                <Badge variant="outline" className="animate-pulse">
-                  <Save className="h-3 w-3 mr-1" />
-                  {isAutoSaving ? "Menyimpan..." : "Belum tersimpan"}
-                </Badge>
+            {/* Right Section */}
+            <div className="flex items-center space-x-4">
+              {/* Timer */}
+              <div
+                className={`flex items-center space-x-2 px-3 py-2 rounded-lg border ${
+                  isTimeAlmostUp
+                    ? "bg-red-50 border-red-200 text-red-700"
+                    : isTimeCritical
+                      ? "bg-orange-50 border-orange-200 text-orange-700"
+                      : "bg-blue-50 border-blue-200 text-blue-700"
+                }`}
+              >
+                <Clock
+                  className={`h-4 w-4 ${isTimeAlmostUp ? "animate-pulse" : ""}`}
+                />
+                <span className="font-mono font-medium">
+                  {Math.floor(displayTimeRemaining / 60)}:
+                  {(displayTimeRemaining % 60).toString().padStart(2, "0")}
+                </span>
+                {isTimeCritical && (
+                  <Badge
+                    variant={isTimeAlmostUp ? "destructive" : "secondary"}
+                    className="text-xs"
+                  >
+                    {isTimeAlmostUp ? "HAMPIR HABIS!" : "TERBATAS"}
+                  </Badge>
+                )}
+              </div>
+
+              {/* Auto-save indicator */}
+              {(hasUnsavedChanges || isAutoSaving) && (
+                <div
+                  className={`flex items-center space-x-2 px-3 py-1 rounded-full text-xs ${
+                    isAutoSaving
+                      ? "bg-blue-50 text-blue-700 border border-blue-200"
+                      : "bg-yellow-50 text-yellow-700 border border-yellow-200"
+                  }`}
+                >
+                  <Save
+                    className={`h-3 w-3 ${isAutoSaving ? "animate-spin" : "animate-pulse"}`}
+                  />
+                  <span>
+                    {isAutoSaving ? "Menyimpan..." : "Belum tersimpan"}
+                  </span>
+                </div>
+              )}
+
+              {/* Auto-saved confirmation */}
+              {!hasUnsavedChanges && !isAutoSaving && selectedAnswer.trim() && (
+                <div className="flex items-center space-x-2 px-3 py-1 rounded-full text-xs bg-green-50 text-green-700 border border-green-200">
+                  <CheckCircle className="h-3 w-3" />
+                  <span>Tersimpan</span>
+                </div>
               )}
             </div>
           </div>
 
-          <div className="flex items-center space-x-4">
-            <div className="flex items-center space-x-2">
-              <div className="w-48 bg-gray-200 rounded-full h-2">
-                <div
-                  className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                  style={{ width: `${progressPercentage}%` }}
-                ></div>
+          {/* Mobile Header */}
+          <div className="md:hidden py-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <div>
+                  <h1 className="text-sm font-semibold text-gray-900 truncate max-w-32">
+                    {testProgress?.test?.name || "Test"}
+                  </h1>
+                  <p className="text-xs text-gray-600">
+                    {currentQuestionNumber}/{totalQuestions}
+                  </p>
+                </div>
               </div>
-              <span className="text-sm text-gray-600">
-                {Math.round(progressPercentage)}%
-              </span>
+
+              <div className="flex items-center space-x-2">
+                {/* Timer Mobile */}
+                <div
+                  className={`flex items-center space-x-1 px-2 py-1 rounded text-xs ${
+                    isTimeAlmostUp
+                      ? "bg-red-50 border border-red-200 text-red-700"
+                      : isTimeCritical
+                        ? "bg-orange-50 border border-orange-200 text-orange-700"
+                        : "bg-blue-50 border border-blue-200 text-blue-700"
+                  }`}
+                >
+                  <Clock
+                    className={`h-3 w-3 ${isTimeAlmostUp ? "animate-pulse" : ""}`}
+                  />
+                  <span className="font-mono font-medium">
+                    {Math.floor(displayTimeRemaining / 60)}:
+                    {(displayTimeRemaining % 60).toString().padStart(2, "0")}
+                  </span>
+                </div>
+
+                {/* Navigation Toggle */}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setIsNavigationOpen(!isNavigationOpen)}
+                >
+                  <Grid3X3 className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
 
-            <Button variant="outline" size="sm" onClick={handleLogout}>
-              <LogOut className="h-4 w-4 mr-2" />
-              Keluar
-            </Button>
+            {/* Mobile Progress */}
+            <div className="mt-3">
+              <div className="flex items-center justify-between text-xs mb-1">
+                <span className="text-gray-600">
+                  Progress: {answeredCount}/{totalQuestions}
+                </span>
+                <span className="text-gray-600">
+                  {Math.round(progressPercentage)}%
+                </span>
+              </div>
+              <Progress value={progressPercentage} className="h-1.5" />
+            </div>
+
+            {/* Auto-save indicator mobile */}
+            {(hasUnsavedChanges || isAutoSaving) && (
+              <div className="mt-2">
+                <div
+                  className={`inline-flex items-center space-x-1 px-2 py-1 rounded-full text-xs ${
+                    isAutoSaving
+                      ? "bg-blue-50 text-blue-700 border border-blue-200"
+                      : "bg-yellow-50 text-yellow-700 border border-yellow-200"
+                  }`}
+                >
+                  <Save
+                    className={`h-3 w-3 ${isAutoSaving ? "animate-spin" : "animate-pulse"}`}
+                  />
+                  <span>
+                    {isAutoSaving ? "Menyimpan..." : "Belum tersimpan"}
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
 
-      <div className="flex flex-1">
-        {/* Left Panel - Navigation */}
-        <div className="w-80 bg-white border-r border-gray-200 h-[calc(100vh-80px)] overflow-y-auto">
-          <div className="p-4">
-            <h3 className="font-medium text-gray-900 mb-4">Navigasi Soal</h3>
+      <div className="container mx-auto max-w-7xl flex flex-col md:flex-row">
+        {/* Desktop Sidebar - Question Navigation */}
+        <div className="hidden md:block w-80 bg-white border-r border-gray-200 h-[calc(100vh-120px)] overflow-y-auto">
+          <div className="p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-semibold text-gray-900">Navigasi Soal</h3>
+              <Badge variant="outline" className="text-xs">
+                {answeredCount}/{totalQuestions}
+              </Badge>
+            </div>
 
-            <div className="grid grid-cols-5 gap-2">
+            <div className="grid grid-cols-5 gap-2 mb-6">
               {questions.map((question, index) => {
+                // Track answered questions - for now just current question
+                // TODO: Implement comprehensive answered tracking with test progress API
                 const answeredIds = new Set(
                   progress?.answered_question_ids ?? []
                 );
+
                 const isAnswered = answeredIds.has(question.id);
                 const isActive = question.id === questionId;
 
@@ -506,78 +794,230 @@ export default function QuestionPage() {
               })}
             </div>
 
-            <div className="mt-6 space-y-2 text-sm">
+            <div className="space-y-2 text-sm">
               <div className="flex items-center space-x-2">
-                <div className="w-4 h-4 bg-blue-600 rounded"></div>
+                <div className="w-4 h-4 bg-blue-600 rounded border-2 border-blue-600" />
                 <span>Soal Aktif</span>
               </div>
               <div className="flex items-center space-x-2">
-                <div className="w-4 h-4 bg-green-100 border-2 border-green-300 rounded"></div>
+                <div className="w-4 h-4 bg-green-100 border-2 border-green-300 rounded" />
                 <span>Sudah Dijawab</span>
               </div>
               <div className="flex items-center space-x-2">
-                <div className="w-4 h-4 bg-gray-50 border-2 border-gray-300 rounded"></div>
+                <div className="w-4 h-4 bg-gray-50 border-2 border-gray-300 rounded" />
                 <span>Belum Dijawab</span>
               </div>
+            </div>
+
+            <Separator className="my-6" />
+
+            {/* Test Statistics */}
+            <div className="mb-4 p-3 bg-gray-50 rounded-lg text-xs">
+              <div className="flex justify-between items-center mb-1">
+                <span className="text-gray-600">Progress:</span>
+                <span className="font-medium">
+                  {Math.round(progressPercentage)}%
+                </span>
+              </div>
+              <div className="flex justify-between items-center mb-1">
+                <span className="text-gray-600">Waktu tersisa:</span>
+                <span
+                  className={`font-medium ${isTimeCritical ? "text-orange-600" : "text-gray-900"}`}
+                >
+                  {Math.floor(displayTimeRemaining / 60)}:
+                  {(displayTimeRemaining % 60).toString().padStart(2, "0")}
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-gray-600">Rata-rata per soal:</span>
+                <span className="font-medium text-gray-900">
+                  {totalQuestions > 0
+                    ? Math.round(
+                        displayTimeRemaining /
+                          (totalQuestions - currentQuestionNumber + 1)
+                      )
+                    : 0}
+                  s
+                </span>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => testProgressQuery.refetch()}
+                className="w-full"
+                disabled={testProgressQuery.isFetching}
+              >
+                <RotateCcw
+                  className={`h-4 w-4 mr-2 ${testProgressQuery.isFetching ? "animate-spin" : ""}`}
+                />
+                {testProgressQuery.isFetching
+                  ? "Refreshing..."
+                  : "Refresh Progress"}
+              </Button>
             </div>
           </div>
         </div>
 
-        {/* Right Panel - Question Content */}
-        <div className="flex-1 p-6">
+        {/* Mobile Navigation Panel - Collapsible */}
+        {isNavigationOpen && (
+          <div className="md:hidden bg-white border-b border-gray-200 relative z-10">
+            <div className="p-4">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-semibold text-gray-900">Navigasi Soal</h3>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setIsNavigationOpen(false)}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+
+              {/* Question Grid - Horizontal scroll on mobile */}
+              <div className="overflow-x-auto">
+                <div
+                  className="flex space-x-2 pb-2"
+                  style={{ minWidth: "max-content" }}
+                >
+                  {questions.map((question, index) => {
+                    const answeredIds = new Set(
+                      progress?.answered_question_ids ?? []
+                    );
+                    const isAnswered = answeredIds.has(question.id);
+                    const isActive = question.id === questionId;
+
+                    return (
+                      <Button
+                        key={question.id}
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          handleQuestionSelect(question.id);
+                          setIsNavigationOpen(false);
+                        }}
+                        className={`
+                          w-10 h-10 rounded-lg text-sm font-medium border-2 transition-all p-0 flex-shrink-0
+                          ${
+                            isActive
+                              ? "bg-blue-600 text-white border-blue-600"
+                              : isAnswered
+                                ? "bg-green-100 text-green-700 border-green-300"
+                                : "bg-gray-50 text-gray-700 border-gray-300"
+                          }
+                        `}
+                      >
+                        {index + 1}
+                      </Button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Question Content */}
+        <div className="flex-1 p-4 md:p-6">
           <div className="max-w-4xl mx-auto">
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-              {/* Question */}
-              <div className="mb-6">
-                <div className="flex items-start space-x-2 mb-4">
-                  <Badge variant="outline">
-                    {currentQuestion.question_type
-                      .replace("_", " ")
-                      .toUpperCase()}
-                  </Badge>
-                  {currentQuestion.is_required && (
-                    <Badge variant="destructive">WAJIB</Badge>
+            <Card className="shadow-sm">
+              <CardContent className="p-4 md:p-8">
+                {/* Question Header */}
+                <div className="mb-8">
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex items-center space-x-2">
+                      <Badge variant="outline">
+                        {currentQuestion.question_type
+                          .replace("_", " ")
+                          .toUpperCase()}
+                      </Badge>
+                      {currentQuestion.is_required && (
+                        <Badge variant="destructive">WAJIB</Badge>
+                      )}
+                    </div>
+                    <Badge variant="secondary" className="text-xs">
+                      Nomor {currentQuestionNumber}
+                    </Badge>
+                  </div>
+
+                  <h2 className="text-xl font-medium text-gray-900 leading-relaxed">
+                    {currentQuestion.question}
+                  </h2>
+
+                  {currentQuestion.image_url && (
+                    <div className="mt-6">
+                      <img
+                        src={currentQuestion.image_url}
+                        alt="Question illustration"
+                        className="max-w-full h-auto rounded-lg border border-gray-200 shadow-sm"
+                      />
+                    </div>
+                  )}
+
+                  {currentQuestion.audio_url && (
+                    <div className="mt-6">
+                      <audio controls className="w-full">
+                        <source
+                          src={currentQuestion.audio_url}
+                          type="audio/mpeg"
+                        />
+                        Browser Anda tidak mendukung audio.
+                      </audio>
+                    </div>
                   )}
                 </div>
 
-                <h2 className="text-lg font-medium text-gray-900 mb-4">
-                  {currentQuestion.question}
-                </h2>
+                <Separator className="my-8" />
 
-                {currentQuestion.image_url && (
-                  <div className="mb-4">
-                    <img
-                      src={currentQuestion.image_url}
-                      alt="Question illustration"
-                      className="max-w-full h-auto rounded-lg border border-gray-200"
-                    />
-                  </div>
-                )}
+                {/* Answer Options */}
+                <div className="mb-8">
+                  {/* Multiple Choice */}
+                  {currentQuestion.question_type === "multiple_choice" &&
+                    currentQuestion.options && (
+                      <div className="space-y-3">
+                        {currentQuestion.options.map((option, index) => (
+                          <label
+                            key={index}
+                            className={`flex items-center space-x-4 p-4 border-2 rounded-lg cursor-pointer transition-all duration-200 hover:shadow-md ${
+                              selectedAnswer === option.value
+                                ? "border-blue-500 bg-blue-50 shadow-md transform scale-[1.02]"
+                                : "border-gray-200 hover:border-gray-300 hover:bg-gray-50"
+                            }`}
+                          >
+                            <input
+                              type="radio"
+                              name="answer"
+                              value={option.value}
+                              checked={selectedAnswer === option.value}
+                              onChange={(e) =>
+                                handleAnswerChange(e.target.value)
+                              }
+                              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
+                            />
+                            <span className="text-gray-900 flex-1">
+                              {option.label}
+                            </span>
+                          </label>
+                        ))}
+                      </div>
+                    )}
 
-                {currentQuestion.audio_url && (
-                  <div className="mb-4">
-                    <audio controls className="w-full">
-                      <source
-                        src={currentQuestion.audio_url}
-                        type="audio/mpeg"
-                      />
-                      Browser Anda tidak mendukung audio.
-                    </audio>
-                  </div>
-                )}
-              </div>
-
-              <Separator className="my-6" />
-
-              {/* Answer Options */}
-              <div className="mb-8">
-                {currentQuestion.question_type === "multiple_choice" &&
-                  currentQuestion.options && (
+                  {/* True/False */}
+                  {currentQuestion.question_type === "true_false" && (
                     <div className="space-y-3">
-                      {currentQuestion.options.map((option, index) => (
+                      {[
+                        { value: "true", label: "Benar" },
+                        { value: "false", label: "Salah" },
+                      ].map((option) => (
                         <label
-                          key={index}
-                          className="flex items-center space-x-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors"
+                          key={option.value}
+                          className={`flex items-center space-x-4 p-4 border-2 rounded-lg cursor-pointer transition-all duration-200 hover:shadow-md ${
+                            selectedAnswer === option.value
+                              ? "border-blue-500 bg-blue-50 shadow-md transform scale-[1.02]"
+                              : "border-gray-200 hover:border-gray-300 hover:bg-gray-50"
+                          }`}
                         >
                           <input
                             type="radio"
@@ -587,117 +1027,172 @@ export default function QuestionPage() {
                             onChange={(e) => handleAnswerChange(e.target.value)}
                             className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
                           />
-                          <span className="text-gray-900">{option.label}</span>
+                          <span className="text-gray-900 flex-1">
+                            {option.label}
+                          </span>
                         </label>
                       ))}
                     </div>
                   )}
 
-                {currentQuestion.question_type === "true_false" && (
-                  <div className="space-y-3">
-                    <label className="flex items-center space-x-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors">
-                      <input
-                        type="radio"
-                        name="answer"
-                        value="true"
-                        checked={selectedAnswer === "true"}
-                        onChange={(e) => handleAnswerChange(e.target.value)}
-                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
-                      />
-                      <span className="text-gray-900">Benar</span>
-                    </label>
-                    <label className="flex items-center space-x-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors">
-                      <input
-                        type="radio"
-                        name="answer"
-                        value="false"
-                        checked={selectedAnswer === "false"}
-                        onChange={(e) => handleAnswerChange(e.target.value)}
-                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
-                      />
-                      <span className="text-gray-900">Salah</span>
-                    </label>
-                  </div>
-                )}
+                  {/* Text Input */}
+                  {currentQuestion.question_type === "text" && (
+                    <textarea
+                      value={selectedAnswer}
+                      onChange={(e) => handleAnswerChange(e.target.value)}
+                      placeholder="Tulis jawaban Anda di sini..."
+                      className="w-full p-4 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
+                      rows={6}
+                    />
+                  )}
 
-                {currentQuestion.question_type === "text" && (
-                  <textarea
-                    value={selectedAnswer}
-                    onChange={(e) => handleAnswerChange(e.target.value)}
-                    placeholder="Tulis jawaban Anda di sini..."
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
-                    rows={4}
-                  />
-                )}
-
-                {currentQuestion.question_type === "rating_scale" && (
-                  <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
-                    <span className="text-sm text-gray-600">
-                      Sangat Tidak Setuju
-                    </span>
-                    <div className="flex space-x-2">
-                      {[1, 2, 3, 4, 5].map((rating) => (
-                        <label key={rating} className="cursor-pointer">
-                          <input
-                            type="radio"
-                            name="answer"
-                            value={rating.toString()}
-                            checked={selectedAnswer === rating.toString()}
-                            onChange={(e) => handleAnswerChange(e.target.value)}
-                            className="sr-only"
-                          />
-                          <div
-                            className={`
-                              w-10 h-10 rounded-full border-2 flex items-center justify-center text-sm font-medium transition-all
+                  {/* Rating Scale */}
+                  {currentQuestion.question_type === "rating_scale" && (
+                    <div className="bg-gray-50 p-6 rounded-lg">
+                      <div className="flex items-center justify-between mb-4">
+                        <span className="text-sm text-gray-600 font-medium">
+                          Sangat Tidak Setuju
+                        </span>
+                        <span className="text-sm text-gray-600 font-medium">
+                          Sangat Setuju
+                        </span>
+                      </div>
+                      <div className="flex justify-center space-x-4">
+                        {[1, 2, 3, 4, 5].map((rating) => (
+                          <label key={rating} className="cursor-pointer">
+                            <input
+                              type="radio"
+                              name="answer"
+                              value={rating.toString()}
+                              checked={selectedAnswer === rating.toString()}
+                              onChange={(e) =>
+                                handleAnswerChange(e.target.value)
+                              }
+                              className="sr-only"
+                            />
+                            <div
+                              className={`
+                              w-12 h-12 rounded-full border-2 flex items-center justify-center text-lg font-medium transition-all hover:scale-105
                               ${
                                 selectedAnswer === rating.toString()
-                                  ? "bg-blue-600 text-white border-blue-600"
+                                  ? "bg-blue-600 text-white border-blue-600 shadow-lg"
                                   : "bg-white text-gray-700 border-gray-300 hover:border-blue-300"
                               }
                             `}
-                          >
-                            {rating}
-                          </div>
-                        </label>
-                      ))}
+                            >
+                              {rating}
+                            </div>
+                          </label>
+                        ))}
+                      </div>
                     </div>
-                    <span className="text-sm text-gray-600">Sangat Setuju</span>
+                  )}
+                </div>
+
+                {/* Navigation */}
+                <div className="pt-6 md:pt-8 border-t border-gray-200">
+                  {/* Desktop Navigation */}
+                  <div className="hidden md:flex items-center justify-between">
+                    <Button
+                      variant="outline"
+                      onClick={handlePrevious}
+                      disabled={currentIndex === 0}
+                      className="min-w-[120px]"
+                    >
+                      <ArrowLeft className="h-4 w-4 mr-2" />
+                      Sebelumnya
+                    </Button>
+
+                    <div className="text-center">
+                      <p className="text-sm text-gray-600 mb-1">
+                        Soal {currentQuestionNumber} dari {totalQuestions}
+                      </p>
+                      <div className="w-64 bg-gray-200 rounded-full h-2">
+                        <div
+                          className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                          style={{
+                            width: `${(currentQuestionNumber / totalQuestions) * 100}%`,
+                          }}
+                        />
+                      </div>
+                    </div>
+
+                    <Button
+                      onClick={handleNext}
+                      disabled={submitAnswer.isPending}
+                      className={`min-w-[120px] ${
+                        currentIndex === questions.length - 1
+                          ? "bg-green-600 hover:bg-green-700"
+                          : ""
+                      }`}
+                    >
+                      {submitAnswer.isPending ? (
+                        <LoadingSpinner size="sm" className="mr-2" />
+                      ) : currentIndex === questions.length - 1 ? (
+                        <Flag className="h-4 w-4 mr-2" />
+                      ) : (
+                        <ArrowRight className="h-4 w-4 mr-2" />
+                      )}
+                      {currentIndex === questions.length - 1
+                        ? "Selesai"
+                        : "Selanjutnya"}
+                    </Button>
                   </div>
-                )}
-              </div>
 
-              {/* Navigation */}
-              <div className="flex items-center justify-between pt-6 border-t border-gray-200">
-                <Button
-                  variant="outline"
-                  onClick={handlePrevious}
-                  disabled={currentIndex === 0}
-                >
-                  Sebelumnya
-                </Button>
+                  {/* Mobile Navigation */}
+                  <div className="md:hidden space-y-4">
+                    {/* Progress */}
+                    <div className="text-center">
+                      <p className="text-sm text-gray-600 mb-2">
+                        Soal {currentQuestionNumber} dari {totalQuestions}
+                      </p>
+                      <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div
+                          className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                          style={{
+                            width: `${(currentQuestionNumber / totalQuestions) * 100}%`,
+                          }}
+                        />
+                      </div>
+                    </div>
 
-                <span className="text-sm text-gray-600">
-                  {currentQuestionNumber} dari {totalQuestions}
-                </span>
+                    {/* Navigation Buttons */}
+                    <div className="flex gap-3">
+                      <Button
+                        variant="outline"
+                        onClick={handlePrevious}
+                        disabled={currentIndex === 0}
+                        className="flex-1"
+                      >
+                        <ArrowLeft className="h-4 w-4 mr-2" />
+                        Sebelumnya
+                      </Button>
 
-                <Button
-                  onClick={handleNext}
-                  disabled={submitAnswer.isPending}
-                  className={
-                    currentIndex === questions.length - 1
-                      ? "bg-green-600 hover:bg-green-700"
-                      : ""
-                  }
-                >
-                  {submitAnswer.isPending ? (
-                    <LoadingSpinner size="sm" className="mr-2" />
-                  ) : null}
-                  {currentIndex === questions.length - 1
-                    ? "Selesai"
-                    : "Selanjutnya"}
-                </Button>
-              </div>
-            </div>
+                      <Button
+                        onClick={handleNext}
+                        disabled={submitAnswer.isPending}
+                        className={`flex-1 ${
+                          currentIndex === questions.length - 1
+                            ? "bg-green-600 hover:bg-green-700"
+                            : ""
+                        }`}
+                      >
+                        {submitAnswer.isPending ? (
+                          <LoadingSpinner size="sm" className="mr-2" />
+                        ) : currentIndex === questions.length - 1 ? (
+                          <Flag className="h-4 w-4 mr-2" />
+                        ) : (
+                          <ArrowRight className="h-4 w-4 mr-2" />
+                        )}
+                        {currentIndex === questions.length - 1
+                          ? "Selesai"
+                          : "Selanjutnya"}
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </div>
         </div>
       </div>

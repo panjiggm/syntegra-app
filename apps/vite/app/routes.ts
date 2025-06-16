@@ -65,10 +65,6 @@ export default [
       "routes/psikotes.$sessionCode.$sessionId.tsx"
     ),
     route(
-      "/psikotes/:sessionCode/tests",
-      "routes/psikotes.$sessionCode.tests.tsx"
-    ),
-    route(
       "/psikotes/:sessionCode/test/:testId",
       "routes/psikotes.$sessionCode.test.$testId.tsx"
     ),
@@ -77,12 +73,8 @@ export default [
       "routes/psikotes.$sessionCode.test.$testId.question.$questionId.tsx"
     ),
     route(
-      "/psikotes/:sessionCode/test/:testId/complete",
-      "routes/psikotes.$sessionCode.test.$testId.complete.tsx"
-    ),
-    route(
-      "/psikotes/:sessionCode/test/complete",
-      "routes/psikotes.$sessionCode.test.complete.tsx"
+      "/psikotes/:sessionCode/:sessionId/complete",
+      "routes/psikotes.$sessionCode.$sessionId.complete.tsx"
     ),
   ]),
 ] satisfies RouteConfig;

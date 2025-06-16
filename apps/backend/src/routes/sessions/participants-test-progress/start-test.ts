@@ -49,7 +49,7 @@ export async function startTestHandler(
       .from(sessionParticipants)
       .where(
         and(
-          eq(sessionParticipants.id, participantId),
+          eq(sessionParticipants.user_id, participantId),
           eq(sessionParticipants.session_id, sessionId)
         )
       )
@@ -111,7 +111,7 @@ export async function startTestHandler(
       .from(participantTestProgress)
       .where(
         and(
-          eq(participantTestProgress.participant_id, participantId),
+          eq(participantTestProgress.participant_id, participant.id),
           eq(participantTestProgress.test_id, testId)
         )
       )
@@ -142,7 +142,7 @@ export async function startTestHandler(
     const [newProgress] = await db
       .insert(participantTestProgress)
       .values({
-        participant_id: participantId,
+        participant_id: participant.id,
         session_id: sessionId,
         test_id: testId,
         user_id: participant.user_id,

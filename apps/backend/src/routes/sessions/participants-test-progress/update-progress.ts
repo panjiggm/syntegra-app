@@ -52,7 +52,7 @@ export async function updateTestProgressHandler(
       .from(sessionParticipants)
       .where(
         and(
-          eq(sessionParticipants.id, participantId),
+          eq(sessionParticipants.user_id, participantId),
           eq(sessionParticipants.session_id, sessionId)
         )
       )
@@ -90,7 +90,7 @@ export async function updateTestProgressHandler(
       .from(participantTestProgress)
       .where(
         and(
-          eq(participantTestProgress.participant_id, participantId),
+          eq(participantTestProgress.participant_id, participant.id),
           eq(participantTestProgress.session_id, sessionId),
           eq(participantTestProgress.test_id, testId)
         )

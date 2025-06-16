@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router";
 import type { Route } from "./+types/psikotes.$sessionCode.$sessionId";
 
@@ -35,10 +35,7 @@ import { toast } from "sonner";
 
 // Utils
 import { formatTime } from "~/lib/utils/date";
-import {
-  getGradientClass,
-  StatusBadge,
-} from "~/components/card/card-test-module";
+import { getGradientClass } from "~/components/card/card-test-module";
 
 export function meta({ params }: Route.MetaArgs) {
   return [
@@ -60,12 +57,8 @@ export default function PsikotesSessionByIdPage() {
   const { user } = useAuth();
 
   const { useGetSessionById } = useSessions();
-  const {
-    useGetParticipantTestProgress,
-    useStartTest,
-    isTestTimeExpired,
-    calculateTimeRemaining,
-  } = useParticipantTestProgress();
+  const { useGetParticipantTestProgress, isTestTimeExpired } =
+    useParticipantTestProgress();
 
   // Get session data by ID instead of code
   const {
@@ -86,7 +79,6 @@ export default function PsikotesSessionByIdPage() {
     error: progressError,
   } = useGetParticipantTestProgress(sessionId || "", participantId);
 
-  const startTestMutation = useStartTest();
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const handleRefresh = async () => {
@@ -107,12 +99,6 @@ export default function PsikotesSessionByIdPage() {
     }
 
     try {
-      await startTestMutation.mutateAsync({
-        sessionId,
-        participantId,
-        testId,
-      });
-
       // Navigate to test page after successful start
       navigate(`/psikotes/${sessionCode}/test/${testId}`);
     } catch (error) {
@@ -225,6 +211,23 @@ export default function PsikotesSessionByIdPage() {
 
     return Math.round((completedTests / testProgressData.length) * 100);
   };
+
+  // Check if all tests are completed and redirect
+  useEffect(() => {
+    if (testProgressData && sessionData?.session_modules) {
+      const totalTests = sessionData.session_modules.length;
+      const completedTests = testProgressData.filter(
+        (progress) =>
+          progress.status === "completed" ||
+          progress.status === "auto_completed"
+      ).length;
+
+      if (totalTests > 0 && completedTests === totalTests) {
+        // All tests completed, redirect to complete page
+        navigate(`/psikotes/${sessionCode}/${sessionId}/complete`);
+      }
+    }
+  }, [testProgressData, sessionData, navigate, sessionCode, sessionId]);
 
   // Loading state
   if (isLoadingSession || isLoadingProgress) {
@@ -399,90 +402,81 @@ export default function PsikotesSessionByIdPage() {
             {sessionData.session_modules &&
             sessionData.session_modules.length > 0 ? (
               <div className="space-y-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {sessionData.session_modules
-                  .sort((a: any, b: any) => a.sequence - b.sequence)
-                  .map((module: any, index: number) => {
-                    const test = module.test;
-                    const gradientClass = getGradientClass(test.card_color);
+                {testProgressData?.map((module: any, index: number) => {
+                  const test = module.test;
+                  const gradientClass = getGradientClass(test.card_color);
 
-                    // Find test progress for this specific test
-                    const testProgress = testProgressData?.find(
-                      (progress) => progress.test_id === test.id
-                    );
-
-                    console.log("test : ", test);
-
-                    return (
+                  return (
+                    <div
+                      key={module.id}
+                      className="w-full max-w-2xs"
+                      onClick={() => {
+                        // Only allow starting if test is not completed
+                        if (
+                          !test ||
+                          (module.status !== "completed" &&
+                            module.status !== "auto_completed")
+                        ) {
+                          handleStartTest(test.id, test.name);
+                        }
+                      }}
+                    >
                       <div
-                        key={module.id}
-                        className="w-full max-w-2xs"
-                        onClick={() => {
-                          // Only allow starting if test is not completed
-                          if (
-                            !testProgress ||
-                            (testProgress.status !== "completed" &&
-                              testProgress.status !== "auto_completed")
-                          ) {
-                            handleStartTest(test.id, test.name);
-                          }
-                        }}
+                        className={`rounded-xl p-4 shadow-lg transition-all duration-200 ${
+                          module?.status === "completed" ||
+                          module?.status === "auto_completed"
+                            ? "cursor-not-allowed opacity-75"
+                            : "cursor-pointer hover:shadow-xl transform hover:scale-105"
+                        } ${gradientClass}`}
                       >
-                        <div
-                          className={`rounded-xl p-4 shadow-lg transition-all duration-200 ${
-                            testProgress?.status === "completed" ||
-                            testProgress?.status === "auto_completed"
-                              ? "cursor-not-allowed opacity-75"
-                              : "cursor-pointer hover:shadow-xl transform hover:scale-105"
-                          } ${gradientClass}`}
-                        >
-                          <div className="flex justify-between items-start mb-3">
-                            <span className="text-3xl">{test.icon}</span>
-                            {getModuleStatusBadge(test.id, testProgress)}
-                          </div>
-
-                          <h3 className={`font-bold text-md mb-1 line-clamp-1`}>
-                            {test.name}
-                          </h3>
-                          <p className={`text-xs mb-3 line-clamp-2`}>
-                            {test.description}
-                          </p>
-
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-1">
-                              <Clock10 className="h-4 w-4" />
-                              <span
-                                className={`text-xs`}
-                              >{`${test.time_limit} menit`}</span>
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <NotebookPen className="h-4 w-4" />
-                              <span
-                                className={`text-xs`}
-                              >{`${test.total_questions} soal`}</span>
-                            </div>
-                          </div>
-
-                          <div className={`mt-2 pt-2 border-t border-gray-300`}>
-                            <p className={`text-xs `}>• {test.module_type}</p>
-                            <p className={`text-xs `}>
-                              • {test.category?.split("_").join(" ")}
-                            </p>
-                            <p className={`text-xs `}>
-                              • {test.question_type?.split("_").join(" ")}
-                            </p>
-                          </div>
-
-                          {module.is_required && (
-                            <div className="mt-2">
-                              <Badge variant="destructive" className="text-xs">
-                                Wajib
-                              </Badge>
-                            </div>
-                          )}
+                        <div className="flex justify-between items-start mb-3">
+                          <span className="text-3xl">{test.icon}</span>
+                          {getModuleStatusBadge(test.id, module)}
                         </div>
+
+                        <h3 className={`font-bold text-md mb-1 line-clamp-1`}>
+                          {test.name}
+                        </h3>
+                        <p className={`text-xs mb-3 line-clamp-2`}>
+                          {test.description}
+                        </p>
+
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-1">
+                            <Clock10 className="h-4 w-4" />
+                            <span
+                              className={`text-xs`}
+                            >{`${test.time_limit} menit`}</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <NotebookPen className="h-4 w-4" />
+                            <span
+                              className={`text-xs`}
+                            >{`${test.total_questions} soal`}</span>
+                          </div>
+                        </div>
+
+                        <div className={`mt-2 pt-2 border-t border-gray-300`}>
+                          <p className={`text-xs `}>• {test.module_type}</p>
+                          <p className={`text-xs `}>
+                            • {test.category?.split("_").join(" ")}
+                          </p>
+                          <p className={`text-xs `}>
+                            • {test.question_type?.split("_").join(" ")}
+                          </p>
+                        </div>
+
+                        {module.is_required && (
+                          <div className="mt-2">
+                            <Badge variant="destructive" className="text-xs">
+                              Wajib
+                            </Badge>
+                          </div>
+                        )}
                       </div>
-                    );
-                  })}
+                    </div>
+                  );
+                })}
               </div>
             ) : (
               <div className="text-center py-8">

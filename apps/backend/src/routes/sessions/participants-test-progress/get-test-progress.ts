@@ -5,6 +5,7 @@ import {
   participantTestProgress,
   tests,
   isDatabaseConfigured,
+  sessionParticipants,
 } from "@/db";
 import { type CloudflareBindings } from "@/lib/env";
 
@@ -27,6 +28,37 @@ export async function getTestProgressHandler(
 
     // Get database connection
     const db = getDbFromEnv(c.env);
+
+    const [participant] = await db
+      .select({
+        id: sessionParticipants.id,
+        user_id: sessionParticipants.user_id,
+        status: sessionParticipants.status,
+      })
+      .from(sessionParticipants)
+      .where(
+        and(
+          eq(sessionParticipants.user_id, participantId),
+          eq(sessionParticipants.session_id, sessionId)
+        )
+      )
+      .limit(1);
+
+    if (!participant) {
+      const errorResponse = {
+        success: false,
+        message: "Participant not found in session",
+        errors: [
+          {
+            field: "participantId",
+            message: `Participant with ID "${participantId}" not found in session "${sessionId}"`,
+            code: "PARTICIPANT_NOT_FOUND",
+          },
+        ],
+        timestamp: new Date().toISOString(),
+      };
+      return c.json(errorResponse, 404);
+    }
 
     // Get progress record with test info
     const [progressData] = await db
@@ -62,7 +94,7 @@ export async function getTestProgressHandler(
       .innerJoin(tests, eq(participantTestProgress.test_id, tests.id))
       .where(
         and(
-          eq(participantTestProgress.participant_id, participantId),
+          eq(participantTestProgress.participant_id, participant.id),
           eq(participantTestProgress.session_id, sessionId),
           eq(participantTestProgress.test_id, testId)
         )

@@ -58,7 +58,7 @@ export async function getParticipantTestProgressHandler(
       .from(sessionParticipants)
       .where(
         and(
-          eq(sessionParticipants.id, participantId),
+          eq(sessionParticipants.user_id, participantId),
           eq(sessionParticipants.session_id, sessionId)
         )
       )
@@ -106,7 +106,7 @@ export async function getParticipantTestProgressHandler(
       .from(participantTestProgress)
       .where(
         and(
-          eq(participantTestProgress.participant_id, participantId),
+          eq(participantTestProgress.participant_id, participant.id),
           eq(participantTestProgress.session_id, sessionId)
         )
       );

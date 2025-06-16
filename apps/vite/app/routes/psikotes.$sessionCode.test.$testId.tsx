@@ -34,6 +34,8 @@ import { usePsikotesContext } from "./_psikotes";
 // Utils
 import { useTestAttempt } from "~/hooks/use-test-attempt";
 import { toast } from "sonner";
+import { useSessions } from "~/hooks/use-sessions";
+import { useParticipantTestProgress } from "~/hooks/use-participant-test-progress";
 
 export function meta({ params }: Route.MetaArgs) {
   return [
@@ -49,10 +51,15 @@ export async function loader({ params }: Route.LoaderArgs) {
 }
 
 export default function PsikotesTestDetailPage() {
-  const { testId } = useParams();
+  const { testId, sessionCode } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { sessionData, sessionCode } = usePsikotesContext();
+  const { useGetPublicSessionByCode } = useSessions();
+  const {
+    data: sessionData,
+    isLoading: isLoadingSession,
+    error: sessionError,
+  } = useGetPublicSessionByCode(sessionCode || "");
 
   const [currentTest, setCurrentTest] = useState<any>(null);
   const [isStarting, setIsStarting] = useState(false);
@@ -71,8 +78,11 @@ export default function PsikotesTestDetailPage() {
       page: 1,
     });
 
+  const { useStartTest } = useParticipantTestProgress();
+
   const { useStartAttempt } = useTestAttempt();
   const startAttempt = useStartAttempt();
+  const startTestMutation = useStartTest();
 
   // Find current test in session modules
   useEffect(() => {
@@ -110,7 +120,7 @@ export default function PsikotesTestDetailPage() {
     setIsStartingAttempt(true);
 
     try {
-      // 1. Start test attempt terlebih dahulu
+      // 0. Start test attempt
       const attempt = await startAttempt.mutateAsync({
         test_id: testId,
         session_code: sessionCode,
@@ -123,6 +133,13 @@ export default function PsikotesTestDetailPage() {
           screenResolution: `${screen.width}x${screen.height}`,
           windowSize: `${window.innerWidth}x${window.innerHeight}`,
         },
+      });
+
+      // 1. Start test
+      await startTestMutation.mutateAsync({
+        sessionId: sessionData?.id || "",
+        participantId: user?.id || "",
+        testId,
       });
 
       // 2. Store attemptId ke sessionStorage
@@ -163,12 +180,6 @@ export default function PsikotesTestDetailPage() {
     } finally {
       setIsStartingAttempt(false);
     }
-  };
-
-  const calculateOverallProgress = () => {
-    // TODO: Calculate based on completed tests
-    // For now, return sample progress
-    return 25; // 25% progress
   };
 
   const getTestIcon = (category: string) => {
@@ -362,12 +373,14 @@ export default function PsikotesTestDetailPage() {
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
+              <div className="flex flex-col items-start md:items-center md:flex-row gap-4">
                 <Button
                   variant="link"
                   size="sm"
                   className="cursor-pointer"
-                  onClick={() => navigate(`/psikotes/${sessionCode}/tests`)}
+                  onClick={() =>
+                    navigate(`/psikotes/${sessionCode}/${sessionData?.id}`)
+                  }
                 >
                   <ArrowLeft className="h-4 w-4 mr-2" />
                   Kembali
@@ -383,23 +396,9 @@ export default function PsikotesTestDetailPage() {
                     )}
                   </CardTitle>
                   <p className="text-sm text-muted-foreground mt-1">
-                    {sessionData.session_name} • {currentTest.test.category}
+                    {sessionData?.session_name} • {currentTest.test.category}
                   </p>
                 </div>
-              </div>
-            </div>
-
-            {/* Progress Overview */}
-            <div className="mt-4">
-              <div className="flex items-center justify-between text-sm mb-2">
-                <span>Progress Keseluruhan</span>
-                <span>{calculateOverallProgress()}%</span>
-              </div>
-              <div className="w-full bg-gray-200 rounded-full h-2">
-                <div
-                  className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                  style={{ width: `${calculateOverallProgress()}%` }}
-                ></div>
               </div>
             </div>
           </CardHeader>
