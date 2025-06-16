@@ -48,24 +48,6 @@ export async function getSessionByIdHandler(
     const env = getEnv(c);
     const db = getDbFromEnv(c.env);
 
-    // Get authenticated admin user
-    const auth = c.get("auth");
-    if (!auth || auth.user.role !== "admin") {
-      const errorResponse: SessionErrorResponse = {
-        success: false,
-        message: "Access denied",
-        errors: [
-          {
-            field: "authorization",
-            message: "Only admin users can access test session details",
-            code: "ACCESS_DENIED",
-          },
-        ],
-        timestamp: new Date().toISOString(),
-      };
-      return c.json(errorResponse, 403);
-    }
-
     // Find session by ID
     const [session] = await db
       .select({
@@ -128,6 +110,7 @@ export async function getSessionByIdHandler(
         test_card_color: tests.card_color,
         test_status: tests.status,
         test_description: tests.description,
+        test_question_type: tests.question_type,
       })
       .from(sessionModules)
       .innerJoin(tests, eq(sessionModules.test_id, tests.id))
@@ -196,6 +179,7 @@ export async function getSessionByIdHandler(
         total_questions: module.test_total_questions || 0,
         icon: module.test_icon,
         card_color: module.test_card_color,
+        question_type: module.test_question_type,
       },
     }));
 
@@ -269,10 +253,6 @@ export async function getSessionByIdHandler(
       data: responseData,
       timestamp: new Date().toISOString(),
     };
-
-    console.log(
-      `✅ Session details retrieved by admin ${auth.user.email}: ${session.session_name} (${session.session_code}) - ${sessionModulesWithTests.length} modules`
-    );
 
     return c.json(response, 200);
   } catch (error) {

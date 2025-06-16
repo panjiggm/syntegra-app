@@ -23,6 +23,7 @@ import { authenticateUser, requireAdmin } from "../../middleware/auth";
 import { generalApiRateLimit } from "../../middleware/rateLimiter";
 import { participantRoutes } from "./participants";
 import { liveTestRoutes } from "./live-test";
+import { participantTestProgressRoutes } from "./participants-test-progress";
 
 const sessionRoutes = new Hono<{ Bindings: CloudflareBindings }>();
 
@@ -33,6 +34,13 @@ sessionRoutes.route("/:sessionId/participants", participantRoutes);
 // ==================== LIVE TEST MONITORING ROUTES ====================
 // Mount live test routes under /:sessionId/live-test
 sessionRoutes.route("/:sessionId/live-test", liveTestRoutes);
+
+// ==================== PARTICIPANT TEST PROGRESS ROUTES ====================
+// Mount participant test progress routes under /:sessionId/participants-test-progress
+sessionRoutes.route(
+  "/:sessionId/participants-test-progress",
+  participantTestProgressRoutes
+);
 
 // ==================== PUBLIC ROUTES (No Authentication) ====================
 
@@ -305,7 +313,6 @@ sessionRoutes.get(
   "/:sessionId",
   generalApiRateLimit,
   authenticateUser,
-  requireAdmin,
   zValidator("param", GetSessionByIdRequestSchema, (result, c) => {
     if (!result.success) {
       const errorResponse: SessionErrorResponse = {
