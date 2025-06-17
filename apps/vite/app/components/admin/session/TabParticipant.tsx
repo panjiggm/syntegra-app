@@ -315,9 +315,9 @@ export const TabParticipant = ({ session }: TabParticipantProps) => {
                         <TableRow>
                           <TableHead>Peserta</TableHead>
                           <TableHead>Kontak</TableHead>
-                          <TableHead>Status</TableHead>
+                          {/* <TableHead>Status</TableHead>
                           <TableHead>Terdaftar</TableHead>
-                          <TableHead>Undangan</TableHead>
+                          <TableHead>Undangan</TableHead> */}
                           <TableHead className="w-[70px]">Aksi</TableHead>
                         </TableRow>
                       </TableHeader>
@@ -355,12 +355,12 @@ export const TabParticipant = ({ session }: TabParticipantProps) => {
                               </TableCell>
 
                               {/* Status */}
-                              <TableCell>
+                              {/* <TableCell>
                                 {getStatusBadge(participant.status)}
-                              </TableCell>
+                              </TableCell> */}
 
                               {/* Terdaftar */}
-                              <TableCell>
+                              {/* <TableCell>
                                 {participant.registered_at ? (
                                   <div className="text-sm">
                                     {formatDateTime(participant.registered_at)}
@@ -370,10 +370,10 @@ export const TabParticipant = ({ session }: TabParticipantProps) => {
                                     Belum terdaftar
                                   </span>
                                 )}
-                              </TableCell>
+                              </TableCell> */}
 
                               {/* Undangan */}
-                              <TableCell>
+                              {/* <TableCell>
                                 <div className="flex items-center gap-2">
                                   {participant.invitation_sent_at ? (
                                     <Badge
@@ -396,7 +396,7 @@ export const TabParticipant = ({ session }: TabParticipantProps) => {
                                     </Badge>
                                   )}
                                 </div>
-                              </TableCell>
+                              </TableCell> */}
 
                               {/* Actions */}
                               <TableCell>
