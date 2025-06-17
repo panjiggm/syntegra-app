@@ -48,11 +48,11 @@ const data = {
       url: "/admin/sessions",
       icon: Clock,
     },
-    {
-      title: "Live Test Monitor",
-      url: "/admin/live-test",
-      icon: Monitor,
-    },
+    // {
+    //   title: "Live Test Monitor",
+    //   url: "/admin/live-test",
+    //   icon: Monitor,
+    // },
     {
       title: "Laporan & Hasil",
       url: "/admin/reports",
