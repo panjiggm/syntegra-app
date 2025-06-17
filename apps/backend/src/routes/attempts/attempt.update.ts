@@ -174,9 +174,13 @@ export async function updateTestAttemptHandler(
       updateData.questions_answered = requestData.questions_answered;
     }
 
-    if (requestData.time_spent !== undefined) {
-      updateData.time_spent = requestData.time_spent;
-    }
+    // Calculate current time spent (in seconds) based on start_time
+    const now = new Date();
+    const startTime = new Date(attempt.start_time);
+    const timeSpentSeconds = Math.round(
+      (now.getTime() - startTime.getTime()) / 1000
+    );
+    updateData.time_spent = timeSpentSeconds;
 
     if (requestData.browser_info) {
       updateData.browser_info = requestData.browser_info;

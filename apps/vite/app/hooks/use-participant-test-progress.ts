@@ -211,7 +211,7 @@ export function useParticipantTestProgress() {
     });
   };
 
-  // Update test progress (answered questions, time tracking)
+  // Update test progress (answered questions, activity tracking)
   const useUpdateTestProgress = () => {
     return useMutation({
       mutationFn: async ({
@@ -219,19 +219,16 @@ export function useParticipantTestProgress() {
         participantId,
         testId,
         answered_questions,
-        time_spent,
       }: {
         sessionId: string;
         participantId: string;
         testId: string;
         answered_questions?: number;
-        time_spent?: number;
       }) => {
         const response = await apiClient.put<UpdateTestProgressResponse>(
           `/sessions/${sessionId}/participants-test-progress/${participantId}/test-progress/${testId}`,
           {
             answered_questions,
-            time_spent,
           }
         );
         if (!response.success) {

@@ -37,7 +37,7 @@ export async function completeTestHandler(
 
     // Get request body (optional fields for completion)
     const body = await c.req.json().catch(() => ({}));
-    const { answered_questions, time_spent } = body;
+    const { answered_questions } = body;
 
     // Get database connection
     const db = getDbFromEnv(c.env);
@@ -172,23 +172,6 @@ export async function completeTestHandler(
       }
     }
 
-    // Validate time_spent if provided
-    if (time_spent !== undefined && time_spent < 0) {
-      const errorResponse = {
-        success: false,
-        message: "Invalid time spent",
-        errors: [
-          {
-            field: "time_spent",
-            message: "Time spent cannot be negative",
-            code: "INVALID_TIME_SPENT",
-          },
-        ],
-        timestamp: new Date().toISOString(),
-      };
-      return c.json(errorResponse, 400);
-    }
-
     const now = new Date();
 
     // Check if test time has already expired
@@ -223,12 +206,10 @@ export async function completeTestHandler(
       updateData.answered_questions = answered_questions;
     }
 
-    if (time_spent !== undefined) {
-      updateData.time_spent = time_spent;
-    } else if (existingProgress.started_at && !isTimeExpired) {
-      // Calculate time spent if not provided and not auto-completed
+    // Always calculate time spent based on started_at
+    if (existingProgress.started_at) {
       const timeSpentCalculated = Math.floor(
-        (now.getTime() - existingProgress.started_at.getTime()) / 1000
+        (completedAt.getTime() - existingProgress.started_at.getTime()) / 1000
       );
       updateData.time_spent = timeSpentCalculated;
     }

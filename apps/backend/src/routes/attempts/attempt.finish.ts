@@ -118,6 +118,12 @@ export async function finishTestAttemptHandler(
 
     const now = new Date();
 
+    // Calculate time spent in seconds (as per database schema)
+    const startTime = new Date(attempt.start_time);
+    const timeSpentSeconds = Math.round(
+      (now.getTime() - startTime.getTime()) / 1000
+    );
+
     // Calculate completion percentage
     const completionPercentage =
       (test.total_questions || 0) > 0
@@ -130,7 +136,7 @@ export async function finishTestAttemptHandler(
     const updateData = {
       status: finalStatus,
       actual_end_time: now,
-      time_spent: requestData.time_spent,
+      time_spent: timeSpentSeconds,
       questions_answered: requestData.questions_answered,
       browser_info: requestData.final_browser_info || attempt.browser_info,
       updated_at: now,

@@ -417,7 +417,7 @@ export function useReports() {
       queryKey: reportQueryKeys.individualById(userId, params),
       queryFn: async () => {
         const response = await apiClient.get<IndividualReportResponse>(
-          `/reports/individual/${userId}?${queryParams.toString()}`
+          `/reports/individual/${userId}`
         );
         if (!response.success) {
           throw new Error(

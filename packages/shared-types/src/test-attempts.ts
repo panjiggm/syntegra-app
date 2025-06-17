@@ -109,7 +109,6 @@ export const StartTestAttemptRequestSchema = z.object({
 export const UpdateTestAttemptRequestSchema = z.object({
   status: AttemptStatusEnum.optional(),
   questions_answered: z.number().min(0).optional(),
-  time_spent: z.number().min(0).optional(),
   browser_info: z
     .object({
       user_agent: z.string(),
@@ -123,7 +122,6 @@ export const UpdateTestAttemptRequestSchema = z.object({
 
 // Finish Test Attempt Request Schema
 export const FinishTestAttemptRequestSchema = z.object({
-  time_spent: z.number().min(0),
   questions_answered: z.number().min(0),
   completion_type: z
     .enum(["completed", "abandoned", "expired"])

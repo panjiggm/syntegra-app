@@ -94,14 +94,12 @@ interface SubmitAnswerRequest {
 interface UpdateAttemptRequest {
   status?: "in_progress" | "completed" | "abandoned";
   questions_answered?: number;
-  time_spent?: number;
   browser_info?: Record<string, any>;
 }
 
 interface FinishAttemptRequest {
   completion_type: "completed" | "abandoned" | "expired";
   questions_answered: number;
-  time_spent: number;
   final_browser_info?: Record<string, any>;
 }
 

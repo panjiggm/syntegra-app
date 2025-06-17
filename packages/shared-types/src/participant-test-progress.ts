@@ -74,7 +74,6 @@ export const UpdateTestProgressRequestSchema = z.object({
   participantId: z.string().uuid("Invalid participant ID format"),
   testId: z.string().uuid("Invalid test ID format"),
   answered_questions: z.number().int().min(0).optional(),
-  time_spent: z.number().int().min(0).optional(), // in seconds
 });
 
 // Complete Test
