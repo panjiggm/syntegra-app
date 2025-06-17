@@ -25,6 +25,7 @@ import {
   type AnswerErrorResponse,
   type GetAttemptAnswersQuery,
   formatAnswerForDisplay,
+  calculateAnswerScore,
 } from "shared-types";
 
 export async function getAttemptAnswersHandler(
@@ -207,6 +208,35 @@ export async function getAttemptAnswersHandler(
           undefined
       );
 
+      // Real-time calculation of is_correct if not already calculated and for admin
+      let isCorrect = answer.is_correct;
+      let calculatedScore = answer.score ? parseFloat(answer.score) : null;
+
+      if (
+        queryParams.include_correct_answers &&
+        question.correct_answer &&
+        isAnswered &&
+        answer.is_correct === null
+      ) {
+        // Calculate is_correct in real-time
+        const scoreResult = calculateAnswerScore(
+          answer.answer,
+          (answer.answer_data as Record<string, any>) || null,
+          question.question_type,
+          question.correct_answer,
+          (question.scoring_key as Record<string, number>) || undefined,
+          (question.options as Array<{
+            value: string;
+            label: string;
+            score?: number;
+          }>) || undefined
+        );
+        isCorrect = scoreResult.isCorrect;
+        if (calculatedScore === null) {
+          calculatedScore = scoreResult.score;
+        }
+      }
+
       return {
         id: answer.id,
         user_id: answer.user_id,
@@ -215,13 +245,11 @@ export async function getAttemptAnswersHandler(
         answer: answer.answer,
         answer_data: (answer.answer_data as Record<string, any>) || null,
         score:
-          queryParams.include_score && answer.score
-            ? parseFloat(answer.score)
+          queryParams.include_score && calculatedScore !== null
+            ? calculatedScore
             : null,
         time_taken: answer.time_taken,
-        is_correct: queryParams.include_correct_answers
-          ? answer.is_correct
-          : null,
+        is_correct: queryParams.include_correct_answers ? isCorrect : null,
         confidence_level: answer.confidence_level,
         answered_at: answer.answered_at,
         created_at: answer.created_at,

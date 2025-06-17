@@ -29,8 +29,20 @@ import { updateQuestionSequenceHandler } from "./question.sequence";
 import { authenticateUser, requireAdmin } from "@/middleware/auth";
 import { generalApiRateLimit } from "@/middleware/rateLimiter";
 import { bulkDeleteQuestionsHandler } from "./question.bulk-delete";
+import { updateCorrectAnswersHandler } from "./question.update-correct-answers";
 
 const questionRoutes = new Hono<{ Bindings: CloudflareBindings }>();
+
+// ==================== UTILITY ROUTES (Admin only) ====================
+
+// Update Missing Correct Answers (Admin only)
+questionRoutes.post(
+  "/update-correct-answers",
+  generalApiRateLimit,
+  authenticateUser,
+  requireAdmin,
+  updateCorrectAnswersHandler
+);
 
 // ==================== STATISTICS ROUTES (Admin only) ====================
 

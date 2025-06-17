@@ -15,10 +15,26 @@ import { submitAnswerHandler } from "./answer.submit";
 import { getAttemptAnswersHandler } from "./answer.get-list";
 import { getSpecificAnswerHandler } from "./answer.get-specific";
 import { autoSaveAnswerHandler } from "./answer.auto-save";
-import { authenticateUser, requireParticipant } from "@/middleware/auth";
+import { recalculateScoresHandler } from "./answer.recalculate-scores";
+import {
+  authenticateUser,
+  requireParticipant,
+  requireAdmin,
+} from "@/middleware/auth";
 import { generalApiRateLimit } from "@/middleware/rateLimiter";
 
 const answerRoutes = new Hono<{ Bindings: CloudflareBindings }>();
+
+// ==================== ADMIN UTILITY ROUTES ====================
+
+// Recalculate scores for an attempt (Admin only)
+answerRoutes.post(
+  "/recalculate",
+  generalApiRateLimit,
+  authenticateUser,
+  requireAdmin,
+  recalculateScoresHandler
+);
 
 // ==================== AUTO-SAVE ROUTE ====================
 
