@@ -231,7 +231,6 @@ export default function QuestionPage() {
           participantId: user.id,
           testId,
           answered_questions: answeredCount,
-          time_spent: testProgress?.time_spent || 0,
         });
       }
 
@@ -381,7 +380,6 @@ export default function QuestionPage() {
         data: {
           completion_type: "completed",
           questions_answered: answeredCount,
-          time_spent: testProgress?.time_spent || 0,
         },
       });
 
