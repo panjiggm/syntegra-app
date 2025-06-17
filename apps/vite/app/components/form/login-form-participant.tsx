@@ -61,7 +61,7 @@ export function LoginFormParticipant({
     resolver: zodResolver(participantLoginSchema),
     mode: "onChange",
     defaultValues: {
-      phone: "+62812345678",
+      phone: "",
       rememberMe: true,
     },
   });
