@@ -588,8 +588,9 @@ function ReportsContent() {
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {Object.entries(health?.data.services || {}).map(
-                    ([service, status]) => (
+                  {Object.entries(health?.data.services || {})
+                    .filter(([service, status]) => service !== "batch_reports")
+                    .map(([service, status]) => (
                       <div
                         key={service}
                         className="flex items-center justify-between"
@@ -606,8 +607,7 @@ function ReportsContent() {
                           {status === "active" ? "Aktif" : "Tidak Aktif"}
                         </Badge>
                       </div>
-                    )
-                  )}
+                    ))}
                 </div>
               )}
             </CardContent>
@@ -718,7 +718,17 @@ function IndividualReportDisplay({
                 <AccordionTrigger>
                   <div className="flex items-center justify-between w-full pr-4">
                     <span className="font-medium">{performance.test_name}</span>
-                    <Badge variant="outline">
+                    <Badge
+                      variant="outline"
+                      className={`${
+                        performance.scaled_score > 80
+                          ? "bg-green-100 text-green-700 border-green-600"
+                          : performance.scaled_score > 60 &&
+                              performance.scaled_score < 80
+                            ? "bg-yellow-100 text-yellow-700 border-yellow-600"
+                            : "bg-red-100 text-red-700 border-red-600"
+                      }`}
+                    >
                       Skor:{" "}
                       {performance.scaled_score ||
                         performance.raw_score ||
@@ -747,12 +757,12 @@ function IndividualReportDisplay({
                           {Math.round(performance.time_spent_minutes)}m
                         </p>
                       </div>
-                      <div>
+                      {/* <div>
                         <Label className="text-sm">Efisiensi</Label>
                         <p className="text-sm text-muted-foreground">
                           {performance.time_efficiency}%
                         </p>
-                      </div>
+                      </div> */}
                     </div>
 
                     {/* Trait Scores */}
@@ -890,7 +900,7 @@ function SessionReportDisplay({ data }: { data: any }) {
       </Card>
 
       {/* Participation Stats */}
-      <Card>
+      {/* <Card>
         <CardHeader>
           <CardTitle>Statistik Partisipasi</CardTitle>
         </CardHeader>
@@ -922,7 +932,7 @@ function SessionReportDisplay({ data }: { data: any }) {
             </div>
           </div>
         </CardContent>
-      </Card>
+      </Card> */}
 
       {/* Test Modules Analysis */}
       <Card>
@@ -1002,12 +1012,22 @@ function SessionReportDisplay({ data }: { data: any }) {
                       </p>
                     </div>
                     <div className="text-right">
-                      <p className="font-bold text-green-600">
+                      <Badge
+                        variant="outline"
+                        className={`text-lg ${
+                          performer.overall_score > 80
+                            ? "bg-green-100 text-green-700 border-green-600"
+                            : performer.overall_score > 60 &&
+                                performer.overall_score < 80
+                              ? "bg-yellow-100 text-yellow-700 border-yellow-600"
+                              : "bg-red-100 text-red-700 border-red-600"
+                        }`}
+                      >
                         {performer.overall_score}
-                      </p>
-                      <p className="text-sm text-muted-foreground">
+                      </Badge>
+                      {/* <p className="text-sm text-muted-foreground">
                         {performer.percentile}%
-                      </p>
+                      </p> */}
                     </div>
                   </div>
                 )
@@ -1119,16 +1139,26 @@ function ComparativeReportDisplay({ data }: { data: any }) {
                   </div>
                   <div className="text-right">
                     <div className="flex items-center gap-2">
-                      <Badge variant="outline">
-                        {participant.overall_score}
+                      <Badge
+                        variant="outline"
+                        className={`${
+                          participant.overall_score > 80
+                            ? "bg-green-100 text-green-700 border-green-600"
+                            : participant.overall_score > 60 &&
+                                participant.overall_score < 80
+                              ? "bg-yellow-100 text-yellow-700 border-yellow-600"
+                              : "bg-red-100 text-red-700 border-red-600"
+                        }`}
+                      >
+                        Nilai: <strong>{participant.overall_score}</strong>
                       </Badge>
                       <Badge variant="secondary">
-                        {participant.completion_rate}%
+                        Selesai: {participant.completion_rate}%
                       </Badge>
                     </div>
-                    <p className="text-sm text-muted-foreground mt-1">
+                    {/* <p className="text-sm text-muted-foreground mt-1">
                       {participant.recommendation_category}
-                    </p>
+                    </p> */}
                   </div>
                 </div>
               ))}
@@ -1137,7 +1167,7 @@ function ComparativeReportDisplay({ data }: { data: any }) {
       </Card>
 
       {/* Hiring Recommendations */}
-      {data.hiring_recommendations && (
+      {/* {data.hiring_recommendations && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -1180,7 +1210,7 @@ function ComparativeReportDisplay({ data }: { data: any }) {
             </div>
           </CardContent>
         </Card>
-      )}
+      )} */}
     </div>
   );
 }
