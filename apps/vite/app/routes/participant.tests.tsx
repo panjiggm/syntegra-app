@@ -318,11 +318,13 @@ function TestsContent() {
                         <div className="flex-1 min-w-0">
                           <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 sm:gap-4">
                             <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-3 mb-2">
-                                <h3 className="font-semibold text-base truncate">
+                              <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 mb-2">
+                                <h3 className="font-semibold text-base truncate min-w-0 flex-1">
                                   {session.session_name}
                                 </h3>
-                                {getSessionBadge(session)}
+                                <div className="flex-shrink-0">
+                                  {getSessionBadge(session)}
+                                </div>
                               </div>
                               <p className="text-sm text-muted-foreground mb-2 line-clamp-2">
                                 {session.session_description ||
@@ -492,19 +494,21 @@ function TestsContent() {
                                   <div className="flex-1 min-w-0">
                                     <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
                                       <div className="flex-1 min-w-0">
-                                        <div className="flex items-center gap-2 mb-2">
-                                          <h5 className="font-medium truncate">
+                                        <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-2">
+                                          <h5 className="font-medium truncate min-w-0 flex-1">
                                             {test.test_name}
                                           </h5>
-                                          {getTestProgressBadge(test)}
-                                          {!test.is_required && (
-                                            <Badge
-                                              variant="outline"
-                                              className="text-xs"
-                                            >
-                                              Opsional
-                                            </Badge>
-                                          )}
+                                          <div className="flex items-center gap-2 flex-shrink-0">
+                                            {getTestProgressBadge(test)}
+                                            {!test.is_required && (
+                                              <Badge
+                                                variant="outline"
+                                                className="text-xs"
+                                              >
+                                                Opsional
+                                              </Badge>
+                                            )}
+                                          </div>
                                         </div>
 
                                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm text-muted-foreground mb-3">
@@ -534,7 +538,7 @@ function TestsContent() {
                                         {test.progress_status !==
                                           "not_started" && (
                                           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm mb-3">
-                                            <div>
+                                            {/* <div>
                                               <span className="font-medium text-muted-foreground">
                                                 Progress:
                                               </span>{" "}
@@ -543,7 +547,7 @@ function TestsContent() {
                                                 {test.total_questions} soal (
                                                 {test.progress_percentage}%)
                                               </span>
-                                            </div>
+                                            </div> */}
                                             <div>
                                               <span className="font-medium text-muted-foreground">
                                                 Waktu Terpakai:
@@ -581,7 +585,7 @@ function TestsContent() {
                                         )}
 
                                         {/* Progress Bar */}
-                                        {test.progress_status !==
+                                        {/* {test.progress_status !==
                                           "not_started" && (
                                           <div className="mb-3">
                                             <Progress
@@ -589,7 +593,7 @@ function TestsContent() {
                                               className="h-2"
                                             />
                                           </div>
-                                        )}
+                                        )} */}
                                       </div>
 
                                       {/* Action Button */}
