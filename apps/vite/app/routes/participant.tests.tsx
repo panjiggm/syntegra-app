@@ -9,9 +9,16 @@ import {
 } from "~/components/ui/card";
 import { Progress } from "~/components/ui/progress";
 import { Button } from "~/components/ui/button";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "~/components/ui/accordion";
 import { ParticipantRoute } from "~/components/auth/route-guards";
 import { useAuth } from "~/contexts/auth-context";
 import { LoadingSpinner } from "~/components/ui/loading-spinner";
+import { useParticipantSessions } from "~/hooks/use-participant-sessions";
 import CardTestModule from "~/components/card/card-test-module";
 import {
   Clock,
@@ -22,6 +29,11 @@ import {
   AlertCircle,
   Timer,
   MapPin,
+  BookOpen,
+  ChevronRight,
+  Play,
+  Pause,
+  RotateCcw,
 } from "lucide-react";
 import type { Route } from "./+types/participant.tests";
 
@@ -40,325 +52,23 @@ export default function ParticipantTests() {
   );
 }
 
-// Mock data - nanti akan diganti dengan API call
-const mockAnalytics = {
-  totalSessions: 3,
-  completedSessions: 1,
-  upcomingSessions: 1,
-  expiredSessions: 1,
-};
-
-const mockSessions = [
-  {
-    id: "session-1",
-    session_name: "Tes Seleksi Security",
-    session_code: "SEC-001",
-    start_time: "2024-12-15T08:00:00Z",
-    end_time: "2024-12-15T10:00:00Z",
-    target_position: "Security Officer",
-    status: "active",
-    location: "Ruang Meeting A",
-    description:
-      "Tes psikologi untuk posisi security dengan fokus pada keamanan dan kedisiplinan",
-    is_active: true,
-    is_expired: false,
-    time_remaining: "2 hari 5 jam",
-    current_participants: 15,
-    max_participants: 25,
-    session_modules: [
-      {
-        id: "mod-1",
-        test: {
-          id: "wais-1",
-          name: "WAIS Intelligence Test",
-          description:
-            "Tes kecerdasan untuk mengukur kemampuan kognitif secara komprehensif",
-          module_type: "intelligence",
-          category: "wais",
-          time_limit: 45,
-          icon: "🧠",
-          card_color: "from-blue-500 to-blue-600",
-          total_questions: 60,
-          status: "active",
-        },
-      },
-      {
-        id: "mod-2",
-        test: {
-          id: "mbti-1",
-          name: "MBTI Personality Test",
-          description:
-            "Tes kepribadian untuk mengidentifikasi tipe kepribadian Myers-Briggs",
-          module_type: "personality",
-          category: "mbti",
-          time_limit: 30,
-          icon: "👥",
-          card_color: "from-green-500 to-green-600",
-          total_questions: 93,
-          status: "active",
-        },
-      },
-      {
-        id: "mod-3",
-        test: {
-          id: "wartegg-1",
-          name: "Wartegg Drawing Test",
-          description:
-            "Tes proyektif gambar untuk menganalisis kepribadian melalui gambar",
-          module_type: "projective",
-          category: "wartegg",
-          time_limit: 60,
-          icon: "🎨",
-          card_color: "from-purple-500 to-purple-600",
-          total_questions: 8,
-          status: "active",
-        },
-      },
-      {
-        id: "mod-4",
-        test: {
-          id: "riasec-1",
-          name: "RIASEC Interest Test",
-          description:
-            "Tes minat untuk mengidentifikasi kesesuaian karir berdasarkan Holland Theory",
-          module_type: "interest",
-          category: "riasec",
-          time_limit: 25,
-          icon: "🎯",
-          card_color: "from-orange-500 to-orange-600",
-          total_questions: 42,
-          status: "active",
-        },
-      },
-    ],
-  },
-  {
-    id: "session-2",
-    session_name: "Tes Seleksi Staff",
-    session_code: "STF-002",
-    start_time: "2024-12-10T12:00:00Z",
-    end_time: "2024-12-10T14:00:00Z",
-    target_position: "Staff Administration",
-    status: "completed",
-    location: "Ruang Meeting B",
-    description:
-      "Tes psikologi untuk posisi staff dengan fokus pada kemampuan administratif",
-    is_active: false,
-    is_expired: true,
-    time_remaining: "Expired",
-    current_participants: 20,
-    max_participants: 20,
-    session_modules: [
-      {
-        id: "mod-5",
-        test: {
-          id: "kraepelin-1",
-          name: "Kraepelin Test",
-          description:
-            "Tes konsentrasi dan ketahanan untuk mengukur konsistensi kerja",
-          module_type: "cognitive",
-          category: "kraepelin",
-          time_limit: 30,
-          icon: "📊",
-          card_color: "from-red-500 to-red-600",
-          total_questions: 500,
-          status: "active",
-        },
-      },
-      {
-        id: "mod-6",
-        test: {
-          id: "big-five-1",
-          name: "Big Five Personality",
-          description:
-            "Tes kepribadian berdasarkan lima faktor utama kepribadian",
-          module_type: "personality",
-          category: "big_five",
-          time_limit: 25,
-          icon: "⭐",
-          card_color: "from-indigo-500 to-indigo-600",
-          total_questions: 50,
-          status: "active",
-        },
-      },
-      {
-        id: "mod-7",
-        test: {
-          id: "papi-1",
-          name: "PAPI Kostick Test",
-          description:
-            "Tes untuk mengukur preferensi perilaku dalam lingkungan kerja",
-          module_type: "personality",
-          category: "papi_kostick",
-          time_limit: 40,
-          icon: "💼",
-          card_color: "from-teal-500 to-teal-600",
-          total_questions: 90,
-          status: "active",
-        },
-      },
-      {
-        id: "mod-8",
-        test: {
-          id: "dap-1",
-          name: "Draw A Person Test",
-          description: "Tes proyektif gambar orang untuk analisis kepribadian",
-          module_type: "projective",
-          category: "dap",
-          time_limit: 20,
-          icon: "👤",
-          card_color: "from-pink-500 to-pink-600",
-          total_questions: 3,
-          status: "active",
-        },
-      },
-    ],
-  },
-  {
-    id: "session-3",
-    session_name: "Tes Seleksi Manager",
-    session_code: "MGR-003",
-    start_time: "2024-12-20T08:00:00Z",
-    end_time: "2024-12-20T10:00:00Z",
-    target_position: "Manager",
-    status: "draft",
-    location: "Ruang Meeting C",
-    description:
-      "Tes psikologi untuk posisi manager dengan fokus pada kepemimpinan",
-    is_active: false,
-    is_expired: false,
-    time_remaining: "7 hari 3 jam",
-    current_participants: 5,
-    max_participants: 15,
-    session_modules: [
-      {
-        id: "mod-9",
-        test: {
-          id: "raven-1",
-          name: "Raven's Progressive Matrices",
-          description:
-            "Tes kecerdasan non-verbal untuk mengukur kemampuan pemecahan masalah",
-          module_type: "intelligence",
-          category: "raven",
-          time_limit: 40,
-          icon: "🧩",
-          card_color: "from-cyan-500 to-cyan-600",
-          total_questions: 36,
-          status: "active",
-        },
-      },
-      {
-        id: "mod-10",
-        test: {
-          id: "epps-1",
-          name: "EPPS Personality Test",
-          description:
-            "Tes untuk mengukur kebutuhan psikologis dan motivasi individu",
-          module_type: "personality",
-          category: "epps",
-          time_limit: 35,
-          icon: "💡",
-          card_color: "from-amber-500 to-amber-600",
-          total_questions: 225,
-          status: "active",
-        },
-      },
-      {
-        id: "mod-11",
-        test: {
-          id: "army-alpha-1",
-          name: "Army Alpha Test",
-          description:
-            "Tes kecerdasan untuk mengukur kemampuan verbal dan numerik",
-          module_type: "intelligence",
-          category: "army_alpha",
-          time_limit: 50,
-          icon: "🎖️",
-          card_color: "from-emerald-500 to-emerald-600",
-          total_questions: 80,
-          status: "active",
-        },
-      },
-      {
-        id: "mod-12",
-        test: {
-          id: "htp-1",
-          name: "House-Tree-Person Test",
-          description:
-            "Tes proyektif untuk menganalisis kepribadian melalui gambar rumah, pohon, orang",
-          module_type: "projective",
-          category: "htp",
-          time_limit: 45,
-          icon: "🏠",
-          card_color: "from-lime-500 to-lime-600",
-          total_questions: 3,
-          status: "active",
-        },
-      },
-      {
-        id: "mod-13",
-        test: {
-          id: "army-alpha-1",
-          name: "Army Alpha Test 2",
-          description:
-            "Tes kecerdasan untuk mengukur kemampuan verbal dan numerik",
-          module_type: "intelligence",
-          category: "army_alpha_2",
-          time_limit: 50,
-          icon: "🎖️",
-          card_color: "from-emerald-500 to-emerald-600",
-          total_questions: 80,
-          status: "active",
-        },
-      },
-    ],
-  },
-];
-
-const getStatusBadge = (
-  status: string,
-  isActive: boolean,
-  isExpired: boolean
-) => {
-  if (isExpired) {
-    return (
-      <Badge variant="destructive">
-        <AlertCircle className="size-3 mr-1" />
-        Expired
-      </Badge>
-    );
-  }
-
-  if (status === "completed") {
-    return (
-      <Badge variant="default" className="bg-green-500 hover:bg-green-600">
-        <CheckCircle className="size-3 mr-1" />
-        Selesai
-      </Badge>
-    );
-  }
-
-  if (isActive) {
-    return (
-      <Badge variant="default" className="bg-blue-500 hover:bg-blue-600">
-        <Timer className="size-3 mr-1" />
-        Aktif
-      </Badge>
-    );
-  }
-
-  return (
-    <Badge variant="secondary">
-      <Clock className="size-3 mr-1" />
-      Menunggu
-    </Badge>
-  );
-};
-
 function TestsContent() {
   const { user, isLoading: authLoading } = useAuth();
+  const {
+    useGetParticipantSessions,
+    getTestStatusBadge,
+    getSessionStatusBadge,
+    formatTimeSpent,
+    formatTimeRemaining,
+    getQuestionTypeLabel,
+    canStartTest,
+    canContinueTest,
+  } = useParticipantSessions();
 
-  if (authLoading) {
+  // Get participant's sessions with progress
+  const sessionsQuery = useGetParticipantSessions();
+
+  if (authLoading || sessionsQuery.isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <LoadingSpinner size="lg" />
@@ -366,43 +76,136 @@ function TestsContent() {
     );
   }
 
-  // Calculate overall progress
-  const totalTests = mockSessions.reduce(
-    (acc, session) => acc + session.session_modules.length,
-    0
-  );
-  const completedTests = mockSessions
-    .filter((session) => session.status === "completed")
-    .reduce((acc, session) => acc + session.session_modules.length, 0);
-  const progressPercentage =
-    totalTests > 0 ? (completedTests / totalTests) * 100 : 0;
+  if (sessionsQuery.error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Card className="p-8 text-center max-w-md">
+          <CardContent>
+            <AlertCircle className="size-12 text-destructive mx-auto mb-4" />
+            <h3 className="text-lg font-semibold mb-2">Gagal Memuat Data</h3>
+            <p className="text-muted-foreground mb-4">
+              Terjadi kesalahan saat memuat data sesi tes Anda.
+            </p>
+            <Button onClick={() => sessionsQuery.refetch()}>Coba Lagi</Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  const data = sessionsQuery.data;
+  const sessions = data?.sessions || [];
+  const summary = data?.summary;
+  const participantInfo = data?.participant_info;
+
+  // Create test modules data for CardTestModule component
+  const createTestModuleData = (test: any) => ({
+    id: test.test_id,
+    name: test.test_name,
+    description: `${getQuestionTypeLabel(test.question_type)} • ${test.total_questions} soal • ${test.time_limit} menit`,
+    module_type: test.test_module_type,
+    category: test.test_category,
+    time_limit: test.time_limit,
+    total_questions: test.total_questions,
+    icon: test.icon,
+    card_color: test.card_color,
+    status: "active" as const,
+    question_type: test.question_type,
+  });
+
+  const getTestProgressBadge = (test: any) => {
+    const statusInfo = getTestStatusBadge(test.progress_status);
+
+    return (
+      <Badge className={`${statusInfo.color} text-xs border`}>
+        {test.progress_status === "completed" ||
+        test.progress_status === "auto_completed" ? (
+          <CheckCircle className="size-3 mr-1" />
+        ) : test.progress_status === "in_progress" ? (
+          <Timer className="size-3 mr-1" />
+        ) : (
+          <Clock className="size-3 mr-1" />
+        )}
+        {statusInfo.label}
+      </Badge>
+    );
+  };
+
+  const getSessionBadge = (session: any) => {
+    const statusInfo = getSessionStatusBadge(session);
+
+    return (
+      <Badge className={`${statusInfo.color} text-xs border`}>
+        {session.is_expired ? (
+          <AlertCircle className="size-3 mr-1" />
+        ) : session.session_status === "completed" ? (
+          <CheckCircle className="size-3 mr-1" />
+        ) : session.is_active ? (
+          <Timer className="size-3 mr-1" />
+        ) : (
+          <Clock className="size-3 mr-1" />
+        )}
+        {statusInfo.label}
+      </Badge>
+    );
+  };
+
+  const getTestActionButton = (test: any, session: any) => {
+    if (
+      test.progress_status === "completed" ||
+      test.progress_status === "auto_completed"
+    ) {
+      return (
+        <Button variant="outline" size="sm" disabled>
+          <CheckCircle className="size-4 mr-2" />
+          Selesai
+        </Button>
+      );
+    }
+
+    if (test.progress_status === "in_progress") {
+      if (test.is_time_expired) {
+        return (
+          <Button variant="destructive" size="sm" disabled>
+            <AlertCircle className="size-4 mr-2" />
+            Waktu Habis
+          </Button>
+        );
+      }
+
+      if (canContinueTest(test, session)) {
+        return (
+          <Button size="sm">
+            <Play className="size-4 mr-2" />
+            Lanjutkan Tes
+          </Button>
+        );
+      }
+    }
+
+    if (canStartTest(test, session)) {
+      return (
+        <Button size="sm">
+          <ChevronRight className="size-4 mr-2" />
+          Mulai Tes
+        </Button>
+      );
+    }
+
+    return (
+      <Button variant="secondary" size="sm" disabled>
+        <Pause className="size-4 mr-2" />
+        Tidak Tersedia
+      </Button>
+    );
+  };
 
   return (
     <div className="min-h-screen">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between py-6">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">
-                Tes Psikologi Saya
-              </h1>
-              <p className="mt-1 text-sm text-gray-600">
-                Kelola dan ikuti tes psikologi yang tersedia
-              </p>
-            </div>
-            <div className="text-right">
-              <p className="text-sm text-gray-600">Halo, {user?.name}!</p>
-              <p className="text-xs text-gray-500">{user?.phone}</p>
-            </div>
-          </div>
-        </div>
-      </header>
-
       {/* Main Content */}
-      <main className="py-6">
+      <main className="max-w-7xl mx-auto px-4 py-6 space-y-6">
         {/* Analytics Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total Sesi</CardTitle>
@@ -410,10 +213,10 @@ function TestsContent() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                {mockAnalytics.totalSessions}
+                {summary?.total_sessions || 0}
               </div>
               <p className="text-xs text-muted-foreground">
-                Sesi tes yang tersedia
+                Sesi tes yang terdaftar
               </p>
             </CardContent>
           </Card>
@@ -425,7 +228,7 @@ function TestsContent() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-green-600">
-                {mockAnalytics.completedSessions}
+                {summary?.completed_sessions || 0}
               </div>
               <p className="text-xs text-muted-foreground">
                 Sesi yang telah diselesaikan
@@ -435,27 +238,25 @@ function TestsContent() {
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Upcoming</CardTitle>
+              <CardTitle className="text-sm font-medium">Aktif</CardTitle>
               <Timer className="size-4 text-blue-600" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-blue-600">
-                {mockAnalytics.upcomingSessions}
+                {summary?.active_sessions || 0}
               </div>
-              <p className="text-xs text-muted-foreground">
-                Sesi yang akan datang
-              </p>
+              <p className="text-xs text-muted-foreground">Sesi yang aktif</p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Expired</CardTitle>
+              <CardTitle className="text-sm font-medium">Berakhir</CardTitle>
               <AlertCircle className="size-4 text-red-600" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-red-600">
-                {mockAnalytics.expiredSessions}
+                {summary?.expired_sessions || 0}
               </div>
               <p className="text-xs text-muted-foreground">
                 Sesi yang telah berakhir
@@ -465,188 +266,369 @@ function TestsContent() {
         </div>
 
         {/* Progress Card */}
-        <Card className="mb-8">
+        <Card>
           <CardHeader>
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div>
-                <CardTitle>Progress Tes</CardTitle>
+                <CardTitle>Progress Tes Keseluruhan</CardTitle>
                 <CardDescription>
-                  {completedTests} dari {totalTests} modul tes telah
+                  {summary?.completed_tests_across_sessions || 0} dari{" "}
+                  {summary?.total_tests_across_sessions || 0} tes telah
                   diselesaikan
                 </CardDescription>
               </div>
-              <div className="text-right">
+              <div className="text-left sm:text-right">
                 <div className="text-2xl font-bold text-primary">
-                  {Math.round(progressPercentage)}%
+                  {summary?.overall_progress_percentage || 0}%
                 </div>
                 <div className="text-xs text-muted-foreground">Selesai</div>
               </div>
             </div>
           </CardHeader>
           <CardContent>
-            <Progress value={progressPercentage} className="h-3" />
+            <Progress
+              value={summary?.overall_progress_percentage || 0}
+              className="h-3"
+            />
           </CardContent>
         </Card>
 
-        {/* Sessions and Test Modules */}
-        <div className="space-y-8">
-          {mockSessions.map((session, sessionIndex) => (
-            <div key={session.id} className="space-y-6">
-              {/* Session Header */}
-              <Card className="border-l-4 border-l-primary">
-                <CardHeader>
-                  <div className="flex items-start justify-between">
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-3">
-                        <CardTitle className="text-xl">
-                          {session.session_name}
-                        </CardTitle>
-                        {getStatusBadge(
-                          session.status,
-                          session.is_active,
-                          session.is_expired
+        {/* Sessions Accordion */}
+        {sessions.length > 0 ? (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <BookOpen className="size-5" />
+                Sesi Tes Anda
+              </CardTitle>
+              <CardDescription>
+                Klik pada sesi untuk melihat detail dan progress tes
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Accordion type="single" collapsible className="w-full">
+                {sessions.map((session) => (
+                  <AccordionItem
+                    key={session.session_id}
+                    value={session.session_id}
+                    className="border-b last:border-b-0"
+                  >
+                    <AccordionTrigger className="hover:no-underline">
+                      <div className="flex flex-1 items-start justify-between text-left pr-4">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 sm:gap-4">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-3 mb-2">
+                                <h3 className="font-semibold text-base truncate">
+                                  {session.session_name}
+                                </h3>
+                                {getSessionBadge(session)}
+                              </div>
+                              <p className="text-sm text-muted-foreground mb-2 line-clamp-2">
+                                {session.session_description ||
+                                  "Tidak ada deskripsi"}
+                              </p>
+
+                              {/* Session Info Grid */}
+                              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
+                                <div className="flex items-center gap-2">
+                                  <Calendar className="size-3 text-muted-foreground" />
+                                  <div>
+                                    <div className="font-medium">
+                                      {new Date(
+                                        session.start_time
+                                      ).toLocaleDateString("id-ID", {
+                                        day: "numeric",
+                                        month: "short",
+                                        year: "numeric",
+                                      })}
+                                    </div>
+                                    <div className="text-muted-foreground">
+                                      {new Date(
+                                        session.start_time
+                                      ).toLocaleTimeString("id-ID", {
+                                        hour: "2-digit",
+                                        minute: "2-digit",
+                                      })}
+                                    </div>
+                                  </div>
+                                </div>
+
+                                <div className="flex items-center gap-2">
+                                  <Target className="size-3 text-muted-foreground" />
+                                  <div>
+                                    <div className="font-medium truncate">
+                                      {session.target_position}
+                                    </div>
+                                    <div className="text-muted-foreground">
+                                      Posisi target
+                                    </div>
+                                  </div>
+                                </div>
+
+                                <div className="flex items-center gap-2">
+                                  <MapPin className="size-3 text-muted-foreground" />
+                                  <div>
+                                    <div className="font-medium truncate">
+                                      {session.session_location ||
+                                        "Tidak ditentukan"}
+                                    </div>
+                                    <div className="text-muted-foreground">
+                                      Lokasi tes
+                                    </div>
+                                  </div>
+                                </div>
+
+                                <div className="flex items-center gap-2">
+                                  <CheckCircle className="size-3 text-muted-foreground" />
+                                  <div>
+                                    <div className="font-medium">
+                                      {session.completed_tests}/
+                                      {session.total_tests}
+                                    </div>
+                                    <div className="text-muted-foreground">
+                                      Tes selesai
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="text-left sm:text-right flex-shrink-0">
+                              <div className="text-sm font-medium">
+                                Kode: {session.session_code}
+                              </div>
+                              <div className="text-xs text-muted-foreground">
+                                {formatTimeRemaining(session)}
+                              </div>
+                              <div className="mt-1">
+                                <Progress
+                                  value={session.session_progress_percentage}
+                                  className="h-2 w-20"
+                                />
+                                <div className="text-xs text-muted-foreground mt-1">
+                                  {session.session_progress_percentage}%
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </AccordionTrigger>
+
+                    <AccordionContent className="pt-4">
+                      {/* Session Action Button */}
+                      <div className="mb-6">
+                        {session.is_active &&
+                          !session.is_expired &&
+                          session.in_progress_tests > 0 && (
+                            <Button className="w-full sm:w-auto mr-2">
+                              <Play className="size-4 mr-2" />
+                              Lanjutkan Tes
+                            </Button>
+                          )}
+
+                        {session.session_status === "completed" && (
+                          <Button
+                            variant="outline"
+                            className="w-full sm:w-auto"
+                          >
+                            <BookOpen className="size-4 mr-2" />
+                            Lihat Hasil
+                          </Button>
                         )}
                       </div>
-                      <CardDescription className="text-base">
-                        {session.description}
-                      </CardDescription>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-sm font-medium">
-                        Kode: {session.session_code}
-                      </div>
-                      <div className="text-xs text-muted-foreground">
-                        {session.time_remaining}
-                      </div>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
-                    <div className="flex items-center gap-2">
-                      <Calendar className="size-4 text-muted-foreground" />
-                      <div>
-                        <div className="font-medium">
-                          {new Date(session.start_time).toLocaleDateString(
-                            "id-ID",
-                            {
-                              day: "numeric",
-                              month: "long",
-                              year: "numeric",
-                            }
-                          )}
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                          {new Date(session.start_time).toLocaleTimeString(
-                            "id-ID",
-                            {
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            }
-                          )}{" "}
-                          -{" "}
-                          {new Date(session.end_time).toLocaleTimeString(
-                            "id-ID",
-                            {
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            }
-                          )}
-                        </div>
-                      </div>
-                    </div>
 
-                    <div className="flex items-center gap-2">
-                      <Target className="size-4 text-muted-foreground" />
-                      <div>
-                        <div className="font-medium">
-                          {session.target_position}
+                      {/* Test Progress Summary */}
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6 text-sm">
+                        <div className="text-center p-3 bg-green-50 rounded-lg">
+                          <div className="font-semibold text-green-700">
+                            {session.completed_tests}
+                          </div>
+                          <div className="text-green-600">Selesai</div>
                         </div>
-                        <div className="text-xs text-muted-foreground">
-                          Posisi target
+                        <div className="text-center p-3 bg-blue-50 rounded-lg">
+                          <div className="font-semibold text-blue-700">
+                            {session.in_progress_tests}
+                          </div>
+                          <div className="text-blue-600">Berlangsung</div>
                         </div>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      <MapPin className="size-4 text-muted-foreground" />
-                      <div>
-                        <div className="font-medium">{session.location}</div>
-                        <div className="text-xs text-muted-foreground">
-                          Lokasi tes
+                        <div className="text-center p-3 bg-gray-50 rounded-lg">
+                          <div className="font-semibold text-gray-700">
+                            {session.not_started_tests}
+                          </div>
+                          <div className="text-gray-600">Belum Mulai</div>
                         </div>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      <Users className="size-4 text-muted-foreground" />
-                      <div>
-                        <div className="font-medium">
-                          {session.current_participants}/
-                          {session.max_participants}
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                          Peserta
+                        <div className="text-center p-3 bg-orange-50 rounded-lg">
+                          <div className="font-semibold text-orange-700">
+                            {session.total_tests}
+                          </div>
+                          <div className="text-orange-600">Total Tes</div>
                         </div>
                       </div>
-                    </div>
-                  </div>
 
-                  {session.is_active && !session.is_expired && (
-                    <div className="mt-4 pt-4 border-t">
-                      <Button className="w-full sm:w-auto">
-                        Mulai Tes Sekarang
-                      </Button>
-                    </div>
-                  )}
+                      {/* Test Modules List */}
+                      {session.tests && session.tests.length > 0 ? (
+                        <div>
+                          <h4 className="font-medium text-sm mb-4 text-muted-foreground">
+                            Detail Tes ({session.tests.length} tes)
+                          </h4>
+                          <div className="space-y-4">
+                            {session.tests
+                              .sort((a, b) => a.sequence - b.sequence)
+                              .map((test) => (
+                                <div
+                                  key={test.test_id}
+                                  className="flex flex-col sm:flex-row gap-4 p-4 border rounded-lg bg-white"
+                                >
+                                  {/* Test Card */}
+                                  <div className="flex-shrink-0">
+                                    <CardTestModule
+                                      test={createTestModuleData(test)}
+                                    />
+                                  </div>
 
-                  {session.status === "completed" && (
-                    <div className="mt-4 pt-4 border-t">
-                      <Button variant="outline" className="w-full sm:w-auto">
-                        Lihat Detail Tes
-                      </Button>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+                                  {/* Test Details */}
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                                      <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-2 mb-2">
+                                          <h5 className="font-medium truncate">
+                                            {test.test_name}
+                                          </h5>
+                                          {getTestProgressBadge(test)}
+                                          {!test.is_required && (
+                                            <Badge
+                                              variant="outline"
+                                              className="text-xs"
+                                            >
+                                              Opsional
+                                            </Badge>
+                                          )}
+                                        </div>
 
-              {/* Test Modules Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                {session.session_modules.map((module) => (
-                  <div key={module.id} className="relative">
-                    <CardTestModule test={module.test as any} />
-                    {session.status === "completed" && (
-                      <div className="absolute top-2 right-2">
-                        <Badge className="bg-green-100 text-green-700 border-green-300">
-                          <CheckCircle className="size-3 mr-1" />
-                          Selesai
-                        </Badge>
-                      </div>
-                    )}
-                  </div>
+                                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm text-muted-foreground mb-3">
+                                          <div>
+                                            <span className="font-medium">
+                                              Tipe:
+                                            </span>{" "}
+                                            {getQuestionTypeLabel(
+                                              test.question_type
+                                            )}
+                                          </div>
+                                          <div>
+                                            <span className="font-medium">
+                                              Waktu:
+                                            </span>{" "}
+                                            {test.time_limit} menit
+                                          </div>
+                                          <div>
+                                            <span className="font-medium">
+                                              Soal:
+                                            </span>{" "}
+                                            {test.total_questions}
+                                          </div>
+                                        </div>
+
+                                        {/* Progress Info */}
+                                        {test.progress_status !==
+                                          "not_started" && (
+                                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm mb-3">
+                                            <div>
+                                              <span className="font-medium text-muted-foreground">
+                                                Progress:
+                                              </span>{" "}
+                                              <span className="text-primary">
+                                                {test.answered_questions}/
+                                                {test.total_questions} soal (
+                                                {test.progress_percentage}%)
+                                              </span>
+                                            </div>
+                                            <div>
+                                              <span className="font-medium text-muted-foreground">
+                                                Waktu Terpakai:
+                                              </span>{" "}
+                                              <span>
+                                                {formatTimeSpent(
+                                                  test.time_spent
+                                                )}
+                                              </span>
+                                            </div>
+                                            {test.completed_at && (
+                                              <div>
+                                                <span className="font-medium text-muted-foreground">
+                                                  Selesai:
+                                                </span>{" "}
+                                                <span>
+                                                  {new Date(
+                                                    test.completed_at
+                                                  ).toLocaleDateString(
+                                                    "id-ID"
+                                                  )}{" "}
+                                                  {new Date(
+                                                    test.completed_at
+                                                  ).toLocaleTimeString(
+                                                    "id-ID",
+                                                    {
+                                                      hour: "2-digit",
+                                                      minute: "2-digit",
+                                                    }
+                                                  )}
+                                                </span>
+                                              </div>
+                                            )}
+                                          </div>
+                                        )}
+
+                                        {/* Progress Bar */}
+                                        {test.progress_status !==
+                                          "not_started" && (
+                                          <div className="mb-3">
+                                            <Progress
+                                              value={test.progress_percentage}
+                                              className="h-2"
+                                            />
+                                          </div>
+                                        )}
+                                      </div>
+
+                                      {/* Action Button */}
+                                      <div className="flex-shrink-0">
+                                        {getTestActionButton(test, session)}
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="text-center py-8 text-muted-foreground">
+                          <BookOpen className="size-8 mx-auto mb-2 opacity-50" />
+                          <p className="text-sm">
+                            Belum ada tes yang ditambahkan dalam sesi ini
+                          </p>
+                        </div>
+                      )}
+                    </AccordionContent>
+                  </AccordionItem>
                 ))}
-              </div>
-
-              {sessionIndex < mockSessions.length - 1 && (
-                <div className="border-b border-gray-200 pt-4"></div>
-              )}
-            </div>
-          ))}
-        </div>
-
-        {/* Empty State */}
-        {mockSessions.length === 0 && (
+              </Accordion>
+            </CardContent>
+          </Card>
+        ) : (
+          /* Empty State */
           <Card className="text-center py-12">
             <CardContent>
               <div className="mx-auto flex items-center justify-center size-12 bg-gray-100 rounded-full mb-4">
                 <Target className="size-6 text-gray-600" />
               </div>
               <h3 className="text-lg font-medium text-gray-900 mb-2">
-                Belum Ada Tes Tersedia
+                Belum Ada Sesi Terdaftar
               </h3>
-              <p className="text-gray-600 mb-4">
-                Saat ini belum ada sesi tes yang tersedia untuk Anda. Silakan
-                hubungi administrator untuk informasi lebih lanjut.
+              <p className="text-gray-600 mb-4 max-w-md mx-auto">
+                Anda belum terdaftar dalam sesi tes apapun. Silakan hubungi
+                administrator untuk mendaftarkan Anda dalam sesi tes.
               </p>
               <Button variant="outline">Hubungi Administrator</Button>
             </CardContent>
