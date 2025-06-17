@@ -19,6 +19,7 @@ import { getSessionStatsHandler } from "./session.stats";
 import { updateSessionHandler } from "./session.update";
 import { deleteSessionHandler } from "./session.delete";
 import { checkParticipantHandler } from "./session.check-participant";
+import { getParticipantSessionsHandler } from "./participant-sessions.get";
 import { authenticateUser, requireAdmin } from "../../middleware/auth";
 import { generalApiRateLimit } from "../../middleware/rateLimiter";
 import { participantRoutes } from "./participants";
@@ -71,6 +72,14 @@ sessionRoutes.post(
   "/check-participant",
   generalApiRateLimit,
   checkParticipantHandler
+);
+
+// Get Participant Sessions with Progress (authenticated participant only)
+sessionRoutes.get(
+  "/my-sessions",
+  generalApiRateLimit,
+  authenticateUser,
+  getParticipantSessionsHandler
 );
 
 // ==================== STATISTICS ROUTES (Admin only) ====================
