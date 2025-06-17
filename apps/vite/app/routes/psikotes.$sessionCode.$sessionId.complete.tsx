@@ -293,7 +293,7 @@ export default function PsikotesSessionComplete() {
               </p>
             </CardHeader>
             <CardContent>
-              <div className="grid gap-4">
+              <div className="space-y-3 sm:space-y-4">
                 {sessionData.session_modules
                   ?.sort((a: any, b: any) => a.sequence - b.sequence)
                   .map((module: any, index: number) => {
@@ -306,7 +306,7 @@ export default function PsikotesSessionComplete() {
                     return (
                       <div
                         key={module.id}
-                        className={`flex flex-col items-start gap-3 p-4 rounded-lg border-l-4 ${
+                        className={`relative rounded-lg border-l-4 p-3 sm:p-4 ${
                           isCompleted
                             ? "bg-green-50 border-l-green-500"
                             : status === "in_progress"
@@ -314,92 +314,209 @@ export default function PsikotesSessionComplete() {
                               : "bg-gray-50 border-l-gray-300"
                         }`}
                       >
-                        <div
-                          className={`w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 ${
-                            isCompleted
-                              ? "bg-green-100"
-                              : status === "in_progress"
-                                ? "bg-blue-100"
-                                : "bg-gray-100"
-                          }`}
-                        >
-                          {getTestIcon(module.test.category)}
-                        </div>
+                        {/* Mobile Layout */}
+                        <div className="flex gap-3 sm:hidden">
+                          {/* Icon */}
+                          <div
+                            className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
+                              isCompleted
+                                ? "bg-green-100"
+                                : status === "in_progress"
+                                  ? "bg-blue-100"
+                                  : "bg-gray-100"
+                            }`}
+                          >
+                            {getTestIcon(module.test.category)}
+                          </div>
 
-                        <div className="flex-1 min-w-0">
-                          <div className="flex flex-col gap-1 mb-1">
-                            <h4 className="font-medium truncate">
-                              {module.test.name}
-                            </h4>
-                            {module.is_required && (
-                              <Badge
-                                variant="destructive"
-                                className="text-xs w-fit"
-                              >
-                                Wajib
-                              </Badge>
-                            )}
-                          </div>
-                          <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-                            <span className="flex items-center gap-1">
-                              <FileText className="h-3 w-3" />
-                              {module.test.total_questions} soal
-                            </span>
-                            <span className="flex items-center gap-1">
-                              <Clock className="h-3 w-3" />
-                              {module.test.time_limit} menit
-                            </span>
-                            <span className="capitalize">
-                              {module.test.category}
-                            </span>
-                          </div>
-                          {progress && (
-                            <div className="mt-2 text-xs text-muted-foreground space-y-1">
-                              {progress.answered_questions > 0 && (
-                                <div className="flex items-center gap-1">
-                                  <CheckCircle className="h-3 w-3" />
-                                  <span>
-                                    Dijawab: {progress.answered_questions}/
-                                    {progress.total_questions} soal
-                                  </span>
-                                </div>
-                              )}
-                              {progress.time_spent > 0 && (
-                                <div className="flex items-center gap-1">
-                                  <Timer className="h-3 w-3" />
-                                  <span>
-                                    Waktu:{" "}
-                                    {Math.floor(progress.time_spent / 60)} menit
-                                  </span>
-                                </div>
+                          {/* Content */}
+                          <div className="flex-1 min-w-0 space-y-2">
+                            {/* Title and Badge */}
+                            <div className="space-y-1">
+                              <h4 className="font-medium text-sm leading-tight">
+                                {module.test.name}
+                              </h4>
+                              {module.is_required && (
+                                <Badge
+                                  variant="destructive"
+                                  className="text-xs h-4 px-1.5"
+                                >
+                                  Wajib
+                                </Badge>
                               )}
                             </div>
-                          )}
+
+                            {/* Test Info - Stacked on mobile */}
+                            <div className="space-y-1">
+                              <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                                <FileText className="h-3 w-3 flex-shrink-0" />
+                                <span>{module.test.total_questions} soal</span>
+                              </div>
+                              <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                                <Clock className="h-3 w-3 flex-shrink-0" />
+                                <span>{module.test.time_limit} menit</span>
+                              </div>
+                              <div className="text-xs text-muted-foreground capitalize">
+                                {module.test.category}
+                              </div>
+                            </div>
+
+                            {/* Progress Info */}
+                            {progress && (
+                              <div className="space-y-1">
+                                {progress.answered_questions > 0 && (
+                                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                                    <CheckCircle className="h-3 w-3 flex-shrink-0" />
+                                    <span>
+                                      {progress.answered_questions}/
+                                      {progress.total_questions} soal
+                                    </span>
+                                  </div>
+                                )}
+                                {progress.time_spent > 0 && (
+                                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                                    <Timer className="h-3 w-3 flex-shrink-0" />
+                                    <span>
+                                      {Math.floor(progress.time_spent / 60)}{" "}
+                                      menit
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+
+                            {/* Status and Action */}
+                            <div className="flex items-center gap-2 pt-1">
+                              <div className="flex-shrink-0">
+                                {getStatusBadge(status)}
+                              </div>
+                              {canStart && (
+                                <Button
+                                  size="sm"
+                                  onClick={() =>
+                                    handleStartTest(module.test.id)
+                                  }
+                                  className="cursor-pointer h-7 px-2 text-xs flex-1"
+                                >
+                                  <PlayCircle className="h-3 w-3 mr-1" />
+                                  Mulai
+                                </Button>
+                              )}
+                              {status === "in_progress" && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() =>
+                                    handleStartTest(module.test.id)
+                                  }
+                                  className="cursor-pointer h-7 px-2 text-xs flex-1"
+                                >
+                                  <ArrowRight className="h-3 w-3 mr-1" />
+                                  Lanjutkan
+                                </Button>
+                              )}
+                            </div>
+                          </div>
                         </div>
 
-                        <div className="flex flex-col items-stretch gap-2 sm:gap-3 w-full">
-                          {getStatusBadge(status)}
-                          {canStart && (
-                            <Button
-                              size="sm"
-                              onClick={() => handleStartTest(module.test.id)}
-                              className="cursor-pointer w-full"
-                            >
-                              <PlayCircle className="h-4 w-4 mr-2" />
-                              Mulai
-                            </Button>
-                          )}
-                          {status === "in_progress" && (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleStartTest(module.test.id)}
-                              className="cursor-pointer w-full"
-                            >
-                              <ArrowRight className="h-4 w-4 mr-2" />
-                              Lanjutkan
-                            </Button>
-                          )}
+                        {/* Desktop Layout */}
+                        <div className="hidden sm:flex sm:gap-4">
+                          {/* Icon */}
+                          <div
+                            className={`w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 ${
+                              isCompleted
+                                ? "bg-green-100"
+                                : status === "in_progress"
+                                  ? "bg-blue-100"
+                                  : "bg-gray-100"
+                            }`}
+                          >
+                            {getTestIcon(module.test.category)}
+                          </div>
+
+                          {/* Content */}
+                          <div className="flex-1 min-w-0 space-y-3">
+                            {/* Title and Badge */}
+                            <div className="flex flex-col gap-1">
+                              <h4 className="font-medium truncate">
+                                {module.test.name}
+                              </h4>
+                              {module.is_required && (
+                                <Badge
+                                  variant="destructive"
+                                  className="text-xs w-fit"
+                                >
+                                  Wajib
+                                </Badge>
+                              )}
+                            </div>
+
+                            {/* Test Info - Horizontal on desktop */}
+                            <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
+                              <span className="flex items-center gap-1">
+                                <FileText className="h-3 w-3" />
+                                {module.test.total_questions} soal
+                              </span>
+                              <span className="flex items-center gap-1">
+                                <Clock className="h-3 w-3" />
+                                {module.test.time_limit} menit
+                              </span>
+                              <span className="capitalize">
+                                {module.test.category}
+                              </span>
+                            </div>
+
+                            {/* Progress Info */}
+                            {progress && (
+                              <div className="text-xs text-muted-foreground space-y-1">
+                                {progress.answered_questions > 0 && (
+                                  <div className="flex items-center gap-1">
+                                    <CheckCircle className="h-3 w-3" />
+                                    <span>
+                                      Dijawab: {progress.answered_questions}/
+                                      {progress.total_questions} soal
+                                    </span>
+                                  </div>
+                                )}
+                                {progress.time_spent > 0 && (
+                                  <div className="flex items-center gap-1">
+                                    <Timer className="h-3 w-3" />
+                                    <span>
+                                      Waktu:{" "}
+                                      {Math.floor(progress.time_spent / 60)}{" "}
+                                      menit
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Actions - Desktop */}
+                          <div className="flex flex-col items-end gap-2 flex-shrink-0">
+                            {getStatusBadge(status)}
+                            {canStart && (
+                              <Button
+                                size="sm"
+                                onClick={() => handleStartTest(module.test.id)}
+                                className="cursor-pointer"
+                              >
+                                <PlayCircle className="h-4 w-4 mr-2" />
+                                Mulai
+                              </Button>
+                            )}
+                            {status === "in_progress" && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleStartTest(module.test.id)}
+                                className="cursor-pointer"
+                              >
+                                <ArrowRight className="h-4 w-4 mr-2" />
+                                Lanjutkan
+                              </Button>
+                            )}
+                          </div>
                         </div>
                       </div>
                     );
