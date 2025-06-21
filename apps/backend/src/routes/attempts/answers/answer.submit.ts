@@ -156,11 +156,12 @@ export async function submitAnswerHandler(
       return c.json(errorResponse, 400);
     }
 
-    // Calculate score if not a draft
+    // Calculate score for all answers (whether draft or not)
     let score: number | null = null;
     let isCorrect: boolean | null = null;
 
-    if (!requestData.is_draft) {
+    // Always calculate score if there's an answer
+    if (requestData.answer || requestData.answer_data) {
       const scoreResult = calculateAnswerScore(
         requestData.answer || null,
         requestData.answer_data || null,

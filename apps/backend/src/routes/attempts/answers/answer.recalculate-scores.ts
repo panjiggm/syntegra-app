@@ -19,12 +19,7 @@ export async function recalculateScoresHandler(
       })
       .from(userAnswers)
       .leftJoin(questions, eq(userAnswers.question_id, questions.id))
-      .where(
-        and(
-          eq(userAnswers.attempt_id, attemptId),
-          isNotNull(userAnswers.answer) // Only answered questions
-        )
-      );
+      .where(eq(userAnswers.attempt_id, attemptId));
 
     console.log(
       `Found ${answersWithQuestions.length} answers to recalculate for attempt ${attemptId}`
@@ -40,10 +35,15 @@ export async function recalculateScoresHandler(
     }> = [];
 
     for (const { answer, question } of answersWithQuestions) {
-      if (!question || !question.correct_answer) {
-        console.log(
-          `Skipping answer ${answer.id} - missing question or correct_answer`
-        );
+      if (!question) {
+        console.log(`Skipping answer ${answer.id} - missing question`);
+        continue;
+      }
+
+      // Check if answer has any content (answer text, answer_data, or existing score)
+      const hasAnswer = answer.answer || answer.answer_data || answer.score;
+      if (!hasAnswer) {
+        console.log(`Skipping answer ${answer.id} - no content to recalculate`);
         continue;
       }
 
