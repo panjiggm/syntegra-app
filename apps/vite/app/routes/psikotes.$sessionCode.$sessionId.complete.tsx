@@ -78,6 +78,7 @@ export default function PsikotesSessionComplete() {
 
   const handleLogout = () => {
     logout();
+    navigate(`/psikotes/${sessionCode}`);
   };
 
   const handleStartTest = (testId: string) => {
