@@ -22,6 +22,11 @@ import {
   calculateReliabilityIndex,
   generateExecutiveSummary,
 } from "shared-types";
+import { 
+  calculateFreshScoresForUser, 
+  groupFreshScoresByUser,
+  calculateUserAverageFromFreshScores 
+} from "@/lib/reportCalculations";
 
 export async function getIndividualReportHandler(
   c: Context<{ Bindings: CloudflareBindings; Variables: { user: any } }>
@@ -200,18 +205,39 @@ export async function getIndividualReportHandler(
       };
     });
 
-    // Process test performances
+    // Calculate fresh scores for all user attempts
+    const freshScores = await calculateFreshScoresForUser(
+      db,
+      userId,
+      queryParams.session_filter,
+      queryParams.date_from,
+      queryParams.date_to
+    );
+
+    console.log(`Calculated ${freshScores.length} fresh scores for user ${userId}`);
+
+    // Process test performances using fresh calculations
     const testPerformances = await Promise.all(
       userAttempts
-        .filter((attempt) => attempt.result && attempt.test)
+        .filter((attempt) => attempt.test)
         .map(async (attempt) => {
           const test = attempt.test!;
-          const result = attempt.result!;
           const attemptData = attempt.attempt;
 
-          // Parse traits
+          // Get fresh score for this attempt
+          const freshScore = freshScores.find(fs => fs.attemptId === attemptData.id);
+          
+          // Fallback to stored result if fresh calculation failed
+          const result = attempt.result;
+          const rawScore = freshScore?.rawScore ?? (result?.raw_score ? parseFloat(result.raw_score) : 0);
+          const scaledScore = freshScore?.scaledScore ?? (result?.scaled_score ? parseFloat(result.scaled_score) : 0);
+          const completionRate = freshScore?.completionPercentage ?? parseFloat(result?.completion_percentage || "0");
+
+          console.log(`Attempt ${attemptData.id}: Fresh score=${freshScore?.scaledScore}, Stored score=${result?.scaled_score}`);
+
+          // Parse traits from stored result (traits calculation logic remains the same)
           let traitScores: any[] = [];
-          if (result.traits) {
+          if (result?.traits) {
             try {
               traitScores = Array.isArray(result.traits)
                 ? result.traits
@@ -278,21 +304,25 @@ export async function getIndividualReportHandler(
             )
             .map((trait) => trait.trait_name);
 
+          // Determine grade based on fresh scaled score
+          let grade = result?.grade || "E";
+          if (scaledScore >= 90) grade = "A";
+          else if (scaledScore >= 80) grade = "B"; 
+          else if (scaledScore >= 70) grade = "C";
+          else if (scaledScore >= 60) grade = "D";
+          else grade = "E";
+
           return {
             test_id: test.id,
             test_name: test.name,
             test_category: test.category,
             module_type: test.module_type,
             attempt_id: attemptData.id,
-            raw_score: result.raw_score ? parseFloat(result.raw_score) : null,
-            scaled_score: result.scaled_score
-              ? parseFloat(result.scaled_score)
-              : null,
-            percentile: result.percentile
-              ? parseFloat(result.percentile)
-              : null,
-            grade: result.grade,
-            completion_rate: parseFloat(result.completion_percentage || "0"),
+            raw_score: rawScore,
+            scaled_score: scaledScore,
+            percentile: Math.min(100, scaledScore), // Simplified percentile
+            grade: grade,
+            completion_rate: completionRate,
             time_spent_minutes: actualTimeMinutes,
             time_efficiency: timeEfficiency,
             trait_scores: processedTraitScores,

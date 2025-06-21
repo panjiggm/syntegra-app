@@ -19,6 +19,11 @@ import {
   calculateCompletionRate,
   generateExecutiveSummary,
 } from "shared-types";
+import { 
+  calculateFreshScoresForSession, 
+  groupFreshScoresByUser,
+  calculateUserAverageFromFreshScores 
+} from "@/lib/reportCalculations";
 
 export async function getSessionSummaryReportHandler(
   c: Context<{ Bindings: CloudflareBindings; Variables: { user: any } }>
@@ -176,6 +181,10 @@ export async function getSessionSummaryReportHandler(
       .where(eq(sessionModules.session_id, sessionId))
       .orderBy(sessionModules.sequence);
 
+    // Calculate fresh scores for the entire session (used in module analysis)
+    const allSessionFreshScores = await calculateFreshScoresForSession(db, sessionId);
+    console.log(`Calculated ${allSessionFreshScores.length} fresh scores for session analysis`);
+
     // Analyze each test module
     const testModuleAnalysis = await Promise.all(
       testModules.map(async (module) => {
@@ -208,20 +217,11 @@ export async function getSessionSummaryReportHandler(
           participantsStarted.count
         );
 
-        // Get average score for this module
-        const [avgScore] = await db
-          .select({
-            avg_score: avg(sql`CAST(${testResults.scaled_score} AS DECIMAL)`),
-          })
-          .from(testResults)
-          .innerJoin(testAttempts, eq(testResults.attempt_id, testAttempts.id))
-          .where(
-            and(
-              eq(testAttempts.session_test_id, sessionId),
-              eq(testResults.test_id, module.test_id),
-              sql`${testResults.scaled_score} IS NOT NULL`
-            )
-          );
+        // Calculate fresh average score for this module
+        const moduleScores = allSessionFreshScores.filter(fs => fs.testId === module.test_id);
+        const avgScoreValue = moduleScores.length > 0 
+          ? moduleScores.reduce((sum, fs) => sum + fs.scaledScore, 0) / moduleScores.length
+          : 0;
 
         // Get average time for this module
         const [avgTime] = await db
@@ -245,9 +245,6 @@ export async function getSessionSummaryReportHandler(
           | "moderate"
           | "difficult"
           | "very_difficult" = "moderate";
-        const avgScoreValue = avgScore.avg_score
-          ? Number(avgScore.avg_score)
-          : 0;
 
         if (moduleCompletionRate >= 90 && avgScoreValue >= 80) {
           difficultyLevel = "very_easy";
@@ -289,24 +286,8 @@ export async function getSessionSummaryReportHandler(
       })
     );
 
-    // Get performance distribution
-    const allResults = await db
-      .select({
-        scaled_score: testResults.scaled_score,
-        grade: testResults.grade,
-        percentile: testResults.percentile,
-        user_id: testResults.user_id,
-      })
-      .from(testResults)
-      .innerJoin(testAttempts, eq(testResults.attempt_id, testAttempts.id))
-      .where(
-        and(
-          eq(testAttempts.session_test_id, sessionId),
-          sql`${testResults.scaled_score} IS NOT NULL`
-        )
-      );
-
-    // Calculate score distribution
+    // Use the previously calculated fresh scores for performance distribution
+    // Calculate score distribution from fresh scores
     const scoreRanges = {
       "0-20": 0,
       "21-40": 0,
@@ -315,8 +296,8 @@ export async function getSessionSummaryReportHandler(
       "81-100": 0,
     };
 
-    allResults.forEach((result) => {
-      const score = parseFloat(result.scaled_score || "0");
+    allSessionFreshScores.forEach((freshScore) => {
+      const score = freshScore.scaledScore;
       if (score <= 20) scoreRanges["0-20"]++;
       else if (score <= 40) scoreRanges["21-40"]++;
       else if (score <= 60) scoreRanges["41-60"]++;
@@ -324,18 +305,20 @@ export async function getSessionSummaryReportHandler(
       else scoreRanges["81-100"]++;
     });
 
-    // Calculate grade distribution
-    const gradeDistribution = allResults.reduce(
-      (acc, result) => {
-        if (result.grade) {
-          acc[result.grade] = (acc[result.grade] || 0) + 1;
-        }
-        return acc;
-      },
-      {} as Record<string, number>
-    );
+    // Calculate grade distribution from fresh scores
+    const gradeDistribution: Record<string, number> = {};
+    allSessionFreshScores.forEach((freshScore) => {
+      // Calculate grade based on fresh scaled score
+      let grade = "E";
+      if (freshScore.scaledScore >= 90) grade = "A";
+      else if (freshScore.scaledScore >= 80) grade = "B";
+      else if (freshScore.scaledScore >= 70) grade = "C";
+      else if (freshScore.scaledScore >= 60) grade = "D";
+      
+      gradeDistribution[grade] = (gradeDistribution[grade] || 0) + 1;
+    });
 
-    // Calculate percentile ranges
+    // Calculate percentile ranges from fresh scores (simplified percentile = scaled score)
     const percentileRanges = {
       "0-25": 0,
       "26-50": 0,
@@ -343,41 +326,42 @@ export async function getSessionSummaryReportHandler(
       "76-100": 0,
     };
 
-    allResults.forEach((result) => {
-      const percentile = parseFloat(result.percentile || "0");
+    allSessionFreshScores.forEach((freshScore) => {
+      const percentile = Math.min(100, freshScore.scaledScore); // Simplified percentile
       if (percentile <= 25) percentileRanges["0-25"]++;
       else if (percentile <= 50) percentileRanges["26-50"]++;
       else if (percentile <= 75) percentileRanges["51-75"]++;
       else percentileRanges["76-100"]++;
     });
 
-    // Get top performers
-    const topPerformers = await db
+    // Get top performers using fresh calculations
+    const userFreshScores = groupFreshScoresByUser(allSessionFreshScores);
+    const allParticipants = await db
       .select({
         user_id: users.id,
         name: users.name,
-        avg_score: avg(sql`CAST(${testResults.scaled_score} AS DECIMAL)`),
-        avg_percentile: avg(sql`CAST(${testResults.percentile} AS DECIMAL)`),
       })
-      .from(testResults)
-      .innerJoin(testAttempts, eq(testResults.attempt_id, testAttempts.id))
-      .innerJoin(users, eq(testAttempts.user_id, users.id))
-      .where(
-        and(
-          eq(testAttempts.session_test_id, sessionId),
-          sql`${testResults.scaled_score} IS NOT NULL`
-        )
-      )
-      .groupBy(users.id, users.name)
-      .orderBy(desc(avg(sql`CAST(${testResults.scaled_score} AS DECIMAL)`)))
-      .limit(5);
+      .from(sessionParticipants)
+      .innerJoin(users, eq(sessionParticipants.user_id, users.id))
+      .where(eq(sessionParticipants.session_id, sessionId));
 
-    const topPerformersData = topPerformers.map((performer) => ({
-      user_id: performer.user_id,
-      name: performer.name,
-      overall_score: Math.round(Number(performer.avg_score) || 0),
-      percentile: Math.round(Number(performer.avg_percentile) || 0),
-    }));
+    const topPerformersData = allParticipants
+      .map(participant => {
+        const userScores = userFreshScores[participant.user_id] || [];
+        if (userScores.length === 0) return null;
+        
+        const freshAverage = calculateUserAverageFromFreshScores(userScores);
+        
+        return {
+          user_id: participant.user_id,
+          name: participant.name,
+          overall_score: Math.round(freshAverage.overallScore),
+          percentile: Math.round(freshAverage.overallPercentile),
+        };
+      })
+      .filter(Boolean) // Remove null entries
+      .sort((a, b) => (b?.overall_score || 0) - (a?.overall_score || 0))
+      .slice(0, 5);
 
     // Calculate assessment quality metrics
     const totalAttempts = await db
