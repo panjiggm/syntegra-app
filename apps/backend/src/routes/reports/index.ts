@@ -2,6 +2,8 @@ import { Hono } from "hono";
 import { zValidator } from "@hono/zod-validator";
 import { type CloudflareBindings } from "@/lib/env";
 import {
+  GetIndividualReportsListQuerySchema,
+  GetSessionReportsListQuerySchema,
   GetIndividualReportRequestSchema,
   GetIndividualReportQuerySchema,
   GetSessionSummaryReportRequestSchema,
@@ -12,6 +14,8 @@ import {
   GetBatchReportQuerySchema,
   type ReportErrorResponse,
 } from "shared-types";
+import { getIndividualReportsListHandler } from "./report.individual-list";
+import { getSessionReportsListHandler } from "./report.session-list";
 import { getIndividualReportHandler } from "./report.individual";
 import { getSessionSummaryReportHandler } from "./report.session-summary";
 import { getComparativeReportHandler } from "./report.comparative";
@@ -20,6 +24,55 @@ import { authenticateUser, requireAdmin } from "@/middleware/auth";
 import { generalApiRateLimit } from "@/middleware/rateLimiter";
 
 const reportRoutes = new Hono<{ Bindings: CloudflareBindings }>();
+
+// ==================== REPORTS LIST ENDPOINTS ====================
+
+// Get Individual Reports List (Users with report overview)
+reportRoutes.get(
+  "/individual",
+  generalApiRateLimit,
+  authenticateUser,
+  zValidator("query", GetIndividualReportsListQuerySchema, (result, c) => {
+    if (!result.success) {
+      const errorResponse: ReportErrorResponse = {
+        success: false,
+        message: "Invalid query parameters",
+        errors: result.error.errors.map((err) => ({
+          field: err.path.join("."),
+          message: err.message,
+          code: err.code,
+        })),
+        timestamp: new Date().toISOString(),
+      };
+      return c.json(errorResponse, 400);
+    }
+  }),
+  getIndividualReportsListHandler
+);
+
+// Get Session Reports List (Sessions with report overview)
+reportRoutes.get(
+  "/session",
+  generalApiRateLimit,
+  authenticateUser,
+  requireAdmin,
+  zValidator("query", GetSessionReportsListQuerySchema, (result, c) => {
+    if (!result.success) {
+      const errorResponse: ReportErrorResponse = {
+        success: false,
+        message: "Invalid query parameters",
+        errors: result.error.errors.map((err) => ({
+          field: err.path.join("."),
+          message: err.message,
+          code: err.code,
+        })),
+        timestamp: new Date().toISOString(),
+      };
+      return c.json(errorResponse, 400);
+    }
+  }),
+  getSessionReportsListHandler
+);
 
 // ==================== INDIVIDUAL ASSESSMENT REPORT ====================
 

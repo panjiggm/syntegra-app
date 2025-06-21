@@ -104,6 +104,32 @@ export const RecommendationSchema = z.object({
 
 // ==================== REQUEST SCHEMAS ====================
 
+// List Individual Reports Request (for getting user list with overview)
+export const GetIndividualReportsListQuerySchema = z.object({
+  page: z.coerce.number().min(1).default(1),
+  per_page: z.coerce.number().min(1).max(100).default(20),
+  search: z.string().optional(), // search by name, email, nik
+  session_id: z.string().uuid().optional(), // filter by session
+  sort_by: z.enum(["name", "email", "overall_score", "completion_rate", "last_test_date"]).default("name"),
+  sort_order: z.enum(["asc", "desc"]).default("asc"),
+  has_reports: z.coerce.boolean().optional(), // filter users who have reports
+  date_from: z.string().datetime().optional(),
+  date_to: z.string().datetime().optional(),
+});
+
+// List Session Reports Request (for getting session list with overview)
+export const GetSessionReportsListQuerySchema = z.object({
+  page: z.coerce.number().min(1).default(1),
+  per_page: z.coerce.number().min(1).max(100).default(20),
+  search: z.string().optional(), // search by session name, code, target position
+  status: z.enum(["upcoming", "active", "completed", "cancelled"]).optional(),
+  sort_by: z.enum(["session_name", "start_time", "total_participants", "completion_rate"]).default("start_time"),
+  sort_order: z.enum(["asc", "desc"]).default("desc"),
+  has_results: z.coerce.boolean().optional(), // filter sessions with test results
+  date_from: z.string().datetime().optional(),
+  date_to: z.string().datetime().optional(),
+});
+
 // Individual Report Request
 export const GetIndividualReportRequestSchema = z.object({
   userId: z.string().uuid("Invalid user ID format"),
@@ -171,6 +197,142 @@ export const GetBatchReportQuerySchema = z.object({
 });
 
 // ==================== RESPONSE SCHEMAS ====================
+
+// Individual Reports List Response
+export const IndividualReportsListItemSchema = z.object({
+  user_id: z.string().uuid(),
+  name: z.string(),
+  email: z.string(),
+  nik: z.string(),
+  profile_picture_url: z.string().nullable(),
+  
+  // Overview scores
+  overall_score: z.number().nullable(),
+  overall_grade: z.string().nullable(),
+  overall_percentile: z.number().nullable(),
+  
+  // Sessions participated
+  sessions_count: z.number(),
+  sessions_participated: z.array(z.object({
+    session_id: z.string().uuid(),
+    session_name: z.string(),
+    participation_date: z.string().datetime(),
+    status: z.string(),
+  })),
+  
+  // Test statistics
+  total_tests_taken: z.number(),
+  total_tests_completed: z.number(),
+  completion_rate: z.number(),
+  total_time_spent_minutes: z.number(),
+  average_score: z.number().nullable(),
+  
+  // Timestamps
+  first_test_date: z.string().datetime().nullable(),
+  last_test_date: z.string().datetime().nullable(),
+  
+  // Status
+  has_complete_reports: z.boolean(),
+  data_quality_score: z.number(), // 0-100
+});
+
+export const GetIndividualReportsListResponseSchema = z.object({
+  success: z.literal(true),
+  message: z.string(),
+  data: z.object({
+    individuals: z.array(IndividualReportsListItemSchema),
+    pagination: z.object({
+      current_page: z.number(),
+      per_page: z.number(),
+      total: z.number(),
+      total_pages: z.number(),
+      has_next_page: z.boolean(),
+      has_prev_page: z.boolean(),
+    }),
+    summary: z.object({
+      total_users_with_reports: z.number(),
+      average_completion_rate: z.number(),
+      total_sessions_represented: z.number(),
+      date_range: z.object({
+        earliest_test: z.string().datetime().nullable(),
+        latest_test: z.string().datetime().nullable(),
+      }),
+    }),
+  }),
+  timestamp: z.string().datetime(),
+});
+
+// Session Reports List Response
+export const SessionReportsListItemSchema = z.object({
+  session_id: z.string().uuid(),
+  session_name: z.string(),
+  session_code: z.string(),
+  target_position: z.string().nullable(),
+  start_time: z.string().datetime(),
+  end_time: z.string().datetime(),
+  status: z.enum(["upcoming", "active", "completed", "cancelled"]),
+  location: z.string().nullable(),
+  proctor_name: z.string().nullable(),
+  
+  // Module test statistics
+  total_test_modules: z.number(),
+  total_duration_minutes: z.number(), // total duration from all test modules
+  
+  // Participation statistics
+  total_invited: z.number(),
+  total_registered: z.number(),
+  total_completed: z.number(),
+  completion_rate: z.number(),
+  
+  // Performance statistics
+  average_score: z.number().nullable(),
+  score_range: z.object({
+    min: z.number().nullable(),
+    max: z.number().nullable(),
+  }),
+  average_time_per_participant: z.number(),
+  
+  // Quality metrics
+  data_quality_average: z.number(), // 0-100
+  reliability_average: z.number(), // 0-100
+  
+  // Timestamps
+  created_at: z.string().datetime(),
+  last_activity: z.string().datetime().nullable(),
+  
+  // Report availability
+  has_individual_reports: z.boolean(),
+  has_session_summary: z.boolean(),
+  has_comparative_reports: z.boolean(),
+  has_batch_reports: z.boolean(),
+});
+
+export const GetSessionReportsListResponseSchema = z.object({
+  success: z.literal(true),
+  message: z.string(),
+  data: z.object({
+    sessions: z.array(SessionReportsListItemSchema),
+    pagination: z.object({
+      current_page: z.number(),
+      per_page: z.number(),
+      total: z.number(),
+      total_pages: z.number(),
+      has_next_page: z.boolean(),
+      has_prev_page: z.boolean(),
+    }),
+    summary: z.object({
+      total_sessions: z.number(),
+      total_completed_sessions: z.number(),
+      total_participants_across_sessions: z.number(),
+      average_completion_rate: z.number(),
+      date_range: z.object({
+        earliest_session: z.string().datetime().nullable(),
+        latest_session: z.string().datetime().nullable(),
+      }),
+    }),
+  }),
+  timestamp: z.string().datetime(),
+});
 
 // Individual Assessment Report Response
 export const IndividualReportDataSchema = z.object({
@@ -672,6 +834,12 @@ export type PsychologicalProfile = z.infer<typeof PsychologicalProfileSchema>;
 export type Recommendation = z.infer<typeof RecommendationSchema>;
 
 // Request Types
+export type GetIndividualReportsListQuery = z.infer<
+  typeof GetIndividualReportsListQuerySchema
+>;
+export type GetSessionReportsListQuery = z.infer<
+  typeof GetSessionReportsListQuerySchema
+>;
 export type GetIndividualReportRequest = z.infer<
   typeof GetIndividualReportRequestSchema
 >;
@@ -694,6 +862,8 @@ export type GetBatchReportRequest = z.infer<typeof GetBatchReportRequestSchema>;
 export type GetBatchReportQuery = z.infer<typeof GetBatchReportQuerySchema>;
 
 // Response Data Types
+export type IndividualReportsListItem = z.infer<typeof IndividualReportsListItemSchema>;
+export type SessionReportsListItem = z.infer<typeof SessionReportsListItemSchema>;
 export type IndividualReportData = z.infer<typeof IndividualReportDataSchema>;
 export type SessionSummaryReportData = z.infer<
   typeof SessionSummaryReportDataSchema
@@ -702,6 +872,12 @@ export type ComparativeReportData = z.infer<typeof ComparativeReportDataSchema>;
 export type BatchReportData = z.infer<typeof BatchReportDataSchema>;
 
 // Response Types
+export type GetIndividualReportsListResponse = z.infer<
+  typeof GetIndividualReportsListResponseSchema
+>;
+export type GetSessionReportsListResponse = z.infer<
+  typeof GetSessionReportsListResponseSchema
+>;
 export type GetIndividualReportResponse = z.infer<
   typeof GetIndividualReportResponseSchema
 >;
