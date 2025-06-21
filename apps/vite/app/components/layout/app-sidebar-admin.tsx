@@ -6,6 +6,7 @@ import {
   FileText,
   Clock,
   Monitor,
+  Target,
 } from "lucide-react";
 
 import { NavMain } from "./nav-main";
@@ -47,6 +48,11 @@ const data = {
       title: "Jadwal & Sesi",
       url: "/admin/sessions",
       icon: Clock,
+    },
+    {
+      title: "Hasil & Analisis",
+      url: "/admin/results",
+      icon: Target,
     },
     // {
     //   title: "Live Test Monitor",
