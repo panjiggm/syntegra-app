@@ -159,7 +159,8 @@ export async function finishTestAttemptHandler(
 
     // Create or update test result if attempt was completed
     if (finalStatus === "completed" && existingResult.length === 0) {
-      // Basic result calculation (in a real system, this would be more sophisticated)
+      // Basic result calculation based on completion percentage only
+      // Note: For accurate scoring, use the dedicated result.calculate endpoint
       const rawScore =
         (test.total_questions || 0) > 0
           ? (requestData.questions_answered / (test.total_questions || 1)) * 100
