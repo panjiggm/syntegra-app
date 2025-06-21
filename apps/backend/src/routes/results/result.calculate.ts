@@ -215,15 +215,40 @@ export async function calculateTestResultHandler(
     }> = [];
 
     for (const { answer, question } of answersResult) {
-      if (!question || !answer.answer) continue;
+      if (!question) continue;
 
-      // Simple scoring logic (can be extended based on test type)
+      // Check if answer has any content (answer text, answer_data, or score)
+      const hasAnswer = answer.answer || answer.answer_data || answer.score;
+      if (!hasAnswer) continue;
+
+      // Calculate question score based on type and available data
       let questionScore = 0;
-      if (answer.is_correct === true) {
+      let isAnswerCorrect = false;
+
+      // Use stored score if available (already calculated)
+      if (answer.score !== null && answer.score !== undefined) {
+        questionScore = parseFloat(answer.score) || 0;
+
+        // For multiple choice and true/false, score 1 means correct
+        if (
+          question.question_type === "multiple_choice" ||
+          question.question_type === "true_false"
+        ) {
+          isAnswerCorrect = questionScore > 0;
+        } else {
+          // For other types (rating_scale, etc.), consider answered as "correct"
+          isAnswerCorrect = true;
+        }
+      }
+      // Fallback: use is_correct if no score available
+      else if (answer.is_correct === true) {
         questionScore = 1;
+        isAnswerCorrect = true;
+      }
+
+      // Count correct answers for accuracy calculation
+      if (isAnswerCorrect) {
         correctAnswers++;
-      } else if (answer.score) {
-        questionScore = parseFloat(answer.score);
       }
 
       rawScore += questionScore;
