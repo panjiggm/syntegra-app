@@ -49,6 +49,10 @@ export default [
 
     // reports
     route("/admin/reports", "routes/admin.reports.tsx"),
+
+    //results
+    route("/admin/results", "routes/admin.results.tsx"),
+    route("/admin/results/:attemptId", "routes/admin.results.$attemptId.tsx"),
   ]),
 
   // Participant routes (protected - participant only)
