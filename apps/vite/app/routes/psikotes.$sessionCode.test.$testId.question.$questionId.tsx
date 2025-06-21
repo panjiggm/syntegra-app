@@ -130,16 +130,10 @@ export default function QuestionPage() {
   const isTimeCritical = displayTimeRemaining <= 300; // 5 minutes
   const isTimeAlmostUp = displayTimeRemaining <= 60; // 1 minute
 
-  console.log("testProgress : ", testProgress);
-  console.log("progress : ", progress);
-
   // ==================== TIMER SYNC ====================
   // Sync display timer with API data
   useEffect(() => {
     if (timeRemaining !== undefined) {
-      console.log("Timer sync - API time remaining:", timeRemaining, "seconds");
-      console.log("Timer sync - Is time expired:", isTimeExpired);
-      console.log("Timer sync - Test progress status:", testProgress?.status);
       setDisplayTimeRemaining(timeRemaining);
     }
   }, [timeRemaining, isTimeExpired, testProgress?.status]);
@@ -358,13 +352,6 @@ export default function QuestionPage() {
 
   const handleFinishTest = async () => {
     if (!user?.id || !sessionId) return;
-
-    // Show confirmation dialog
-    const confirmed = confirm(
-      `Apakah Anda yakin ingin menyelesaikan test ini?\n\nAnda telah menjawab ${answeredCount} dari ${totalQuestions} soal.\n\nSetelah diselesaikan, Anda tidak dapat mengubah jawaban lagi.`
-    );
-
-    if (!confirmed) return;
 
     try {
       await completeTest.mutateAsync({
