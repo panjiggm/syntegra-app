@@ -31,6 +31,7 @@ import {
 } from "~/components/ui/accordion";
 import { formatScore } from "~/lib/utils/score";
 import { LoadingSpinner } from "~/components/ui/loading-spinner";
+import { ChartContainer } from "~/components/ui/chart";
 
 interface SessionDetailViewProps {
   session: SessionReportsListItem;
@@ -141,6 +142,27 @@ export function SessionDetailView({ session }: SessionDetailViewProps) {
               </Accordion>
             </CardContent>
           </Card>
+
+          {/* Charts */}
+          {data?.charts && data.charts.length > 0 && (
+            <>
+              {data.charts
+                .filter((chart: any) => chart.type === "bar")
+                .map((chart: any, index: number) => (
+                  <ChartContainer key={index} chart={chart} origin="session" />
+                ))}
+            </>
+          )}
+
+          {data?.charts && data.charts.length > 0 && (
+            <>
+              {data.charts
+                .filter((chart: any) => chart.type === "line")
+                .map((chart: any, index: number) => (
+                  <ChartContainer key={index} chart={chart} origin="session" />
+                ))}
+            </>
+          )}
 
           {/* Top Performers */}
           {data &&

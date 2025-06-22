@@ -22,6 +22,7 @@ import {
   AccordionTrigger,
 } from "~/components/ui/accordion";
 import { LoadingSpinner } from "~/components/ui/loading-spinner";
+import { ChartContainer } from "~/components/ui/chart";
 
 interface IndividualDetailViewProps {
   individual: IndividualReportsListItem;
@@ -297,6 +298,21 @@ export function IndividualDetailView({
               </Accordion>
             </CardContent>
           </Card>
+
+          {/* Charts */}
+          {data?.charts && data.charts.length > 0 && (
+            <>
+              {data.charts
+                .filter((chart: any) => chart.type === "bar")
+                .map((chart: any, index: number) => (
+                  <ChartContainer
+                    key={index}
+                    chart={chart}
+                    origin="individual"
+                  />
+                ))}
+            </>
+          )}
 
           {/* Recommendations */}
           {data && data?.recommendations?.length > 0 && (
