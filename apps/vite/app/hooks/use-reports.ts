@@ -6,6 +6,40 @@ import { env } from "~/lib/env-config";
 
 // ==================== TYPES ====================
 
+// New types for list endpoints
+export interface IndividualReportsListQuery {
+  page?: number;
+  per_page?: number;
+  search?: string;
+  session_id?: string;
+  sort_by?:
+    | "name"
+    | "email"
+    | "overall_score"
+    | "completion_rate"
+    | "last_test_date";
+  sort_order?: "asc" | "desc";
+  has_reports?: boolean;
+  date_from?: string;
+  date_to?: string;
+}
+
+export interface SessionReportsListQuery {
+  page?: number;
+  per_page?: number;
+  search?: string;
+  status?: "upcoming" | "active" | "completed" | "cancelled";
+  sort_by?:
+    | "session_name"
+    | "start_time"
+    | "total_participants"
+    | "completion_rate";
+  sort_order?: "asc" | "desc";
+  has_results?: boolean;
+  date_from?: string;
+  date_to?: string;
+}
+
 export interface IndividualReportQuery {
   format?: "json" | "pdf" | "html";
   include_charts?: boolean;
@@ -335,6 +369,118 @@ export interface ReportHealthResponse {
   timestamp: string;
 }
 
+export interface IndividualReportsListItem {
+  user_id: string;
+  name: string;
+  email: string;
+  nik: string;
+  profile_picture_url: string | null;
+  overall_score: number | null;
+  overall_grade: string | null;
+  overall_percentile: number | null;
+  sessions_count: number;
+  sessions_participated: Array<{
+    session_id: string;
+    session_name: string;
+    participation_date: string;
+    status: string;
+  }>;
+  total_tests_taken: number;
+  total_tests_completed: number;
+  completion_rate: number;
+  total_time_spent_minutes: number;
+  average_score: number | null;
+  first_test_date: string | null;
+  last_test_date: string | null;
+  has_complete_reports: boolean;
+  data_quality_score: number;
+}
+
+export interface SessionReportsListItem {
+  session_id: string;
+  session_name: string;
+  session_code: string;
+  target_position: string | null;
+  start_time: string;
+  end_time: string;
+  status: "upcoming" | "active" | "completed" | "cancelled";
+  location: string | null;
+  proctor_name: string | null;
+  total_test_modules: number;
+  total_duration_minutes: number;
+  total_invited: number;
+  total_registered: number;
+  total_completed: number;
+  completion_rate: number;
+  average_score: number | null;
+  score_range: {
+    min: number | null;
+    max: number | null;
+  };
+  average_time_per_participant: number;
+  data_quality_average: number;
+  reliability_average: number;
+  created_at: string;
+  last_activity: string | null;
+  has_individual_reports: boolean;
+  has_session_summary: boolean;
+  has_comparative_reports: boolean;
+  has_batch_reports: boolean;
+}
+
+export interface SessionReportsListResponse {
+  success: boolean;
+  message: string;
+  data: {
+    sessions: SessionReportsListItem[];
+    pagination: {
+      current_page: number;
+      per_page: number;
+      total: number;
+      total_pages: number;
+      has_next_page: boolean;
+      has_prev_page: boolean;
+    };
+    summary: {
+      total_sessions: number;
+      total_completed_sessions: number;
+      total_participants_across_sessions: number;
+      average_completion_rate: number;
+      date_range: {
+        earliest_session: string | null;
+        latest_session: string | null;
+      };
+    };
+  };
+  timestamp: string;
+}
+
+export interface IndividualReportsListResponse {
+  success: boolean;
+  message: string;
+  data: {
+    individuals: IndividualReportsListItem[];
+    pagination: {
+      current_page: number;
+      per_page: number;
+      total: number;
+      total_pages: number;
+      has_next_page: boolean;
+      has_prev_page: boolean;
+    };
+    summary: {
+      total_users_with_reports: number;
+      average_completion_rate: number;
+      total_sessions_represented: number;
+      date_range: {
+        earliest_test: string | null;
+        latest_test: string | null;
+      };
+    };
+  };
+  timestamp: string;
+}
+
 export interface ErrorResponse {
   success: false;
   message: string;
@@ -351,10 +497,20 @@ export interface ErrorResponse {
 export const reportQueryKeys = {
   all: ["reports"] as const,
 
+  // Individual reports list
+  individualsList: () => [...reportQueryKeys.all, "individuals-list"] as const,
+  individualsListWithParams: (params?: IndividualReportsListQuery) =>
+    [...reportQueryKeys.individualsList(), params] as const,
+
   // Individual reports
   individual: () => [...reportQueryKeys.all, "individual"] as const,
   individualById: (userId: string, params?: IndividualReportQuery) =>
     [...reportQueryKeys.individual(), userId, params] as const,
+
+  // Sessions reports list
+  sessionsList: () => [...reportQueryKeys.all, "sessions-list"] as const,
+  sessionsListWithParams: (params?: SessionReportsListQuery) =>
+    [...reportQueryKeys.sessionsList(), params] as const,
 
   // Session summary reports
   sessionSummary: () => [...reportQueryKeys.all, "session-summary"] as const,
@@ -381,6 +537,50 @@ export const reportQueryKeys = {
 
 export function useReports() {
   const queryClient = useQueryClient();
+
+  // Helper function for building query params
+  const buildQueryParams = (params: Record<string, any>): string => {
+    const queryParams = new URLSearchParams();
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== "") {
+        queryParams.set(key, value.toString());
+      }
+    });
+    return queryParams.toString();
+  };
+
+  // Individuals Reports List
+  const useGetIndividualReportsList = (params?: IndividualReportsListQuery) => {
+    const queryString = params ? buildQueryParams(params) : "";
+
+    return useQuery({
+      queryKey: reportQueryKeys.individualsListWithParams(params),
+      queryFn: async () => {
+        const url = `/reports/individual${queryString ? `?${queryString}` : ""}`;
+        const response =
+          await apiClient.get<IndividualReportsListResponse>(url);
+        return response.data;
+      },
+      staleTime: 1000 * 60 * 5, // 5 minutes
+      enabled: true,
+    });
+  };
+
+  // Sessions Reports List
+  const useGetSessionReportsList = (params?: SessionReportsListQuery) => {
+    const queryString = params ? buildQueryParams(params) : "";
+
+    return useQuery({
+      queryKey: reportQueryKeys.sessionsListWithParams(params),
+      queryFn: async () => {
+        const url = `/reports/session${queryString ? `?${queryString}` : ""}`;
+        const response = await apiClient.get<SessionReportsListResponse>(url);
+        return response.data;
+      },
+      staleTime: 1000 * 60 * 5, // 5 minutes
+      enabled: true,
+    });
+  };
 
   // Individual Report
   const useGetIndividualReport = (
@@ -729,10 +929,16 @@ export function useReports() {
             queryClient.invalidateQueries({
               queryKey: reportQueryKeys.individual(),
             });
+            queryClient.invalidateQueries({
+              queryKey: reportQueryKeys.individualsList(),
+            });
             break;
           case "session":
             queryClient.invalidateQueries({
               queryKey: reportQueryKeys.sessionSummary(),
+            });
+            queryClient.invalidateQueries({
+              queryKey: reportQueryKeys.sessionsList(),
             });
             break;
           case "comparative":
@@ -760,7 +966,47 @@ export function useReports() {
     });
   };
 
+  // Utility hooks for invalidating specific caches
+  const useInvalidateIndividualsList = () => {
+    return () => {
+      queryClient.invalidateQueries({
+        queryKey: reportQueryKeys.individualsList(),
+      });
+    };
+  };
+
+  const useInvalidateSessionsList = () => {
+    return () => {
+      queryClient.invalidateQueries({
+        queryKey: reportQueryKeys.sessionsList(),
+      });
+    };
+  };
+
+  // Prefetch hooks for better UX
+  const usePrefetchIndividualReport = () => {
+    return (userId: string, params?: IndividualReportQuery) => {
+      const queryParams = new URLSearchParams();
+      if (params?.format) queryParams.set("format", params.format);
+      // Add other params as needed...
+
+      queryClient.prefetchQuery({
+        queryKey: reportQueryKeys.individualById(userId, params),
+        queryFn: async () => {
+          const url = `/api/v1/reports/individual/${userId}${queryParams.toString() ? `?${queryParams.toString()}` : ""}`;
+          const response = await apiClient.get(url);
+          return response.data;
+        },
+        staleTime: 1000 * 60 * 10, // 10 minutes
+      });
+    };
+  };
+
   return {
+    // List query hooks (new)
+    useGetIndividualReportsList,
+    useGetSessionReportsList,
+
     // Query hooks
     useGetIndividualReport,
     useGetSessionSummaryReport,
@@ -773,6 +1019,11 @@ export function useReports() {
     // Mutation hooks
     useDownloadReport,
     useRegenerateReport,
+
+    // Utility hooks
+    useInvalidateIndividualsList,
+    useInvalidateSessionsList,
+    usePrefetchIndividualReport,
 
     // Query keys (for manual cache invalidation)
     queryKeys: reportQueryKeys,
