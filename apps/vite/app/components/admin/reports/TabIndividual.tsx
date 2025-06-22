@@ -73,8 +73,6 @@ export function TabIndividual({
     refetch: refetchIndividuals,
   } = useGetIndividualReportsList(queryParams);
 
-  console.log("Individuals data:", individuals);
-
   // Handle search with debounce
   useEffect(() => {
     const timeoutId = setTimeout(() => {
