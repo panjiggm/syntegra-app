@@ -174,7 +174,7 @@ export async function calculateFreshScoresForUser(
     .from(testAttempts)
     .where(and(...conditions));
 
-  const attemptIds = userAttempts.map(attempt => attempt.id);
+  const attemptIds = userAttempts.map((attempt: { id: string }) => attempt.id);
   
   return calculateFreshScoresForMultipleAttempts(db, attemptIds);
 }
@@ -189,9 +189,27 @@ export async function calculateFreshScoresForSession(
     .from(testAttempts)
     .where(eq(testAttempts.session_test_id, sessionId));
 
-  const attemptIds = sessionAttempts.map(attempt => attempt.id);
+  const attemptIds = sessionAttempts.map((attempt: { id: string }) => attempt.id);
   
   return calculateFreshScoresForMultipleAttempts(db, attemptIds);
+}
+
+export async function calculateFreshScoresForUsers(
+  db: any,
+  userIds: string[],
+  sessionFilter?: string,
+  dateFrom?: string,
+  dateTo?: string
+): Promise<FreshScoreResult[]> {
+  // Process users in parallel for optimal performance
+  const promises = userIds.map(userId => 
+    calculateFreshScoresForUser(db, userId, sessionFilter, dateFrom, dateTo)
+  );
+  
+  const allUserScores = await Promise.all(promises);
+  
+  // Flatten the results from all users into a single array
+  return allUserScores.flat();
 }
 
 // Helper function to group fresh scores by user
