@@ -19,10 +19,10 @@ import {
   calculateCompletionRate,
   generateExecutiveSummary,
 } from "shared-types";
-import { 
-  calculateFreshScoresForSession, 
+import {
+  calculateFreshScoresForSession,
   groupFreshScoresByUser,
-  calculateUserAverageFromFreshScores 
+  calculateUserAverageFromFreshScores,
 } from "@/lib/reportCalculations";
 
 export async function getSessionSummaryReportHandler(
@@ -169,6 +169,7 @@ export async function getSessionSummaryReportHandler(
         test_name: tests.name,
         test_category: tests.category,
         module_type: tests.module_type,
+        test_icon: tests.icon,
         sequence: sessionModules.sequence,
         is_required: sessionModules.is_required,
         weight: sessionModules.weight,
@@ -182,8 +183,13 @@ export async function getSessionSummaryReportHandler(
       .orderBy(sessionModules.sequence);
 
     // Calculate fresh scores for the entire session (used in module analysis)
-    const allSessionFreshScores = await calculateFreshScoresForSession(db, sessionId);
-    console.log(`Calculated ${allSessionFreshScores.length} fresh scores for session analysis`);
+    const allSessionFreshScores = await calculateFreshScoresForSession(
+      db,
+      sessionId
+    );
+    console.log(
+      `Calculated ${allSessionFreshScores.length} fresh scores for session analysis`
+    );
 
     // Analyze each test module
     const testModuleAnalysis = await Promise.all(
@@ -218,10 +224,14 @@ export async function getSessionSummaryReportHandler(
         );
 
         // Calculate fresh average score for this module
-        const moduleScores = allSessionFreshScores.filter(fs => fs.testId === module.test_id);
-        const avgScoreValue = moduleScores.length > 0 
-          ? moduleScores.reduce((sum, fs) => sum + fs.scaledScore, 0) / moduleScores.length
-          : 0;
+        const moduleScores = allSessionFreshScores.filter(
+          (fs) => fs.testId === module.test_id
+        );
+        const avgScoreValue =
+          moduleScores.length > 0
+            ? moduleScores.reduce((sum, fs) => sum + fs.scaledScore, 0) /
+              moduleScores.length
+            : 0;
 
         // Get average time for this module
         const [avgTime] = await db
@@ -272,6 +282,7 @@ export async function getSessionSummaryReportHandler(
           test_name: module.test_name,
           test_category: module.test_category,
           module_type: module.module_type,
+          test_icon: module.test_icon,
           sequence: module.sequence,
           participants_started: participantsStarted.count,
           participants_completed: participantsCompleted.count,
@@ -314,7 +325,7 @@ export async function getSessionSummaryReportHandler(
       else if (freshScore.scaledScore >= 80) grade = "B";
       else if (freshScore.scaledScore >= 70) grade = "C";
       else if (freshScore.scaledScore >= 60) grade = "D";
-      
+
       gradeDistribution[grade] = (gradeDistribution[grade] || 0) + 1;
     });
 
@@ -346,21 +357,21 @@ export async function getSessionSummaryReportHandler(
       .where(eq(sessionParticipants.session_id, sessionId));
 
     const topPerformersData = allParticipants
-      .map(participant => {
+      .map((participant) => {
         const userScores = userFreshScores[participant.user_id] || [];
         if (userScores.length === 0) return null;
-        
+
         const freshAverage = calculateUserAverageFromFreshScores(userScores);
-        
+
         return {
           user_id: participant.user_id,
           name: participant.name,
-          overall_score: Math.round(freshAverage.overallScore),
-          percentile: Math.round(freshAverage.overallPercentile),
+          overall_score: freshAverage.overallScore,
+          percentile: freshAverage.overallPercentile,
         };
       })
-      .filter(Boolean) // Remove null entries
-      .sort((a, b) => (b?.overall_score || 0) - (a?.overall_score || 0))
+      .filter((item): item is NonNullable<typeof item> => item !== null) // Remove null entries with type guard
+      .sort((a, b) => b.overall_score - a.overall_score)
       .slice(0, 5);
 
     // Calculate assessment quality metrics

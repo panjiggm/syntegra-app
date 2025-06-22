@@ -22,10 +22,10 @@ import {
   calculateReliabilityIndex,
   generateExecutiveSummary,
 } from "shared-types";
-import { 
-  calculateFreshScoresForUser, 
+import {
+  calculateFreshScoresForUser,
   groupFreshScoresByUser,
-  calculateUserAverageFromFreshScores 
+  calculateUserAverageFromFreshScores,
 } from "@/lib/reportCalculations";
 
 export async function getIndividualReportHandler(
@@ -214,7 +214,9 @@ export async function getIndividualReportHandler(
       queryParams.date_to
     );
 
-    console.log(`Calculated ${freshScores.length} fresh scores for user ${userId}`);
+    console.log(
+      `Calculated ${freshScores.length} fresh scores for user ${userId}`
+    );
 
     // Process test performances using fresh calculations
     const testPerformances = await Promise.all(
@@ -225,15 +227,21 @@ export async function getIndividualReportHandler(
           const attemptData = attempt.attempt;
 
           // Get fresh score for this attempt
-          const freshScore = freshScores.find(fs => fs.attemptId === attemptData.id);
-          
+          const freshScore = freshScores.find(
+            (fs) => fs.attemptId === attemptData.id
+          );
+
           // Fallback to stored result if fresh calculation failed
           const result = attempt.result;
-          const rawScore = freshScore?.rawScore ?? (result?.raw_score ? parseFloat(result.raw_score) : 0);
-          const scaledScore = freshScore?.scaledScore ?? (result?.scaled_score ? parseFloat(result.scaled_score) : 0);
-          const completionRate = freshScore?.completionPercentage ?? parseFloat(result?.completion_percentage || "0");
-
-          console.log(`Attempt ${attemptData.id}: Fresh score=${freshScore?.scaledScore}, Stored score=${result?.scaled_score}`);
+          const rawScore =
+            freshScore?.rawScore ??
+            (result?.raw_score ? parseFloat(result.raw_score) : 0);
+          const scaledScore =
+            freshScore?.scaledScore ??
+            (result?.scaled_score ? parseFloat(result.scaled_score) : 0);
+          const completionRate =
+            freshScore?.completionPercentage ??
+            parseFloat(result?.completion_percentage || "0");
 
           // Parse traits from stored result (traits calculation logic remains the same)
           let traitScores: any[] = [];
@@ -246,16 +254,6 @@ export async function getIndividualReportHandler(
               console.warn("Failed to parse traits:", error);
             }
           }
-
-          // Get user answers for reliability calculation
-          const userResponses = await db
-            .select({
-              question_id: userAnswers.question_id,
-              answer: userAnswers.answer,
-              time_taken: userAnswers.time_taken,
-            })
-            .from(userAnswers)
-            .where(eq(userAnswers.attempt_id, attemptData.id));
 
           // Calculate time efficiency
           const optimalTimeMinutes = test.time_limit || 60;
@@ -307,7 +305,7 @@ export async function getIndividualReportHandler(
           // Determine grade based on fresh scaled score
           let grade = result?.grade || "E";
           if (scaledScore >= 90) grade = "A";
-          else if (scaledScore >= 80) grade = "B"; 
+          else if (scaledScore >= 80) grade = "B";
           else if (scaledScore >= 70) grade = "C";
           else if (scaledScore >= 60) grade = "D";
           else grade = "E";
@@ -317,6 +315,7 @@ export async function getIndividualReportHandler(
             test_name: test.name,
             test_category: test.category,
             module_type: test.module_type,
+            icon: test.icon,
             attempt_id: attemptData.id,
             raw_score: rawScore,
             scaled_score: scaledScore,
