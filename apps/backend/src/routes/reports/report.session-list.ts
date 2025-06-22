@@ -5,6 +5,8 @@ import {
   type GetSessionReportsListResponse,
   type ReportErrorResponse,
 } from "shared-types";
+import { calculateFreshScoresForSession } from "@/lib/reportCalculations";
+import { sessionResults } from "@/db";
 
 /**
  * Handler for GET /api/v1/reports/session
@@ -52,7 +54,6 @@ export async function getSessionReportsListHandler(
       testResults,
       tests,
       testAttempts,
-      sessionResults,
       sessionModules,
     } = await import("@/db");
     const { sql, and, or, eq, count, desc, asc, isNotNull } = await import(
@@ -195,8 +196,29 @@ export async function getSessionReportsListHandler(
       .limit(query.per_page)
       .offset(offset);
 
-    // Get statistics for each session
+    // Calculate fresh scores for all sessions
     const sessionIds = sessionsData.map((s) => s.id);
+    const allSessionsFreshScores = await Promise.all(
+      sessionIds.map((sessionId) =>
+        calculateFreshScoresForSession(db, sessionId)
+      )
+    );
+
+    // Create a map for each session's fresh scores
+    const sessionFreshScoresMap = new Map();
+    allSessionsFreshScores.forEach((sessionScores, index) => {
+      sessionFreshScoresMap.set(sessionIds[index], sessionScores);
+    });
+
+    const totalFreshScores = allSessionsFreshScores.reduce(
+      (sum, scores) => sum + scores.length,
+      0
+    );
+    console.log(
+      `Calculated ${totalFreshScores} fresh scores for ${sessionIds.length} sessions`
+    );
+
+    // Get statistics for each session
     const sessionStats = new Map();
 
     if (sessionIds.length > 0) {
@@ -213,27 +235,19 @@ export async function getSessionReportsListHandler(
         )
         .groupBy(sessionParticipants.session_id);
 
-      // Get test results statistics (from sessionResults which has session_id)
-      const testResultsStats = await db
+      // Get timing and activity statistics
+      const timingStats = await db
         .select({
-          session_id: sessionResults.session_id,
-          avg_score: sql<number>`AVG(${sessionResults.total_score})`,
-          min_score: sql<number>`MIN(${sessionResults.total_score})`,
-          max_score: sql<number>`MAX(${sessionResults.total_score})`,
+          session_id: testAttempts.session_test_id,
           avg_time: sql<number>`AVG(${testAttempts.time_spent})`,
-          total_tests: count(),
-          last_activity: sql<string>`MAX(${sessionResults.completed_at})`,
+          total_attempts: count(),
+          last_activity: sql<string>`MAX(${testAttempts.end_time})`,
         })
-        .from(sessionResults)
-        .leftJoin(
-          testResults,
-          eq(sessionResults.id, testResults.session_result_id)
-        )
-        .leftJoin(testAttempts, eq(testResults.attempt_id, testAttempts.id))
+        .from(testAttempts)
         .where(
-          sql`${sessionResults.session_id} IN (${sql.join(sessionIds, sql`, `)})`
+          sql`${testAttempts.session_test_id} IN (${sql.join(sessionIds, sql`, `)})`
         )
-        .groupBy(sessionResults.session_id);
+        .groupBy(testAttempts.session_test_id);
 
       // Get test modules count and total duration
       const testModulesStats = await db
@@ -262,21 +276,42 @@ export async function getSessionReportsListHandler(
         });
       });
 
-      testResultsStats.forEach((stat) => {
+      timingStats.forEach((stat) => {
         const existing = sessionStats.get(stat.session_id) || {};
+
+        // Get fresh scores for this session
+        const sessionScores = sessionFreshScoresMap.get(stat.session_id) || [];
+        let averageScore = null;
+        let scoreRange = { min: 0, max: 0 };
+
+        if (sessionScores.length > 0) {
+          // Calculate average from fresh scores
+          const totalScore = sessionScores.reduce(
+            (sum: number, fs: any) => sum + fs.scaledScore,
+            0
+          );
+          averageScore = totalScore / sessionScores.length;
+
+          // Calculate score range from fresh scores
+          const scores = sessionScores.map(
+            (fs: { scaledScore: number }) => fs.scaledScore
+          );
+          scoreRange = {
+            min: Math.min(...scores),
+            max: Math.max(...scores),
+          };
+        }
+
         sessionStats.set(stat.session_id, {
           ...existing,
-          average_score: stat.avg_score
-            ? Math.round(stat.avg_score * 100) / 100
+          average_score: averageScore
+            ? Math.round(averageScore * 100) / 100
             : null,
-          score_range: {
-            min: stat.min_score || null,
-            max: stat.max_score || null,
-          },
+          score_range: scoreRange,
           average_time_per_participant: stat.avg_time
             ? Math.round((stat.avg_time / 60) * 100) / 100
             : 0, // convert seconds to minutes
-          total_test_attempts: stat.total_tests,
+          total_test_attempts: stat.total_attempts,
           last_activity: stat.last_activity,
         });
       });

@@ -6,6 +6,11 @@ import {
   type ReportErrorResponse,
   calculateReportTimeEfficiency,
 } from "shared-types";
+import {
+  calculateFreshScoresForUsers,
+  groupFreshScoresByUser,
+  calculateUserAverageFromFreshScores,
+} from "@/lib/reportCalculations";
 
 /**
  * Handler for GET /api/v1/reports/individual
@@ -188,19 +193,31 @@ export async function getIndividualReportsListHandler(
     const userStats = new Map();
 
     if (userIds.length > 0) {
-      // Get test results statistics
+      // Calculate fresh scores for all users
+      const allUsersFreshScores = await calculateFreshScoresForUsers(
+        db,
+        userIds,
+        query.session_id,
+        query.date_from,
+        query.date_to
+      );
+
+      console.log(
+        `Calculated ${allUsersFreshScores.length} fresh scores for ${userIds.length} users`
+      );
+
+      // Group fresh scores by user
+      const userFreshScores = groupFreshScoresByUser(allUsersFreshScores);
+
+      // Get test results statistics for completion rates and timing
       const testStats = await db
         .select({
           user_id: testResults.user_id,
           total_tests: count(),
           total_completed: sql<number>`COUNT(CASE WHEN ${testResults.raw_score} IS NOT NULL THEN 1 END)`,
-          avg_score: sql<number>`AVG(${testResults.scaled_score})`,
           total_time: sql<number>`SUM(COALESCE(${testAttempts.time_spent}, 0))`,
           first_test: sql<string>`MIN(${testResults.calculated_at})`,
           last_test: sql<string>`MAX(${testResults.calculated_at})`,
-          best_score: sql<number>`MAX(${testResults.scaled_score})`,
-          best_percentile: sql<number>`MAX(${testResults.percentile})`,
-          best_grade: sql<string>`MAX(${testResults.grade})`,
         })
         .from(testResults)
         .leftJoin(testAttempts, eq(testResults.attempt_id, testAttempts.id))
@@ -240,17 +257,35 @@ export async function getIndividualReportsListHandler(
               )
             : 100; // convert seconds to minutes
 
+        // Get fresh scores for this user
+        const userScores = userFreshScores[stat.user_id] || [];
+        let freshAverage = null;
+        let overallGrade = null;
+
+        if (userScores.length > 0) {
+          freshAverage = calculateUserAverageFromFreshScores(userScores);
+
+          // Calculate grade based on fresh average score
+          if (freshAverage.overallScore >= 90) overallGrade = "A";
+          else if (freshAverage.overallScore >= 80) overallGrade = "B";
+          else if (freshAverage.overallScore >= 70) overallGrade = "C";
+          else if (freshAverage.overallScore >= 60) overallGrade = "D";
+          else overallGrade = "E";
+        }
+
         userStats.set(stat.user_id, {
           total_tests_taken: stat.total_tests,
           total_tests_completed: stat.total_completed,
           completion_rate: Math.round(completionRate * 100) / 100,
           total_time_spent_minutes: Math.round((stat.total_time || 0) / 60), // convert seconds to minutes
-          average_score: stat.avg_score
-            ? Math.round(stat.avg_score * 100) / 100
+          average_score: freshAverage
+            ? (freshAverage.overallScore * 100) / 100
             : null,
-          overall_score: stat.best_score || null,
-          overall_percentile: stat.best_percentile || null,
-          overall_grade: stat.best_grade || null,
+          overall_score: freshAverage ? freshAverage.overallScore : null,
+          overall_percentile: freshAverage
+            ? freshAverage.overallPercentile
+            : null,
+          overall_grade: overallGrade,
           first_test_date: stat.first_test,
           last_test_date: stat.last_test,
           data_quality_score: Math.min(
