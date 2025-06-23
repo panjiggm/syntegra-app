@@ -337,6 +337,56 @@ export function useTestAttempt() {
     });
   };
 
+  // Get all answers for an attempt
+  const useGetAttemptAnswers = (attemptId: string, options?: {
+    page?: number;
+    limit?: number;
+    include_correct_answers?: boolean;
+    include_score?: boolean;
+  }) => {
+    return useQuery({
+      queryKey: ["attempt-answers", attemptId, options],
+      queryFn: async () => {
+        const params = new URLSearchParams();
+        if (options?.page) params.append("page", options.page.toString());
+        if (options?.limit) params.append("limit", options.limit.toString());
+        if (options?.include_correct_answers) params.append("include_correct_answers", "true");
+        if (options?.include_score) params.append("include_score", "true");
+
+        const response = await apiClient.get<{
+          success: boolean;
+          data: Answer[];
+          meta: {
+            current_page: number;
+            per_page: number;
+            total: number;
+            total_pages: number;
+            has_next_page: boolean;
+            has_prev_page: boolean;
+          };
+          summary: {
+            total_questions: number;
+            answered_questions: number;
+            unanswered_questions: number;
+            progress_percentage: number;
+            average_time_per_question: number;
+            total_time_spent: number;
+            average_confidence_level: number | null;
+          };
+          message: string;
+        }>(`/attempts/${attemptId}/answers${params.toString() ? `?${params.toString()}` : ""}`);
+
+        if (!response.success) {
+          throw new Error(response.message);
+        }
+
+        return response;
+      },
+      enabled: !!attemptId,
+      staleTime: 30 * 1000, // 30 seconds
+    });
+  };
+
   // Update attempt
   const useUpdateAttempt = () => {
     return useMutation({
@@ -438,6 +488,7 @@ export function useTestAttempt() {
     useSubmitAnswer,
     useAutoSave,
     useGetAnswer,
+    useGetAttemptAnswers,
     useUpdateAttempt,
     useFinishAttempt,
   };
