@@ -174,6 +174,10 @@ export const GetAttemptAnswersResponseSchema = z.object({
     total_pages: z.number(),
     has_next_page: z.boolean(),
     has_prev_page: z.boolean(),
+    total_answers: z.number(),
+    correct_answers: z.number(),
+    wrong_answers: z.number(),
+    unanswered_questions: z.number(),
   }),
   summary: z.object({
     total_questions: z.number(),

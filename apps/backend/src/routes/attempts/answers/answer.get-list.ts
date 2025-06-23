@@ -284,6 +284,12 @@ export async function getAttemptAnswersHandler(
         answered_count: sum(
           sql`CASE WHEN ${userAnswers.answer} IS NOT NULL OR ${userAnswers.answer_data} IS NOT NULL THEN 1 ELSE 0 END`
         ),
+        correct_count: sum(
+          sql`CASE WHEN ${userAnswers.is_correct} = true THEN 1 ELSE 0 END`
+        ),
+        wrong_count: sum(
+          sql`CASE WHEN ${userAnswers.is_correct} = false THEN 1 ELSE 0 END`
+        ),
         avg_time: avg(userAnswers.time_taken),
         total_time: sum(userAnswers.time_taken),
         avg_confidence: avg(userAnswers.confidence_level),
@@ -298,6 +304,8 @@ export async function getAttemptAnswersHandler(
 
     const totalQuestions = test.total_questions || 0;
     const answeredQuestions = Number(statsResult.answered_count) || 0;
+    const correctAnswers = Number(statsResult.correct_count) || 0;
+    const wrongAnswers = Number(statsResult.wrong_count) || 0;
     const unansweredQuestions = totalQuestions - answeredQuestions;
     const progressPercentage =
       totalQuestions > 0
@@ -331,6 +339,10 @@ export async function getAttemptAnswersHandler(
         total_pages: totalPages,
         has_next_page: queryParams.page < totalPages,
         has_prev_page: queryParams.page > 1,
+        total_answers: totalQuestions,
+        correct_answers: correctAnswers,
+        wrong_answers: wrongAnswers,
+        unanswered_questions: unansweredQuestions,
       },
       summary,
       timestamp: new Date().toISOString(),

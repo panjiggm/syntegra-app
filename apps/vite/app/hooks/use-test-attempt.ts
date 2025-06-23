@@ -363,6 +363,10 @@ export function useTestAttempt() {
             total_pages: number;
             has_next_page: boolean;
             has_prev_page: boolean;
+            total_answers: number;
+            correct_answers: number;
+            wrong_answers: number;
+            unanswered_questions: number;
           };
           summary: {
             total_questions: number;

@@ -7,6 +7,7 @@ import {
   User,
   Lightbulb,
   Brain,
+  Eye,
 } from "lucide-react";
 import { cn } from "~/lib/utils";
 import {
@@ -23,6 +24,8 @@ import {
 } from "~/components/ui/accordion";
 import { LoadingSpinner } from "~/components/ui/loading-spinner";
 import { ChartContainer } from "~/components/ui/chart";
+import { AttemptAnswersDrawer } from "./AttemptAnswersDrawer";
+import { Button } from "~/components/ui/button";
 
 interface IndividualDetailViewProps {
   individual: IndividualReportsListItem;
@@ -260,34 +263,22 @@ export function IndividualDetailView({
                             </div>
                           </div>
 
-                          {/* Trait Scores */}
-                          {performance.trait_scores?.length > 0 && (
-                            <div>
-                              <Label className="text-sm font-medium mb-2">
-                                Skor Trait
-                              </Label>
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                                {performance.trait_scores
-                                  .slice(0, 6)
-                                  .map((trait: any, traitIndex: number) => (
-                                    <div
-                                      key={traitIndex}
-                                      className="flex items-center justify-between p-2 border rounded"
-                                    >
-                                      <span className="text-sm">
-                                        {trait.trait_name}
-                                      </span>
-                                      <Badge
-                                        variant="secondary"
-                                        className={getStrengthLevelColor(
-                                          trait.strength_level
-                                        )}
-                                      >
-                                        {trait.scaled_score}
-                                      </Badge>
-                                    </div>
-                                  ))}
-                              </div>
+                          {/* Attempt Answer List */}
+                          {performance.attempt_id && (
+                            <div className="flex justify-center items-center mt-4">
+                              <AttemptAnswersDrawer
+                                attemptId={performance.attempt_id}
+                                testName={performance.test_name}
+                              >
+                                <Button
+                                  variant="link"
+                                  size="sm"
+                                  className="gap-2 cursor-pointer"
+                                >
+                                  <Eye className="h-4 w-4" />
+                                  Lihat Detail Jawaban
+                                </Button>
+                              </AttemptAnswersDrawer>
                             </div>
                           )}
                         </div>
