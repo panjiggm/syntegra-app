@@ -117,3 +117,114 @@ pnpm deploy:production # Deploy to production
 - Backend: Cloudflare Workers with environment-specific configurations
 - Frontend: Cloudflare Pages (Vite app is primary deployment target)
 - Database: Neon PostgreSQL with connection pooling
+
+## API Testing Examples
+
+**Question Creation Payloads for Postman:**
+
+### 1. Multiple Choice Question
+```json
+POST /tests/{testId}/questions
+{
+  "question": "Apa ibu kota Indonesia?",
+  "question_type": "multiple_choice",
+  "sequence": 1,
+  "time_limit": 30,
+  "is_required": true,
+  "options": [
+    {
+      "value": "A",
+      "label": "Jakarta"
+    },
+    {
+      "value": "B", 
+      "label": "Surabaya"
+    },
+    {
+      "value": "C",
+      "label": "Bandung"
+    },
+    {
+      "value": "D",
+      "label": "Medan"
+    }
+  ],
+  "correct_answer": "A",
+  "image_url": "https://example.com/map-indonesia.jpg"
+}
+```
+
+### 2. True/False Question
+```json
+POST /tests/{testId}/questions
+{
+  "question": "Indonesia adalah negara kepulauan terbesar di dunia",
+  "question_type": "true_false",
+  "sequence": 2,
+  "time_limit": 15,
+  "is_required": true,
+  "correct_answer": "true",
+  "audio_url": "https://example.com/question-audio.mp3"
+}
+```
+
+### 3. Rating Scale Question
+```json
+POST /tests/{testId}/questions
+{
+  "question": "Seberapa setuju Anda dengan pernyataan: 'Saya merasa nyaman bekerja dalam tim'?",
+  "question_type": "rating_scale",
+  "sequence": 3,
+  "time_limit": 45,
+  "is_required": true,
+  "options": [
+    {
+      "value": "1",
+      "label": "Sangat Tidak Setuju",
+      "score": 1
+    },
+    {
+      "value": "2",
+      "label": "2",
+      "score": 2
+    },
+    {
+      "value": "3",
+      "label": "3", 
+      "score": 3
+    },
+    {
+      "value": "4",
+      "label": "4",
+      "score": 4
+    },
+    {
+      "value": "5",
+      "label": "Sangat Setuju",
+      "score": 5
+    }
+  ],
+  "scoring_key": {
+    "1": 1,
+    "2": 2, 
+    "3": 3,
+    "4": 4,
+    "5": 5
+  }
+}
+```
+
+**Required Headers:**
+```
+Content-Type: application/json
+Authorization: Bearer {JWT_TOKEN}
+```
+
+**Notes:**
+- Replace `{testId}` with valid test UUID
+- `sequence` auto-calculated if not provided
+- `time_limit` in seconds (optional, uses defaults)
+- `is_required` defaults to `true`
+- `image_url`/`audio_url` optional, supported by specific question types
+- For `true_false`, backend auto-generates options
+- `scoring_key` required for `rating_scale` questions
