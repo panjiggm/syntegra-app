@@ -49,11 +49,6 @@ const data = {
       url: "/admin/sessions",
       icon: Clock,
     },
-    {
-      title: "Hasil & Analisis",
-      url: "/admin/results",
-      icon: Target,
-    },
     // {
     //   title: "Live Test Monitor",
     //   url: "/admin/live-test",
