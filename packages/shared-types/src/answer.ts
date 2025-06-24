@@ -368,10 +368,10 @@ export function validateAnswerByQuestionType(
         return { isValid: false, errorMessage: "Rating is required" };
       }
       const rating = parseInt(answer);
-      if (isNaN(rating) || rating < 1 || rating > 10) {
+      if (isNaN(rating) || rating < 1 || rating > 5) {
         return {
           isValid: false,
-          errorMessage: "Rating must be between 1 and 10",
+          errorMessage: "Rating must be between 1 and 5",
         };
       }
       return { isValid: true };
@@ -426,7 +426,7 @@ export function formatAnswerForDisplay(
           : "No answer";
 
     case "rating_scale":
-      return answer ? `${answer} out of 10` : "No rating";
+      return answer ? `${answer} out of 5` : "No rating";
 
     case "drawing":
       return "Drawing submitted";

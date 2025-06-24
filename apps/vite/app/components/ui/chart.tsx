@@ -3,6 +3,11 @@ import {
   Bar,
   LineChart,
   Line,
+  RadarChart,
+  Radar,
+  PolarGrid,
+  PolarAngleAxis,
+  PolarRadiusAxis,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -14,7 +19,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "./card";
 import { formatScore } from "~/lib/utils/score";
 
 interface ChartData {
-  type: "bar" | "line";
+  type: "bar" | "line" | "radar";
   title: string;
   data: any[];
   description?: string;
@@ -41,6 +46,16 @@ interface SimpleLineChartProps {
     count?: number;
     trait?: string;
     score?: number;
+  }>;
+  title: string;
+  description?: string;
+  origin: "individual" | "session";
+}
+
+interface SimpleRadarChartProps {
+  data: Array<{
+    trait: string;
+    score: number;
   }>;
   title: string;
   description?: string;
@@ -196,6 +211,70 @@ export function SimpleLineChart({
   );
 }
 
+export function SimpleRadarChart({
+  data,
+  title,
+  description,
+  origin,
+}: SimpleRadarChartProps) {
+  // Transform data for radar chart - data already comes in the correct format
+  const transformedData = data.map((item) => ({
+    trait: item.trait,
+    value: Math.round(item.score * 10) / 10, // Round to 1 decimal place
+  }));
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base">{title}</CardTitle>
+        {description && (
+          <p className="text-sm text-muted-foreground">{description}</p>
+        )}
+      </CardHeader>
+      <CardContent>
+        <ResponsiveContainer width="100%" height={400}>
+          <RadarChart
+            data={transformedData}
+            margin={{ top: 20, right: 80, bottom: 20, left: 80 }}
+          >
+            <PolarGrid gridType="polygon" />
+            <PolarAngleAxis
+              dataKey="trait"
+              tick={{ fontSize: 12, fill: "hsl(var(--foreground))" }}
+              className="text-xs"
+            />
+            <PolarRadiusAxis
+              angle={90}
+              domain={[0, 100]}
+              tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
+              tickCount={6}
+            />
+            <Radar
+              name="Percentage"
+              dataKey="value"
+              stroke="#3b82f6"
+              fill="#3b82f6"
+              fillOpacity={0.3}
+              strokeWidth={2}
+              dot={{ fill: "#3b82f6", strokeWidth: 1, r: 4 }}
+            />
+            <Tooltip
+              contentStyle={{
+                backgroundColor: "hsl(var(--background))",
+                border: "1px solid hsl(var(--border))",
+                borderRadius: "6px",
+                fontSize: "12px",
+              }}
+              formatter={(value: number) => [`${value}%`, "Persentase"]}
+              labelFormatter={(label: string) => `Trait: ${label}`}
+            />
+          </RadarChart>
+        </ResponsiveContainer>
+      </CardContent>
+    </Card>
+  );
+}
+
 export function ChartContainer({ chart, origin }: ChartContainerProps) {
   if (chart.type === "bar") {
     return (
@@ -211,6 +290,17 @@ export function ChartContainer({ chart, origin }: ChartContainerProps) {
   if (chart.type === "line") {
     return (
       <SimpleLineChart
+        data={chart.data}
+        title={chart.title}
+        description={chart.description}
+        origin={origin}
+      />
+    );
+  }
+
+  if (chart.type === "radar") {
+    return (
+      <SimpleRadarChart
         data={chart.data}
         title={chart.title}
         description={chart.description}

@@ -211,22 +211,28 @@ export function IndividualDetailView({
                               {performance.test_name}
                             </span>
                           </div>
-                          <Badge
-                            variant="outline"
-                            className={`${
-                              performance.scaled_score > 80
-                                ? "bg-green-100 text-green-700 border-green-600"
-                                : performance.scaled_score > 60 &&
-                                    performance.scaled_score < 80
-                                  ? "bg-yellow-100 text-yellow-700 border-yellow-600"
-                                  : "bg-red-100 text-red-700 border-red-600"
-                            }`}
-                          >
-                            Skor:{" "}
-                            {formatScore(performance.scaled_score) ||
-                              formatScore(performance.raw_score) ||
-                              0}
-                          </Badge>
+                          {performance?.module_type !== "personality" ? (
+                            <Badge
+                              variant="outline"
+                              className={`${
+                                performance.scaled_score > 80
+                                  ? "bg-green-100 text-green-700 border-green-600"
+                                  : performance.scaled_score > 60 &&
+                                      performance.scaled_score < 80
+                                    ? "bg-yellow-100 text-yellow-700 border-yellow-600"
+                                    : "bg-red-100 text-red-700 border-red-600"
+                              }`}
+                            >
+                              Score:{" "}
+                              {formatScore(performance.scaled_score) ||
+                                formatScore(performance.raw_score) ||
+                                0}
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="text-xs">
+                              No Score
+                            </Badge>
+                          )}
                         </div>
                       </AccordionTrigger>
                       <AccordionContent>
@@ -241,7 +247,7 @@ export function IndividualDetailView({
                             <div>
                               <Label className="text-sm">Penyelesaian</Label>
                               <p className="text-xs text-muted-foreground">
-                                {performance.completion_rate}%
+                                {formatScore(performance.completion_rate)}%
                               </p>
                             </div>
                             <div>
@@ -295,6 +301,20 @@ export function IndividualDetailView({
             <>
               {data.charts
                 .filter((chart: any) => chart.type === "bar")
+                .map((chart: any, index: number) => (
+                  <ChartContainer
+                    key={index}
+                    chart={chart}
+                    origin="individual"
+                  />
+                ))}
+            </>
+          )}
+
+          {data?.charts && data.charts.length > 0 && (
+            <>
+              {data.charts
+                .filter((chart: any) => chart.type === "radar")
                 .map((chart: any, index: number) => (
                   <ChartContainer
                     key={index}

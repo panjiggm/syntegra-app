@@ -11,6 +11,8 @@ interface FreshScoreResult {
   attemptId: string;
   userId: string;
   testId: string;
+  testModuleType?: string;
+  testCategory?: string;
   rawScore: number;
   scaledScore: number;
   correctAnswers: number;
@@ -61,6 +63,7 @@ export async function calculateFreshScoreForAttempt(
     let rawScore = 0;
     let correctAnswers = 0;
     let answeredQuestions = 0;
+    let scorableQuestions = 0; // Track questions that contribute to score
 
     for (const { answer, question } of answersResult) {
       if (!question) continue;
@@ -70,6 +73,13 @@ export async function calculateFreshScoreForAttempt(
       if (!hasAnswer) continue;
 
       answeredQuestions++;
+
+      // Skip rating_scale questions from score calculation
+      if (question.question_type === "rating_scale") {
+        continue;
+      }
+
+      scorableQuestions++;
 
       // Calculate fresh score using the same logic as answer.submit.ts
       const scoreResult = calculateAnswerScore(
@@ -96,20 +106,24 @@ export async function calculateFreshScoreForAttempt(
           correctAnswers++;
         }
       } else {
-        // For other types (rating_scale, etc.), consider answered as "correct"
+        // For other non-rating_scale types, consider answered as "correct"
         correctAnswers++;
       }
     }
 
     const totalQuestions = test.total_questions || 0;
-    const scaledScore = totalQuestions > 0 ? (rawScore / totalQuestions) * 100 : 0;
-    const accuracyRate = answeredQuestions > 0 ? (correctAnswers / answeredQuestions) * 100 : 0;
+    // Use scorableQuestions for scaled score if there are rating_scale questions
+    const questionsForScaling = scorableQuestions > 0 ? scorableQuestions : totalQuestions;
+    const scaledScore = questionsForScaling > 0 ? (rawScore / questionsForScaling) * 100 : 0;
+    const accuracyRate = scorableQuestions > 0 ? (correctAnswers / scorableQuestions) * 100 : 0;
     const completionPercentage = totalQuestions > 0 ? (answeredQuestions / totalQuestions) * 100 : 0;
 
     return {
       attemptId,
       userId: attempt.user_id,
       testId: test.id,
+      testModuleType: test.module_type,
+      testCategory: test.category,
       rawScore,
       scaledScore,
       correctAnswers,
@@ -223,32 +237,45 @@ export function groupFreshScoresByUser(freshScores: FreshScoreResult[]): Record<
   }, {} as Record<string, FreshScoreResult[]>);
 }
 
-// Helper function to calculate user averages from fresh scores
+// Helper function to check if test is rating scale based
+export function isRatingScaleTest(moduleType?: string, category?: string): boolean {
+  return moduleType === "personality" || 
+    category === "mbti" || category === "big_five" || 
+    category === "disc" || category === "papi_kostick";
+}
+
+// Helper function to calculate user averages from fresh scores (excluding rating scale tests)
 export function calculateUserAverageFromFreshScores(userScores: FreshScoreResult[]) {
-  if (userScores.length === 0) {
+  // Filter out rating scale tests for score calculations
+  const scorableScores = userScores.filter(score => 
+    !isRatingScaleTest(score.testModuleType, score.testCategory)
+  );
+
+  if (scorableScores.length === 0) {
     return {
       overallScore: 0,
       overallPercentile: 0,
-      totalAttempts: 0,
+      totalAttempts: userScores.length, // Still count all attempts
       completedAttempts: 0,
-      averageCompletionRate: 0,
+      averageCompletionRate: userScores.length > 0 ? 
+        userScores.reduce((sum, score) => sum + score.completionPercentage, 0) / userScores.length : 0,
       totalCorrectAnswers: 0,
       totalAnsweredQuestions: 0,
       overallAccuracyRate: 0,
     };
   }
 
-  const totalScore = userScores.reduce((sum, score) => sum + score.scaledScore, 0);
+  const totalScore = scorableScores.reduce((sum, score) => sum + score.scaledScore, 0);
   const totalCompletionRate = userScores.reduce((sum, score) => sum + score.completionPercentage, 0);
-  const totalCorrectAnswers = userScores.reduce((sum, score) => sum + score.correctAnswers, 0);
-  const totalAnsweredQuestions = userScores.reduce((sum, score) => sum + score.answeredQuestions, 0);
+  const totalCorrectAnswers = scorableScores.reduce((sum, score) => sum + score.correctAnswers, 0);
+  const totalAnsweredQuestions = scorableScores.reduce((sum, score) => sum + score.answeredQuestions, 0);
 
   return {
-    overallScore: totalScore / userScores.length,
-    overallPercentile: Math.min(100, (totalScore / userScores.length)), // Simplified percentile
-    totalAttempts: userScores.length,
+    overallScore: totalScore / scorableScores.length,
+    overallPercentile: Math.min(100, (totalScore / scorableScores.length)), // Simplified percentile
+    totalAttempts: userScores.length, // Count all attempts including rating scale
     completedAttempts: userScores.filter(score => score.completionPercentage >= 90).length,
-    averageCompletionRate: totalCompletionRate / userScores.length,
+    averageCompletionRate: totalCompletionRate / userScores.length, // Use all scores for completion rate
     totalCorrectAnswers,
     totalAnsweredQuestions,
     overallAccuracyRate: totalAnsweredQuestions > 0 ? (totalCorrectAnswers / totalAnsweredQuestions) * 100 : 0,

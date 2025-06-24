@@ -8,6 +8,7 @@ import {
   tests,
   testSessions,
   userAnswers,
+  questions,
 } from "@/db";
 import { type CloudflareBindings } from "@/lib/env";
 import {
@@ -26,6 +27,7 @@ import {
   calculateFreshScoresForUser,
   groupFreshScoresByUser,
   calculateUserAverageFromFreshScores,
+  isRatingScaleTest,
 } from "@/lib/reportCalculations";
 
 export async function getIndividualReportHandler(
@@ -231,14 +233,27 @@ export async function getIndividualReportHandler(
             (fs) => fs.attemptId === attemptData.id
           );
 
-          // Fallback to stored result if fresh calculation failed
+          // Check if this test contains only rating_scale questions
+          const isRatingScaleTestResult = isRatingScaleTest(
+            test.module_type,
+            test.category
+          );
+
+          // For rating_scale tests, set scores to null
+          let rawScore = null;
+          let scaledScore = null;
           const result = attempt.result;
-          const rawScore =
-            freshScore?.rawScore ??
-            (result?.raw_score ? parseFloat(result.raw_score) : 0);
-          const scaledScore =
-            freshScore?.scaledScore ??
-            (result?.scaled_score ? parseFloat(result.scaled_score) : 0);
+
+          if (!isRatingScaleTestResult) {
+            // Fallback to stored result if fresh calculation failed
+            rawScore =
+              freshScore?.rawScore ??
+              (result?.raw_score ? parseFloat(result.raw_score) : 0);
+            scaledScore =
+              freshScore?.scaledScore ??
+              (result?.scaled_score ? parseFloat(result.scaled_score) : 0);
+          }
+
           const completionRate =
             freshScore?.completionPercentage ??
             parseFloat(result?.completion_percentage || "0");
@@ -302,13 +317,15 @@ export async function getIndividualReportHandler(
             )
             .map((trait) => trait.trait_name);
 
-          // Determine grade based on fresh scaled score
-          let grade = result?.grade || "E";
-          if (scaledScore >= 90) grade = "A";
-          else if (scaledScore >= 80) grade = "B";
-          else if (scaledScore >= 70) grade = "C";
-          else if (scaledScore >= 60) grade = "D";
-          else grade = "E";
+          // Determine grade based on fresh scaled score (only for non-rating_scale tests)
+          let grade = null;
+          if (!isRatingScaleTestResult && scaledScore !== null) {
+            if (scaledScore >= 90) grade = "A";
+            else if (scaledScore >= 80) grade = "B";
+            else if (scaledScore >= 70) grade = "C";
+            else if (scaledScore >= 60) grade = "D";
+            else grade = "E";
+          }
 
           return {
             test_id: test.id,
@@ -319,7 +336,11 @@ export async function getIndividualReportHandler(
             attempt_id: attemptData.id,
             raw_score: rawScore,
             scaled_score: scaledScore,
-            percentile: Math.min(100, scaledScore), // Simplified percentile
+            percentile: isRatingScaleTestResult
+              ? null
+              : scaledScore
+                ? Math.min(100, scaledScore)
+                : null, // Simplified percentile
             grade: grade,
             completion_rate: completionRate,
             time_spent_minutes: actualTimeMinutes,
@@ -369,6 +390,10 @@ export async function getIndividualReportHandler(
       { time_limit: 3600, total_questions: allUserResponses.length }
     );
 
+    const scorablePerformances = testPerformances.filter(
+      (p) => p.scaled_score !== null
+    );
+
     const psychologicalProfile = {
       dominant_traits: dominantTraits,
       personality_type: null, // Would be determined by specific test results
@@ -385,11 +410,11 @@ export async function getIndividualReportHandler(
           },
           overall_assessment: {
             composite_score:
-              testPerformances.length > 0
-                ? testPerformances.reduce(
+              scorablePerformances.length > 0
+                ? scorablePerformances.reduce(
                     (sum, p) => sum + (p.scaled_score || 0),
                     0
-                  ) / testPerformances.length
+                  ) / scorablePerformances.length
                 : 0,
           },
         },
@@ -398,17 +423,22 @@ export async function getIndividualReportHandler(
       reliability_index: reliabilityIndex,
     };
 
-    // Calculate overall assessment
+    // Calculate overall assessment (excluding rating_scale tests)
+
     const compositeScore =
-      testPerformances.length > 0
-        ? testPerformances.reduce((sum, p) => sum + (p.scaled_score || 0), 0) /
-          testPerformances.length
+      scorablePerformances.length > 0
+        ? scorablePerformances.reduce(
+            (sum, p) => sum + (p.scaled_score || 0),
+            0
+          ) / scorablePerformances.length
         : null;
 
     const overallPercentile =
-      testPerformances.length > 0
-        ? testPerformances.reduce((sum, p) => sum + (p.percentile || 0), 0) /
-          testPerformances.length
+      scorablePerformances.length > 0
+        ? scorablePerformances.reduce(
+            (sum, p) => sum + (p.percentile || 0),
+            0
+          ) / scorablePerformances.length
         : null;
 
     // Determine grade based on composite score
@@ -545,29 +575,122 @@ export async function getIndividualReportHandler(
     // Generate charts if requested
     let charts = undefined;
     if (queryParams.include_charts && testPerformances.length > 0) {
-      charts = [
-        {
-          type: "radar" as const,
-          title:
-            queryParams.language === "id"
-              ? "Profil Trait Psikologis"
-              : "Psychological Trait Profile",
-          data: allTraits.slice(0, 8).map((trait) => ({
-            trait: trait.trait_name,
-            score: trait.scaled_score,
-          })),
-          description:
-            queryParams.language === "id"
-              ? "Visualisasi kekuatan trait psikologis utama"
-              : "Visualization of main psychological trait strengths",
-        },
-        {
+      charts = [];
+
+      // Radar chart for personality traits (only if there are personality tests)
+      const personalityPerformances = testPerformances.filter((perf) => {
+        const test = userAttempts.find(
+          (ua) => ua.test?.id === perf.test_id
+        )?.test;
+        return test && isRatingScaleTest(test.module_type, test.category);
+      });
+
+      if (personalityPerformances.length > 0) {
+        // Calculate radar data based on rating scale distribution
+        let radarData: Array<{ trait: string; score: number }> = [];
+
+        // Get all user answers from personality tests
+        const personalityTestIds = personalityPerformances.map(perf => perf.test_id);
+        
+        if (personalityTestIds.length > 0) {
+          // Get all rating scale answers for personality tests
+          const personalityAnswers = await db
+            .select({
+              answer: userAnswers.answer,
+              question_type: questions.question_type,
+            })
+            .from(userAnswers)
+            .innerJoin(testAttempts, eq(userAnswers.attempt_id, testAttempts.id))
+            .innerJoin(questions, eq(userAnswers.question_id, questions.id))
+            .where(
+              and(
+                eq(testAttempts.user_id, userId),
+                sql`${testAttempts.test_id} IN (${sql.join(personalityTestIds, sql`, `)})`
+              )
+            );
+
+          // Filter only rating_scale answers and count distribution
+          const ratingAnswers = personalityAnswers.filter(
+            (ans) => ans.question_type === "rating_scale" && ans.answer
+          );
+
+          if (ratingAnswers.length > 0) {
+            // Count distribution of ratings
+            const ratingCounts: Record<string, number> = {
+              "1": 0,
+              "2": 0,
+              "3": 0,
+              "4": 0,
+              "5": 0,
+            };
+
+            ratingAnswers.forEach((ans) => {
+              if (ans.answer && ratingCounts.hasOwnProperty(ans.answer)) {
+                ratingCounts[ans.answer]++;
+              }
+            });
+
+            const totalAnswers = ratingAnswers.length;
+
+            // Calculate percentages for each trait
+            const traitMapping = {
+              "1": "Extraversion",
+              "2": "Conscientiousness", 
+              "3": "Openness",
+              "4": "Agreeableness",
+              "5": "Neuroticism",
+            };
+
+            radarData = Object.entries(traitMapping).map(([rating, traitName]) => ({
+              trait: traitName,
+              score: totalAnswers > 0 ? Math.round((ratingCounts[rating] / totalAnswers) * 100 * 10) / 10 : 0,
+            }));
+          }
+        }
+
+        // If no rating scale data available, use default structure
+        if (radarData.length === 0) {
+          const standardTraits = [
+            "Extraversion",
+            "Conscientiousness",
+            "Openness",
+            "Agreeableness",
+            "Neuroticism",
+          ];
+          radarData = standardTraits.map((traitName) => ({
+            trait: traitName,
+            score: 20, // Default equal distribution (100% / 5 traits = 20%)
+          }));
+        }
+
+        if (radarData.length > 0) {
+          charts.push({
+            type: "radar" as const,
+            title:
+              queryParams.language === "id"
+                ? "Profil Trait Psikologis"
+                : "Psychological Trait Profile",
+            data: radarData,
+            description:
+              queryParams.language === "id"
+                ? "Visualisasi kekuatan trait psikologis utama"
+                : "Visualization of main psychological trait strengths",
+          });
+        }
+      }
+
+      // Bar chart for performance (excluding rating_scale tests)
+      const scorableTestPerformances = testPerformances.filter(
+        (perf) => perf.scaled_score !== null
+      );
+      if (scorableTestPerformances.length > 0) {
+        charts.push({
           type: "bar" as const,
           title:
             queryParams.language === "id"
               ? "Performa per Tes"
               : "Performance by Test",
-          data: testPerformances.map((perf) => ({
+          data: scorableTestPerformances.map((perf) => ({
             test: perf.test_name,
             score: perf.scaled_score || 0,
             completion: perf.completion_rate,
@@ -576,8 +699,8 @@ export async function getIndividualReportHandler(
             queryParams.language === "id"
               ? "Perbandingan skor dan tingkat penyelesaian per tes"
               : "Comparison of scores and completion rates per test",
-        },
-      ];
+        });
+      }
     }
 
     // Build report data

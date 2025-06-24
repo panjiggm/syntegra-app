@@ -10,6 +10,7 @@ import {
   calculateFreshScoresForUsers,
   groupFreshScoresByUser,
   calculateUserAverageFromFreshScores,
+  isRatingScaleTest,
 } from "@/lib/reportCalculations";
 
 /**
@@ -263,14 +264,17 @@ export async function getIndividualReportsListHandler(
         let overallGrade = null;
 
         if (userScores.length > 0) {
+          // calculateUserAverageFromFreshScores now handles filtering rating_scale tests internally
           freshAverage = calculateUserAverageFromFreshScores(userScores);
 
-          // Calculate grade based on fresh average score
-          if (freshAverage.overallScore >= 90) overallGrade = "A";
-          else if (freshAverage.overallScore >= 80) overallGrade = "B";
-          else if (freshAverage.overallScore >= 70) overallGrade = "C";
-          else if (freshAverage.overallScore >= 60) overallGrade = "D";
-          else overallGrade = "E";
+          // Only calculate grade if we have actual scorable tests
+          if (freshAverage.overallScore > 0) {
+            if (freshAverage.overallScore >= 90) overallGrade = "A";
+            else if (freshAverage.overallScore >= 80) overallGrade = "B";
+            else if (freshAverage.overallScore >= 70) overallGrade = "C";
+            else if (freshAverage.overallScore >= 60) overallGrade = "D";
+            else overallGrade = "E";
+          }
         }
 
         userStats.set(stat.user_id, {
