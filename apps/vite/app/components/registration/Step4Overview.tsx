@@ -107,10 +107,7 @@ export function Step4Overview({ onPrev, onEdit }: Step4OverviewProps) {
 
       await createUserMutation.mutateAsync(userData);
 
-      toast.success("Pendaftaran berhasil!", {
-        description:
-          "Akun Anda telah berhasil dibuat. Silakan login untuk mengakses sistem.",
-      });
+      toast.success("Pendaftaran berhasil!");
 
       // Clear registration data
       resetData();
@@ -119,10 +116,7 @@ export function Step4Overview({ onPrev, onEdit }: Step4OverviewProps) {
       window.location.href = "/participant/login";
     } catch (error) {
       console.error("Registration error:", error);
-      toast.error("Pendaftaran gagal", {
-        description:
-          "Terjadi kesalahan saat mendaftarkan akun. Silakan coba lagi.",
-      });
+      toast.error("Pendaftaran gagal. Coba lagi");
     } finally {
       setIsSubmitting(false);
     }

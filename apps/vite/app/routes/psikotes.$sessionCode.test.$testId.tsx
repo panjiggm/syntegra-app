@@ -174,9 +174,7 @@ export default function PsikotesTestDetailPage() {
       }
     } catch (error) {
       console.error("Failed to start test attempt:", error);
-      toast.error("Gagal memulai tes", {
-        description: "Terjadi kesalahan saat memulai tes. Silakan coba lagi.",
-      });
+      toast.error("Gagal memulai tes");
     } finally {
       setIsStartingAttempt(false);
     }

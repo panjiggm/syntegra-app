@@ -145,9 +145,7 @@ export const TabParticipant = ({ session }: TabParticipantProps) => {
 
   const handleCopyAccessUrl = (accessUrl: string, userName: string) => {
     navigator.clipboard.writeText(accessUrl);
-    toast.success("Link berhasil disalin!", {
-      description: `Link akses untuk ${userName} telah disalin ke clipboard`,
-    });
+    toast.success("Link berhasil disalin!");
   };
 
   const handleAddParticipant = () => {

@@ -56,9 +56,7 @@ export function DialogDeleteTest() {
 
     try {
       // Show loading toast
-      const loadingToast = toast.loading("Menghapus tes...", {
-        description: "Mohon tunggu, sedang memproses penghapusan tes",
-      });
+      const loadingToast = toast.loading("Menghapus tes...");
 
       await deleteTestMutation.mutateAsync(deleteTestId);
 
@@ -66,10 +64,7 @@ export function DialogDeleteTest() {
       toast.dismiss(loadingToast);
 
       // Show success toast
-      toast.success("Tes berhasil dihapus!", {
-        description: `Tes ${deleteTestName} telah dihapus dari sistem`,
-        duration: 6000,
-      });
+      toast.success("Tes berhasil dihapus!");
 
       // Close modal and redirect
       closeDeleteTestModal();
@@ -108,10 +103,7 @@ export function DialogDeleteTest() {
       }
 
       // Show error toast
-      toast.error("Gagal menghapus tes", {
-        description: errorMessage,
-        duration: 8000,
-      });
+      toast.error("Gagal menghapus tes" + ": " + errorMessage);
     }
   };
 

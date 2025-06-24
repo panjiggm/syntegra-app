@@ -102,9 +102,7 @@ export function RegisterFormParticipant({
       clearErrors();
 
       // Show loading toast
-      const loadingToast = toast.loading("Mendaftarkan akun...", {
-        description: "Mohon tunggu, kami sedang memproses pendaftaran Anda",
-      });
+      const loadingToast = toast.loading("Mendaftarkan akun...");
 
       // Format phone number (remove any spaces, brackets, dashes)
       const formattedPhone = data.phone.replace(/[\s\-()]/g, "");
@@ -127,14 +125,7 @@ export function RegisterFormParticipant({
       toast.dismiss(loadingToast);
 
       // Show success toast
-      toast.success("Pendaftaran berhasil!", {
-        description: `Akun participant ${data.name} telah berhasil dibuat`,
-        duration: 5000,
-        action: {
-          label: "Login Sekarang",
-          onClick: () => navigate("/participant/login"),
-        },
-      });
+      toast.success("Pendaftaran berhasil!");
 
       // Reset form
       reset();
@@ -163,31 +154,19 @@ export function RegisterFormParticipant({
             type: "manual",
             message: "NIK sudah terdaftar dalam sistem",
           });
-          toast.error("NIK sudah terdaftar", {
-            description:
-              "NIK yang Anda masukkan sudah digunakan oleh akun lain",
-          });
+          toast.error("NIK sudah terdaftar");
         } else if (errorMsg.includes("email") && errorMsg.includes("exist")) {
           setError("email", {
             type: "manual",
             message: "Email sudah terdaftar dalam sistem",
           });
-          toast.error("Email sudah terdaftar", {
-            description:
-              "Email yang Anda masukkan sudah digunakan oleh akun lain",
-          });
+          toast.error("Email sudah terdaftar");
         } else {
           // Generic error toast
-          toast.error("Pendaftaran gagal", {
-            description: error.message || errorMessage,
-            duration: 5000,
-          });
+          toast.error("Pendaftaran gagal: " + (error.message || errorMessage));
         }
       } else {
-        toast.error("Pendaftaran gagal", {
-          description: errorMessage,
-          duration: 5000,
-        });
+        toast.error("Pendaftaran gagal: " + errorMessage);
       }
     }
   };

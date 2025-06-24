@@ -114,16 +114,11 @@ export function DrawerBulkParticipants() {
 
   const onSubmit = async (data: FormData) => {
     if (!currentSessionId) {
-      toast.error("Session tidak valid", {
-        description: "Silakan tutup dialog dan coba lagi",
-      });
+      toast.error("Session tidak valid");
       return;
     }
 
-    const loadingToast = toast.loading("Menambahkan peserta...", {
-      description: "Mohon tunggu, sedang memproses penambahan peserta",
-      duration: 10000,
-    });
+    const loadingToast = toast.loading("Menambahkan peserta...");
 
     try {
       // Create participants array from selected users

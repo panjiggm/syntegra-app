@@ -284,9 +284,7 @@ export default function QuestionPage() {
         is_auto_completed: true,
       });
 
-      toast.error("Waktu habis!", {
-        description: "Test telah diselesaikan secara otomatis.",
-      });
+      toast.error("Waktu habis!");
 
       navigate(`/psikotes/${sessionCode}/${sessionId}/complete`);
     } catch (error) {
@@ -396,13 +394,9 @@ export default function QuestionPage() {
   // ==================== TIME WARNING EFFECTS ====================
   useEffect(() => {
     if (displayTimeRemaining === 300) {
-      toast.warning("Waktu tersisa 5 menit!", {
-        description: "Segera selesaikan test Anda.",
-      });
+      toast.warning("Waktu tersisa 5 menit!");
     } else if (displayTimeRemaining === 60) {
-      toast.error("Waktu tersisa 1 menit!", {
-        description: "Test akan otomatis selesai jika waktu habis.",
-      });
+      toast.error("Waktu tersisa 1 menit!");
     }
   }, [displayTimeRemaining]);
 

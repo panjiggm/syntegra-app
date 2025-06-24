@@ -118,10 +118,7 @@ export function useScheduler() {
           description = "No sessions required status updates";
         }
 
-        toast.success(message, {
-          description,
-          duration: 5000,
-        });
+        toast.success(message);
 
         // Invalidate related queries to refresh data
         queryClient.invalidateQueries({ queryKey: ["scheduler"] });
@@ -141,27 +138,13 @@ export function useScheduler() {
           errorMessage.includes("unauthorized") ||
           errorMessage.includes("access denied")
         ) {
-          toast.error("Access denied", {
-            description: "You don't have permission to trigger the scheduler",
-            duration: 8000,
-          });
+          toast.error("Access ditolak");
         } else if (errorMessage.includes("database")) {
-          toast.error("Database error", {
-            description:
-              "Failed to connect to database. Please try again later.",
-            duration: 8000,
-          });
+          toast.error("Database error");
         } else if (errorMessage.includes("timeout")) {
-          toast.error("Request timeout", {
-            description:
-              "Scheduler execution took too long. Please check the logs.",
-            duration: 8000,
-          });
+          toast.error("Request timeout");
         } else {
-          toast.error("Failed to execute scheduler", {
-            description: error.message || "An unexpected error occurred",
-            duration: 8000,
-          });
+          toast.error("Failed to execute scheduler: " + error.message);
         }
       },
     });

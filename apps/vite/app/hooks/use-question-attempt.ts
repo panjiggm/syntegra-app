@@ -58,9 +58,7 @@ export function useQuestionAttempt({
         setAnswerData(draft.answer?.answer_data);
         setConfidenceLevel(draft.answer?.confidence_level);
         setHasUnsavedChanges(true);
-        toast.info("Draft jawaban dimuat", {
-          description: "Melanjutkan dari jawaban yang belum tersimpan",
-        });
+        toast.info("Draft jawaban dimuat");
       }
     }
   }, [answerQuery.data, attemptId, questionId]);
@@ -241,14 +239,10 @@ export function useQuestionAttempt({
         onAnswerSaved(result.answer);
       }
 
-      toast.success("Jawaban tersimpan", {
-        description: "Jawaban berhasil disimpan ke server",
-      });
-    } catch (error) {
+      toast.success("Jawaban tersimpan");
+    } catch (error: any) {
       console.error("Failed to save answer:", error);
-      toast.error("Gagal menyimpan jawaban", {
-        description: "Terjadi kesalahan saat menyimpan jawaban",
-      });
+      toast.error("Gagal menyimpan jawaban: " + error?.message);
     } finally {
       setIsSubmitting(false);
     }

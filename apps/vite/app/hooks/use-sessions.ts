@@ -251,18 +251,11 @@ export function useSessions() {
         const errorMessage = error.message.toLowerCase();
 
         if (errorMessage.includes("session not found")) {
-          toast.error("Sesi tidak ditemukan", {
-            description: "Kode sesi yang Anda masukkan tidak valid",
-          });
+          toast.error("Sesi tidak ditemukan");
         } else if (errorMessage.includes("missing required")) {
-          toast.error("Data tidak lengkap", {
-            description: "Mohon lengkapi kode sesi dan nomor telepon",
-          });
+          toast.error("Data tidak lengkap");
         } else {
-          toast.error("Gagal memeriksa peserta", {
-            description:
-              error.message || "Terjadi kesalahan saat memeriksa peserta",
-          });
+          toast.error("Gagal memeriksa peserta");
         }
       },
     });
@@ -335,9 +328,7 @@ export function useSessions() {
           response.data
         );
 
-        toast.success("Sesi berhasil dibuat!", {
-          description: `Sesi "${response.data.session_name}" telah dibuat dengan kode: ${response.data.session_code}`,
-        });
+        toast.success("Sesi berhasil dibuat!");
       },
       onError: (error: Error) => {
         console.error("Create session error:", error);
@@ -348,27 +339,15 @@ export function useSessions() {
           errorMessage.includes("session code") &&
           errorMessage.includes("exists")
         ) {
-          toast.error("Kode sesi sudah digunakan", {
-            description:
-              "Silakan gunakan kode sesi yang berbeda atau biarkan kosong untuk dibuat otomatis",
-          });
+          toast.error("Kode sesi sudah digunakan");
         } else if (errorMessage.includes("invalid test")) {
-          toast.error("Tes tidak valid", {
-            description:
-              "Satu atau lebih tes yang dipilih tidak valid atau tidak aktif",
-          });
+          toast.error("Tes tidak valid");
         } else if (errorMessage.includes("invalid proctor")) {
-          toast.error("Proktor tidak valid", {
-            description: "Proktor yang dipilih tidak valid atau bukan admin",
-          });
+          toast.error("Proktor tidak valid");
         } else if (errorMessage.includes("time")) {
-          toast.error("Waktu tidak valid", {
-            description: "Periksa kembali waktu mulai dan selesai sesi",
-          });
+          toast.error("Waktu tidak valid");
         } else {
-          toast.error("Gagal membuat sesi", {
-            description: error.message || "Terjadi kesalahan saat membuat sesi",
-          });
+          toast.error("Gagal membuat sesi");
         }
       },
     });
@@ -405,17 +384,12 @@ export function useSessions() {
         // Invalidate sessions list to refresh
         queryClient.invalidateQueries({ queryKey: queryKeys.sessions.lists() });
 
-        toast.success("Sesi berhasil diperbarui!", {
-          description: `Sesi "${response.data.session_name}" telah diperbarui`,
-        });
+        toast.success("Sesi berhasil diperbarui!");
       },
       onError: (error: Error) => {
         console.error("Update session error:", error);
 
-        toast.error("Gagal memperbarui sesi", {
-          description:
-            error.message || "Terjadi kesalahan saat memperbarui sesi",
-        });
+        toast.error("Gagal memperbarui sesi");
       },
     });
   };
@@ -439,14 +413,10 @@ export function useSessions() {
         // Invalidate sessions list
         queryClient.invalidateQueries({ queryKey: queryKeys.sessions.lists() });
 
-        toast.success("Sesi berhasil dihapus", {
-          description: "Sesi telah dihapus dari sistem",
-        });
+        toast.success("Sesi berhasil dihapus");
       },
       onError: (error: Error) => {
-        toast.error("Gagal menghapus sesi", {
-          description: error.message || "Terjadi kesalahan saat menghapus sesi",
-        });
+        toast.error("Gagal menghapus sesi");
       },
     });
   };

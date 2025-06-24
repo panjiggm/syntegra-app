@@ -318,15 +318,10 @@ export function useTests() {
           queryKey: queryKeys.tests.filterOptions(),
         });
 
-        toast.success("Tes berhasil dihapus!", {
-          description: `${context?.testName} telah dihapus dari sistem`,
-        });
+        toast.success("Tes berhasil dihapus!");
       },
       onError: (error: Error) => {
-        toast.error("Gagal menghapus tes", {
-          description: error.message,
-          duration: 5000,
-        });
+        toast.error("Gagal menghapus tes");
       },
     });
   };
@@ -345,15 +340,10 @@ export function useTests() {
         queryClient.invalidateQueries({ queryKey: queryKeys.tests.lists() });
         queryClient.invalidateQueries({ queryKey: queryKeys.tests.stats() });
 
-        toast.success("Tes berhasil diduplikasi!", {
-          description: `${duplicatedTest.name} telah dibuat`,
-        });
+        toast.success("Tes berhasil diduplikasi!");
       },
       onError: (error: Error) => {
-        toast.error("Gagal menduplikasi tes", {
-          description: error.message,
-          duration: 5000,
-        });
+        toast.error("Gagal menduplikasi tes");
       },
     });
   };
@@ -376,15 +366,10 @@ export function useTests() {
           queryKey: queryKeys.tests.filterOptions(),
         });
 
-        toast.success("Tes berhasil dibuat!", {
-          description: `${newTest.name} telah ditambahkan ke sistem`,
-        });
+        toast.success("Tes berhasil dibuat!");
       },
       onError: (error: Error) => {
-        toast.error("Gagal membuat tes", {
-          description: error.message,
-          duration: 5000,
-        });
+        toast.error("Gagal membuat tes");
       },
     });
   };
@@ -426,15 +411,10 @@ export function useTests() {
           queryKey: queryKeys.tests.filterOptions(),
         });
 
-        toast.success("Tes berhasil diperbarui!", {
-          description: `${context?.testName} telah disimpan`,
-        });
+        toast.success("Tes berhasil diperbarui!");
       },
-      onError: (error: Error, { id }, context) => {
-        toast.error("Gagal memperbarui tes", {
-          description: error.message,
-          duration: 5000,
-        });
+      onError: () => {
+        toast.error("Gagal memperbarui tes");
       },
     });
   };

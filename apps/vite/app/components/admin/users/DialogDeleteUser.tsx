@@ -79,9 +79,7 @@ export function DialogDeleteUser() {
 
     try {
       // Show loading toast
-      const loadingToast = toast.loading("Menghapus peserta...", {
-        description: "Mohon tunggu, sedang memproses penghapusan peserta",
-      });
+      const loadingToast = toast.loading("Menghapus peserta...");
 
       await deleteUserMutation.mutateAsync(deleteUserId);
 
@@ -89,10 +87,7 @@ export function DialogDeleteUser() {
       toast.dismiss(loadingToast);
 
       // Show success toast
-      toast.success("Peserta berhasil dihapus!", {
-        description: `Data peserta ${deleteUserName} telah dihapus dari sistem`,
-        duration: 6000,
-      });
+      toast.success("Peserta berhasil dihapus!");
 
       // Close modal
       closeDeleteUserModal();
@@ -127,10 +122,7 @@ export function DialogDeleteUser() {
       }
 
       // Show error toast
-      toast.error("Gagal menghapus peserta", {
-        description: errorMessage,
-        duration: 8000,
-      });
+      toast.error("Gagal menghapus peserta: " + errorMessage);
     }
   };
 

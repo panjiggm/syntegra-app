@@ -906,9 +906,7 @@ export function useReports() {
         toast.success("Report berhasil diunduh");
       },
       onError: (error: Error) => {
-        toast.error("Gagal mengunduh report", {
-          description: error.message,
-        });
+        toast.error("Gagal mengunduh report: " + error.message);
       },
     });
   };
@@ -959,9 +957,7 @@ export function useReports() {
         toast.success("Report berhasil di-generate ulang");
       },
       onError: (error: Error) => {
-        toast.error("Gagal men-generate ulang report", {
-          description: error.message,
-        });
+        toast.error("Gagal men-generate ulang report: " + error.message);
       },
     });
   };

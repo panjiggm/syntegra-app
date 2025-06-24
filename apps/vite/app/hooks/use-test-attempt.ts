@@ -126,14 +126,10 @@ export function useTestAttempt() {
         // Cache the attempt data
         queryClient.setQueryData(["attempt", data.id], data);
 
-        toast.success("Tes dimulai!", {
-          description: `${data.test.name} - ${data.test.total_questions} soal`,
-        });
+        toast.success("Tes dimulai!");
       },
       onError: (error: Error) => {
-        toast.error("Gagal memulai tes", {
-          description: error.message,
-        });
+        toast.error("Gagal memulai tes");
       },
     });
   };
@@ -265,15 +261,11 @@ export function useTestAttempt() {
         );
 
         if (!variables.data.is_draft) {
-          toast.success("Jawaban tersimpan", {
-            description: `Progress: ${data.attempt_progress.progress_percentage}%`,
-          });
+          toast.success("Jawaban tersimpan");
         }
       },
       onError: (error: Error) => {
-        toast.error("Gagal menyimpan jawaban", {
-          description: error.message,
-        });
+        toast.error("Gagal menyimpan jawaban");
       },
     });
   };
@@ -338,19 +330,23 @@ export function useTestAttempt() {
   };
 
   // Get all answers for an attempt
-  const useGetAttemptAnswers = (attemptId: string, options?: {
-    page?: number;
-    limit?: number;
-    include_correct_answers?: boolean;
-    include_score?: boolean;
-  }) => {
+  const useGetAttemptAnswers = (
+    attemptId: string,
+    options?: {
+      page?: number;
+      limit?: number;
+      include_correct_answers?: boolean;
+      include_score?: boolean;
+    }
+  ) => {
     return useQuery({
       queryKey: ["attempt-answers", attemptId, options],
       queryFn: async () => {
         const params = new URLSearchParams();
         if (options?.page) params.append("page", options.page.toString());
         if (options?.limit) params.append("limit", options.limit.toString());
-        if (options?.include_correct_answers) params.append("include_correct_answers", "true");
+        if (options?.include_correct_answers)
+          params.append("include_correct_answers", "true");
         if (options?.include_score) params.append("include_score", "true");
 
         const response = await apiClient.get<{
@@ -378,7 +374,9 @@ export function useTestAttempt() {
             average_confidence_level: number | null;
           };
           message: string;
-        }>(`/attempts/${attemptId}/answers${params.toString() ? `?${params.toString()}` : ""}`);
+        }>(
+          `/attempts/${attemptId}/answers${params.toString() ? `?${params.toString()}` : ""}`
+        );
 
         if (!response.success) {
           throw new Error(response.message);

@@ -172,31 +172,21 @@ export function useUsers() {
         queryClient.invalidateQueries({ queryKey: queryKeys.users.lists() });
 
         // Show success toast
-        toast.success("Admin berhasil dibuat!", {
-          description: "Akun admin telah berhasil ditambahkan ke sistem",
-        });
+        toast.success("Admin berhasil dibuat!");
       },
       onError: (error: Error) => {
         // Handle specific error cases
         const errorMessage = error.message.toLowerCase();
 
         if (errorMessage.includes("email") && errorMessage.includes("exist")) {
-          toast.error("Email sudah terdaftar", {
-            description:
-              "Email yang Anda masukkan sudah digunakan oleh akun lain",
-          });
+          toast.error("Email sudah terdaftar");
         } else if (
           errorMessage.includes("admin") &&
           errorMessage.includes("limit")
         ) {
-          toast.error("Batas admin tercapai", {
-            description: "Sistem telah mencapai batas maksimal jumlah admin",
-          });
+          toast.error("Batas admin tercapai");
         } else {
-          toast.error("Gagal membuat admin", {
-            description:
-              error.message || "Terjadi kesalahan saat membuat admin",
-          });
+          toast.error("Gagal membuat admin");
         }
       },
     });
@@ -224,30 +214,19 @@ export function useUsers() {
         // Invalidate users list
         queryClient.invalidateQueries({ queryKey: queryKeys.users.lists() });
 
-        toast.success("Peserta berhasil didaftarkan!", {
-          description: "Akun peserta telah berhasil dibuat",
-        });
+        toast.success("Peserta berhasil didaftarkan!");
       },
       onError: (error: Error) => {
         const errorMessage = error.message.toLowerCase();
 
         if (errorMessage.includes("email")) {
-          toast.error("Email sudah terdaftar", {
-            description: "Email yang Anda masukkan sudah digunakan",
-          });
+          toast.error("Email sudah terdaftar");
         } else if (errorMessage.includes("nik")) {
-          toast.error("NIK sudah terdaftar", {
-            description: "NIK yang Anda masukkan sudah digunakan",
-          });
+          toast.error("NIK sudah terdaftar");
         } else if (errorMessage.includes("phone")) {
-          toast.error("Nomor telepon sudah terdaftar", {
-            description: "Nomor telepon yang Anda masukkan sudah digunakan",
-          });
+          toast.error("Nomor telepon sudah terdaftar");
         } else {
-          toast.error("Gagal mendaftarkan peserta", {
-            description:
-              error.message || "Terjadi kesalahan saat mendaftarkan peserta",
-          });
+          toast.error("Gagal mendaftarkan peserta");
         }
       },
     });
@@ -276,15 +255,10 @@ export function useUsers() {
         });
         queryClient.invalidateQueries({ queryKey: queryKeys.users.lists() });
 
-        toast.success("User berhasil diupdate", {
-          description: "Data user telah berhasil diperbarui",
-        });
+        toast.success("User berhasil diupdate!");
       },
       onError: (error: Error) => {
-        toast.error("Gagal update user", {
-          description:
-            error.message || "Terjadi kesalahan saat mengupdate user",
-        });
+        toast.error("Gagal update user: " + error.message);
       },
     });
   };
@@ -303,14 +277,10 @@ export function useUsers() {
         // Invalidate users list
         queryClient.invalidateQueries({ queryKey: queryKeys.users.lists() });
 
-        toast.success("User berhasil dihapus", {
-          description: "Data user telah berhasil dihapus dari sistem",
-        });
+        toast.success("User berhasil dihapus");
       },
       onError: (error: Error) => {
-        toast.error("Gagal menghapus user", {
-          description: error.message || "Terjadi kesalahan saat menghapus user",
-        });
+        toast.error("Gagal menghapus user: " + error.message);
       },
     });
   };

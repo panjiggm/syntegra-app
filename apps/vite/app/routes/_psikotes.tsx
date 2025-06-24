@@ -106,9 +106,7 @@ export default function PsikotesLayout() {
     if (sessionData && sessionHasEnded && isAuthenticated) {
       // Only redirect if we're not already on the login page
       if (!location.pathname.endsWith(`/psikotes/${sessionCode}`)) {
-        toast.info("Sesi telah berakhir", {
-          description: "Anda akan diarahkan ke halaman login",
-        });
+        toast.info("Sesi telah berakhir");
         setTimeout(() => {
           navigate(`/psikotes/${sessionCode}`);
         }, 2000);
@@ -184,25 +182,16 @@ export default function PsikotesLayout() {
         // Participant found, proceed with login
         try {
           await loginParticipant({ phone: phone.trim() });
-          toast.success("Login berhasil!", {
-            description: `Selamat datang, ${
-              checkResult.data.participant?.name || "Peserta"
-            }!`,
-          });
+          toast.success("Login berhasil!");
           // Redirect to main route, then it will auto-redirect to sessionId route
           navigate(`/psikotes/${sessionCode}`);
         } catch (loginError) {
           console.error("Login error:", loginError);
-          toast.error("Gagal melakukan login", {
-            description: "Terjadi kesalahan saat login. Silakan coba lagi.",
-          });
+          toast.error("Gagal melakukan login");
         }
       } else {
         // Participant not found
-        toast.error("Tidak terdaftar", {
-          description:
-            "Nomor telepon Anda tidak terdaftar dalam sesi psikotes ini. Hubungi administrator untuk bantuan.",
-        });
+        toast.error("Tidak terdaftar");
       }
     } catch (error) {
       console.error("Check participant error:", error);

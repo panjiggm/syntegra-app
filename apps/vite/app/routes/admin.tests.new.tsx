@@ -98,21 +98,13 @@ export default function AdminTestsNewPage() {
 
       await createTestMutation.mutateAsync(submitData);
 
-      toast.success("Tes berhasil dibuat!", {
-        description: `Tes "${data.name}" telah ditambahkan ke sistem.`,
-        duration: 5000,
-      });
+      toast.success("Tes berhasil dibuat!");
 
       // Redirect to tests page
       navigate("/admin/tests");
     } catch (error: any) {
       console.error("Error creating test:", error);
-      toast.error("Gagal membuat tes", {
-        description:
-          error?.message ||
-          "Terjadi kesalahan saat membuat tes. Silakan coba lagi.",
-        duration: 5000,
-      });
+      toast.error("Gagal membuat tes: " + error.message);
     } finally {
       setIsSubmitting(false);
     }

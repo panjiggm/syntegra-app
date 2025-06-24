@@ -158,21 +158,15 @@ export default function EditTestPage() {
         data: changedData,
       });
 
-      toast.success("Tes berhasil diperbarui!", {
-        description: `Perubahan pada tes "${data.name}" telah disimpan.`,
-        duration: 5000,
-      });
+      toast.success("Tes berhasil diperbarui!");
 
       // Redirect to tests page
       navigate(-1);
     } catch (error: any) {
       console.error("Error updating test:", error);
-      toast.error("Gagal memperbarui tes", {
-        description:
-          error?.message ||
-          "Terjadi kesalahan saat memperbarui tes. Silakan coba lagi.",
-        duration: 5000,
-      });
+      toast.error(
+        "Gagal memperbarui tes" + (error?.message ? `: ${error.message}` : "")
+      );
     } finally {
       setIsSubmitting(false);
     }

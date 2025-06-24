@@ -121,9 +121,7 @@ export default function AdminSessionsPage() {
     const link = `${window.location.origin}/session/${sessionCode}`;
     navigator.clipboard.writeText(link);
 
-    toast.success("Link berhasil disalin!", {
-      description: "Link partisipan telah disalin ke clipboard",
-    });
+    toast.success("Link berhasil disalin!");
   };
 
   const handlePageChange = (page: number) => {

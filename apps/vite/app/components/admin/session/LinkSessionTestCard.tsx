@@ -18,9 +18,7 @@ export const LinkSessionTestCard = ({ session }: LinkSessionTestCardProps) => {
   const handleCopyParticipantLink = () => {
     if (session?.participant_link) {
       navigator.clipboard.writeText(session?.participant_link);
-      toast.success("Link berhasil disalin!", {
-        description: "Link partisipan telah disalin ke clipboard",
-      });
+      toast.success("Link berhasil disalin!");
     }
   };
 

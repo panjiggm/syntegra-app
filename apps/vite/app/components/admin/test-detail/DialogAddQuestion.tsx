@@ -302,10 +302,7 @@ export function DialogAddQuestion() {
 
     setIsSubmitting(true);
     const loadingToast = toast.loading(
-      mode === "create" ? "Menambahkan soal..." : "Memperbarui soal...",
-      {
-        description: "Mohon tunggu, kami sedang memproses permintaan Anda",
-      }
+      mode === "create" ? "Menambahkan soal..." : "Memperbarui soal..."
     );
 
     try {
@@ -482,11 +479,7 @@ export function DialogAddQuestion() {
       toast.success(
         mode === "create"
           ? "Soal berhasil ditambahkan!"
-          : "Soal berhasil diperbarui!",
-        {
-          description: `Soal "${data.question.substring(0, 50)}..." telah ${mode === "create" ? "ditambahkan" : "diperbarui"}`,
-          duration: 4000,
-        }
+          : "Soal berhasil diperbarui!"
       );
 
       closeDialog();
@@ -494,12 +487,7 @@ export function DialogAddQuestion() {
     } catch (error: any) {
       toast.dismiss(loadingToast);
       toast.error(
-        mode === "create" ? "Gagal menambahkan soal" : "Gagal memperbarui soal",
-        {
-          description:
-            error.message || "Terjadi kesalahan saat memproses permintaan",
-          duration: 5000,
-        }
+        mode === "create" ? "Gagal menambahkan soal" : "Gagal memperbarui soal"
       );
     } finally {
       setIsSubmitting(false);

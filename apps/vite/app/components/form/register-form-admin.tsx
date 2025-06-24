@@ -102,9 +102,7 @@ export function RegisterFormAdmin({
       clearErrors();
 
       // Show loading toast
-      const loadingToast = toast.loading("Mendaftarkan admin...", {
-        description: "Mohon tunggu, kami sedang memproses pendaftaran admin",
-      });
+      const loadingToast = toast.loading("Mendaftarkan admin...");
 
       // Prepare data for API call (admin registration)
       const registrationData = {
@@ -125,14 +123,7 @@ export function RegisterFormAdmin({
       toast.dismiss(loadingToast);
 
       // Show success toast
-      toast.success("Pendaftaran admin berhasil!", {
-        description: `Akun admin ${data.name} telah berhasil dibuat`,
-        duration: 8000,
-        action: {
-          label: "Login Sekarang",
-          onClick: () => navigate("/admin/login"),
-        },
-      });
+      toast.success("Pendaftaran admin berhasil!");
 
       // Reset form
       reset();
@@ -157,15 +148,7 @@ export function RegisterFormAdmin({
         const errorMsg = error.message.toLowerCase();
 
         if (errorMsg.includes("admin") && errorMsg.includes("limit")) {
-          toast.error("Batas Admin Tercapai", {
-            description:
-              "Sudah ada 3 admin dalam sistem. Tidak bisa menambah admin baru.",
-            duration: 8000,
-            action: {
-              label: "Login Admin",
-              onClick: () => navigate("/admin/login"),
-            },
-          });
+          toast.error("Sudah ada 3 admin dalam sistem.");
         } else if (
           errorMsg.includes("email") &&
           (errorMsg.includes("exist") || errorMsg.includes("already"))
@@ -174,33 +157,21 @@ export function RegisterFormAdmin({
             type: "manual",
             message: "Email sudah terdaftar dalam sistem",
           });
-          toast.error("Email sudah terdaftar", {
-            description:
-              "Email yang Anda masukkan sudah digunakan oleh akun lain",
-            duration: 6000,
-          });
+          toast.error("Email sudah terdaftar");
         } else if (errorMsg.includes("password")) {
           setError("password", {
             type: "manual",
             message: "Password tidak memenuhi persyaratan keamanan",
           });
-          toast.error("Password tidak valid", {
-            description:
-              "Password harus mengandung huruf besar, kecil, angka, dan karakter khusus",
-            duration: 6000,
-          });
+          toast.error("Password tidak valid");
         } else {
           // Generic error toast
-          toast.error("Pendaftaran admin gagal", {
-            description: error.message || errorMessage,
-            duration: 8000,
-          });
+          toast.error(
+            "Pendaftaran admin gagal: " + (error.message || errorMessage)
+          );
         }
       } else {
-        toast.error("Pendaftaran admin gagal", {
-          description: errorMessage,
-          duration: 8000,
-        });
+        toast.error("Pendaftaran admin gagal: " + errorMessage);
       }
     }
   };

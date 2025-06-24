@@ -359,21 +359,14 @@ export function DrawerAddQuestion() {
     // Validation for multiple choice questions
     if (questionType === "multiple_choice") {
       if (!selectedCorrectAnswer || selectedCorrectAnswer.trim() === "") {
-        toast.error("Pilih jawaban benar terlebih dahulu", {
-          description:
-            "Untuk soal pilihan ganda, Anda harus memilih satu jawaban yang benar sebelum menyimpan soal.",
-          duration: 5000,
-        });
+        toast.error("Pilih jawaban benar terlebih dahulu");
         return;
       }
     }
 
     setIsSubmitting(true);
     const loadingToast = toast.loading(
-      mode === "create" ? "Menambahkan soal..." : "Memperbarui soal...",
-      {
-        description: "Mohon tunggu, kami sedang memproses permintaan Anda",
-      }
+      mode === "create" ? "Menambahkan soal..." : "Memperbarui soal..."
     );
 
     try {
@@ -473,13 +466,7 @@ export function DrawerAddQuestion() {
       toast.success(
         mode === "create"
           ? "Soal berhasil ditambahkan!"
-          : "Soal berhasil diperbarui!",
-        {
-          description: `Soal "${data.question.substring(0, 50)}..." telah ${
-            mode === "create" ? "ditambahkan" : "diperbarui"
-          }`,
-          duration: 4000,
-        }
+          : "Soal berhasil diperbarui!"
       );
 
       closeDialog();
@@ -487,12 +474,7 @@ export function DrawerAddQuestion() {
     } catch (error: any) {
       toast.dismiss(loadingToast);
       toast.error(
-        mode === "create" ? "Gagal menambahkan soal" : "Gagal memperbarui soal",
-        {
-          description:
-            error.message || "Terjadi kesalahan saat memproses permintaan",
-          duration: 5000,
-        }
+        mode === "create" ? "Gagal menambahkan soal" : "Gagal memperbarui soal"
       );
     } finally {
       setIsSubmitting(false);

@@ -58,9 +58,7 @@ export function DialogDeleteSession() {
 
     try {
       // Show loading toast
-      const loadingToast = toast.loading("Menghapus sesi...", {
-        description: "Mohon tunggu, sedang memproses penghapusan sesi",
-      });
+      const loadingToast = toast.loading("Menghapus sesi...");
 
       await deleteSessionMutation.mutateAsync(deleteSessionId);
 
@@ -68,10 +66,7 @@ export function DialogDeleteSession() {
       toast.dismiss(loadingToast);
 
       // Show success toast
-      toast.success("Sesi berhasil dihapus!", {
-        description: `Sesi ${deleteSessionName} (${deleteSessionCode}) telah dihapus dari sistem`,
-        duration: 6000,
-      });
+      toast.success("Sesi berhasil dihapus!");
 
       // Close modal and redirect
       closeDeleteSessionModal();
@@ -120,10 +115,7 @@ export function DialogDeleteSession() {
       }
 
       // Show error toast
-      toast.error("Gagal menghapus sesi", {
-        description: errorMessage,
-        duration: 8000,
-      });
+      toast.error("Gagal menghapus sesi" + ": " + errorMessage);
     }
   };
 

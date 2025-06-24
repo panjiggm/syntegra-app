@@ -39,9 +39,7 @@ export function LoginFormParticipant({
   const navigate = useNavigate();
   const { handleParticipantLogin, isLoading, error } = useAuthForm({
     onSuccess: () => {
-      toast.success("Login berhasil!", {
-        description: "Selamat datang di Syntegra Services",
-      });
+      toast.success("Login berhasil!");
       onSuccess?.();
       navigate("/participant/dashboard");
     },
@@ -96,24 +94,25 @@ export function LoginFormParticipant({
             message: "Nomor telepon tidak terdaftar",
           });
 
-          toast.error("Login gagal", {
-            description: "Nomor telepon tidak ditemukan dalam sistem",
-          });
+          toast.error(
+            "Login gagal: " + "Nomor telepon tidak ditemukan dalam sistem"
+          );
         } else if (
           errorMsg.includes("account") &&
           errorMsg.includes("locked")
         ) {
-          toast.error("Akun Terkunci", {
-            description:
-              "Akun Anda sementara dikunci. Hubungi admin untuk bantuan.",
-          });
+          toast.error(
+            "Akun Terkunci: " +
+              "Akun Anda sementara dikunci. Hubungi admin untuk bantuan."
+          );
         } else if (
           errorMsg.includes("inactive") ||
           errorMsg.includes("deactivated")
         ) {
-          toast.error("Akun Nonaktif", {
-            description: "Akun Anda tidak aktif. Hubungi admin untuk aktivasi.",
-          });
+          toast.error(
+            "Akun Nonaktif: " +
+              "Akun Anda tidak aktif. Hubungi admin untuk aktivasi."
+          );
         } else {
           setError("root", {
             type: "manual",

@@ -49,9 +49,7 @@ export function DialogDeleteQuestion() {
 
     try {
       // Show loading toast
-      const loadingToast = toast.loading("Menghapus soal...", {
-        description: "Mohon tunggu, sedang memproses penghapusan soal",
-      });
+      const loadingToast = toast.loading("Menghapus soal...");
 
       await deleteQuestionMutation.mutateAsync(deleteQuestionId);
 
@@ -59,10 +57,7 @@ export function DialogDeleteQuestion() {
       toast.dismiss(loadingToast);
 
       // Show success toast
-      toast.success("Soal berhasil dihapus!", {
-        description: `Soal "${deleteQuestionText?.substring(0, 50)}..." telah dihapus dari tes`,
-        duration: 6000,
-      });
+      toast.success("Soal berhasil dihapus!");
 
       // Close modal
       closeDeleteQuestionModal();
@@ -100,10 +95,7 @@ export function DialogDeleteQuestion() {
       }
 
       // Show error toast
-      toast.error("Gagal menghapus soal", {
-        description: errorMessage,
-        duration: 8000,
-      });
+      toast.error("Gagal menghapus soal: " + errorMessage);
     }
   };
 

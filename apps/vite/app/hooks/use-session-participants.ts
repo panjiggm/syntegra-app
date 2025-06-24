@@ -287,9 +287,7 @@ export function useSessionParticipants() {
           queryKey: ["available-users", sessionId],
         });
 
-        toast.success("Peserta berhasil ditambahkan!", {
-          description: `${response.data.user.name} telah ditambahkan ke sesi`,
-        });
+        toast.success("Peserta berhasil ditambahkan!");
       },
       onError: (error: Error) => {
         console.error("Add participant error:", error);
@@ -300,33 +298,21 @@ export function useSessionParticipants() {
           errorMessage.includes("already exists") ||
           errorMessage.includes("duplicate")
         ) {
-          toast.error("Peserta sudah terdaftar", {
-            description: "Peserta ini sudah terdaftar dalam sesi ini",
-          });
+          toast.error("Peserta sudah terdaftar");
         } else if (
           errorMessage.includes("session full") ||
           errorMessage.includes("maximum")
         ) {
-          toast.error("Sesi penuh", {
-            description: "Sesi telah mencapai batas maksimal peserta",
-          });
+          toast.error("Sesi penuh");
         } else if (
           errorMessage.includes("cancelled") ||
           errorMessage.includes("completed")
         ) {
-          toast.error("Sesi tidak dapat diubah", {
-            description:
-              "Tidak dapat menambah peserta ke sesi yang sudah selesai atau dibatalkan",
-          });
+          toast.error("Sesi tidak dapat diubah");
         } else if (errorMessage.includes("inactive")) {
-          toast.error("Peserta tidak aktif", {
-            description: "Tidak dapat menambahkan peserta yang tidak aktif",
-          });
+          toast.error("Peserta tidak aktif");
         } else {
-          toast.error("Gagal menambah peserta", {
-            description:
-              error.message || "Terjadi kesalahan saat menambah peserta",
-          });
+          toast.error("Gagal menambah peserta");
         }
       },
     });
@@ -379,25 +365,17 @@ export function useSessionParticipants() {
         const { total_added, skipped_participants } = response.data;
         const skippedCount = skipped_participants?.length || 0;
 
-        toast.success("Peserta berhasil ditambahkan!", {
-          description: `${total_added} peserta ditambahkan${skippedCount > 0 ? `, ${skippedCount} dilewati` : ""}`,
-        });
+        toast.success("Peserta berhasil ditambahkan!");
 
         // Show warning if some were skipped
         if (skippedCount > 0) {
-          toast.warning(`${skippedCount} peserta dilewati`, {
-            description: "Beberapa peserta sudah terdaftar atau tidak valid",
-          });
+          toast.warning(`${skippedCount} peserta dilewati`);
         }
       },
       onError: (error: Error) => {
         console.error("Bulk add participants error:", error);
 
-        toast.error("Gagal menambah peserta", {
-          description:
-            error.message ||
-            "Terjadi kesalahan saat menambah peserta secara bulk",
-        });
+        toast.error("Gagal menambah peserta");
       },
     });
   };
@@ -433,9 +411,7 @@ export function useSessionParticipants() {
           queryKey: ["session-participants", sessionId],
         });
 
-        toast.success("Status peserta berhasil diperbarui!", {
-          description: `Status ${response.data.user_name} diubah dari ${response.data.old_status} ke ${response.data.new_status}`,
-        });
+        toast.success("Status peserta berhasil diperbarui!");
       },
       onError: (error: Error) => {
         console.error("Update participant status error:", error);
@@ -446,19 +422,11 @@ export function useSessionParticipants() {
           errorMessage.includes("invalid transition") ||
           errorMessage.includes("status transition")
         ) {
-          toast.error("Perubahan status tidak valid", {
-            description: "Transisi status yang dipilih tidak diizinkan",
-          });
+          toast.error("Perubahan status tidak valid");
         } else if (errorMessage.includes("unchanged")) {
-          toast.error("Status tidak berubah", {
-            description: "Peserta sudah memiliki status yang sama",
-          });
+          toast.error("Status tidak berubah");
         } else {
-          toast.error("Gagal memperbarui status", {
-            description:
-              error.message ||
-              "Terjadi kesalahan saat memperbarui status peserta",
-          });
+          toast.error("Gagal memperbarui status");
         }
       },
     });
@@ -500,9 +468,7 @@ export function useSessionParticipants() {
           queryKey: queryKeys.sessions.detail(sessionId),
         });
 
-        toast.success("Peserta berhasil dihapus!", {
-          description: `${response.data.user_name} telah dihapus dari sesi`,
-        });
+        toast.success("Peserta berhasil dihapus!");
       },
       onError: (error: Error) => {
         console.error("Remove participant error:", error);
@@ -513,26 +479,16 @@ export function useSessionParticipants() {
           errorMessage.includes("started") ||
           errorMessage.includes("active")
         ) {
-          toast.error("Tidak dapat menghapus peserta", {
-            description: "Peserta yang sudah memulai tes tidak dapat dihapus",
-          });
+          toast.error("Tidak dapat menghapus peserta");
         } else if (errorMessage.includes("completed")) {
-          toast.error("Tidak dapat menghapus peserta", {
-            description:
-              "Peserta yang sudah menyelesaikan tes tidak dapat dihapus",
-          });
+          toast.error("Tidak dapat menghapus peserta");
         } else if (
           errorMessage.includes("attempts") ||
           errorMessage.includes("dependencies")
         ) {
-          toast.error("Tidak dapat menghapus peserta", {
-            description: "Peserta memiliki data tes yang tidak dapat dihapus",
-          });
+          toast.error("Tidak dapat menghapus peserta");
         } else {
-          toast.error("Gagal menghapus peserta", {
-            description:
-              error.message || "Terjadi kesalahan saat menghapus peserta",
-          });
+          toast.error("Gagal menghapus peserta");
         }
       },
     });

@@ -305,29 +305,17 @@ export function useQuestions() {
           queryKey: queryKeys.tests.detail(testId),
         });
 
-        // Enhanced toast with duration info
-        if (response.data.test_duration_info) {
-          const { total_duration_minutes, total_questions } =
-            response.data.test_duration_info;
-          toast.success(`Soal berhasil dibuat!`, {
-            description: `Durasi test diperbarui: ${total_duration_minutes} menit (${total_questions} soal total)`,
-          });
-        } else {
-          toast.success("Soal berhasil dibuat");
-        }
+        toast.success("Soal berhasil dibuat");
 
         // Show warnings if any
         if (response.warnings && response.warnings.length > 0) {
-          toast.warning("Peringatan Session Constraint", {
-            description: response.warnings.join(". "),
-            duration: 5000,
-          });
+          toast.warning(
+            "Peringatan Session Constraint " + response.warnings.join(". ")
+          );
         }
       },
       onError: (error: Error) => {
-        toast.error("Gagal membuat soal", {
-          description: error.message,
-        });
+        toast.error("Gagal membuat soal: " + error.message);
       },
     });
   };
@@ -355,21 +343,10 @@ export function useQuestions() {
         queryClient.invalidateQueries({ queryKey: ["questions", testId] });
         queryClient.invalidateQueries({ queryKey: ["tests", testId] }); // Refresh test data
 
-        // Enhanced toast with duration info
-        if (response.data.test_duration_info) {
-          const { total_duration_minutes, total_questions } =
-            response.data.test_duration_info;
-          toast.success(`Soal berhasil diperbarui!`, {
-            description: `Durasi test diperbarui: ${total_duration_minutes} menit (${total_questions} soal total)`,
-          });
-        } else {
-          toast.success("Soal berhasil diperbarui");
-        }
+        toast.success("Soal berhasil diperbarui");
       },
       onError: (error: Error) => {
-        toast.error("Gagal memperbarui soal", {
-          description: error.message,
-        });
+        toast.error("Gagal memperbarui soal: " + error.message);
       },
     });
   };
@@ -400,9 +377,7 @@ export function useQuestions() {
         toast.success("Urutan soal berhasil diubah");
       },
       onError: (error: Error) => {
-        toast.error("Gagal mengubah urutan soal", {
-          description: error.message,
-        });
+        toast.error("Gagal mengubah urutan soal: " + error.message);
       },
     });
   };
@@ -433,20 +408,11 @@ export function useQuestions() {
         queryClient.invalidateQueries({ queryKey: ["tests", testId] });
 
         // Enhanced toast with duration info
-        if (response.test_duration_info) {
-          const { total_duration_minutes, total_questions } =
-            response.test_duration_info;
-          toast.success(`Soal berhasil dihapus!`, {
-            description: `Durasi test diperbarui: ${total_duration_minutes} menit (${total_questions} soal tersisa)`,
-          });
-        } else {
-          toast.success("Soal berhasil dihapus");
-        }
+
+        toast.success("Soal berhasil dihapus");
       },
       onError: (error: Error) => {
-        toast.error("Gagal menghapus soal", {
-          description: error.message,
-        });
+        toast.error("Gagal menghapus soal: " + error.message);
       },
     });
   };
@@ -469,26 +435,10 @@ export function useQuestions() {
         queryClient.invalidateQueries({ queryKey: ["questions", testId] });
         queryClient.invalidateQueries({ queryKey: ["tests", testId] }); // Refresh test data
 
-        // Enhanced toast with duration info
-        if (response.data.test_duration_info) {
-          const { total_duration_minutes, total_questions } =
-            response.data.test_duration_info;
-
-          toast.success(
-            `${response.data.created_count} soal berhasil dibuat!`,
-            {
-              description: `Durasi test diperbarui: ${total_duration_minutes} menit (${total_questions} soal total)`,
-              duration: 4000,
-            }
-          );
-        } else {
-          toast.success(`${response.data.created_count} soal berhasil dibuat`);
-        }
+        toast.success(`${response.data.created_count} soal berhasil dibuat`);
       },
       onError: (error: Error) => {
-        toast.error("Gagal membuat soal secara bulk", {
-          description: error.message,
-        });
+        toast.error("Gagal membuat soal secara bulk: " + error.message);
       },
     });
   };
@@ -512,9 +462,7 @@ export function useQuestions() {
 
         // Show duration update info
         if (response.test_duration_info) {
-          toast.success(`${response.updated_count} soal berhasil diperbarui!`, {
-            description: `Durasi test: ${response.test_duration_info.total_duration_minutes} menit`,
-          });
+          toast.success(`${response.updated_count} soal berhasil diperbarui!`);
         }
       },
     });
@@ -540,9 +488,7 @@ export function useQuestions() {
         );
       },
       onError: (error: Error) => {
-        toast.error("Gagal menghapus soal secara bulk", {
-          description: error.message,
-        });
+        toast.error("Gagal menghapus soal secara bulk: " + error.message);
       },
     });
   };

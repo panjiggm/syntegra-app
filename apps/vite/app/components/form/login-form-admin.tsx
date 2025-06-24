@@ -58,9 +58,7 @@ export function LoginFormAdmin({ className, onSuccess }: LoginFormAdminProps) {
 
   const { isLoading, error, handleAdminLogin, clearError } = useAuthForm({
     onSuccess: () => {
-      toast.success("Login berhasil!", {
-        description: "Selamat datang di dashboard admin Syntegra",
-      });
+      toast.success("Login berhasil!");
       onSuccess?.();
     },
     onError: (error) => {
@@ -81,9 +79,7 @@ export function LoginFormAdmin({ className, onSuccess }: LoginFormAdminProps) {
       clearError();
 
       // Show loading toast
-      const loadingToast = toast.loading("Memproses login...", {
-        description: "Mohon tunggu, kami sedang memverifikasi kredensial Anda",
-      });
+      const loadingToast = toast.loading("Memproses login...");
 
       // Call admin login
       await handleAdminLogin({
@@ -117,37 +113,33 @@ export function LoginFormAdmin({ className, onSuccess }: LoginFormAdminProps) {
             message: "Email atau password tidak valid",
           });
 
-          toast.error("Login gagal", {
-            description: "Email atau password yang Anda masukkan salah",
-            duration: 5000,
-          });
+          toast.error(
+            "Login gagal: " + "Email atau password yang Anda masukkan salah"
+          );
         } else if (
           errorMsg.includes("account") &&
           errorMsg.includes("locked")
         ) {
-          toast.error("Akun Terkunci", {
-            description:
-              "Akun Anda sementara dikunci karena terlalu banyak percobaan login. Hubungi administrator untuk bantuan.",
-            duration: 8000,
-          });
+          toast.error(
+            "Akun Terkunci: " +
+              "Akun Anda sementara dikunci karena terlalu banyak percobaan login. Hubungi administrator untuk bantuan."
+          );
         } else if (
           errorMsg.includes("inactive") ||
           errorMsg.includes("deactivated")
         ) {
-          toast.error("Akun Nonaktif", {
-            description:
-              "Akun Anda tidak aktif. Hubungi administrator untuk aktivasi akun.",
-            duration: 8000,
-          });
+          toast.error(
+            "Akun Nonaktif: " +
+              "Akun Anda tidak aktif. Hubungi administrator untuk aktivasi akun."
+          );
         } else if (
           errorMsg.includes("admin") &&
           errorMsg.includes("required")
         ) {
-          toast.error("Akses Ditolak", {
-            description:
-              "Akun ini bukan akun administrator. Gunakan halaman login participant untuk akses.",
-            duration: 8000,
-          });
+          toast.error(
+            "Akses Ditolak: " +
+              "Akun ini bukan akun administrator. Gunakan halaman login participant untuk akses."
+          );
         } else if (errorMsg.includes("validation")) {
           setError("root", {
             type: "manual",
@@ -232,11 +224,7 @@ export function LoginFormAdmin({ className, onSuccess }: LoginFormAdminProps) {
                     <button
                       type="button"
                       onClick={() => {
-                        toast.info("Reset Password", {
-                          description:
-                            "Hubungi administrator sistem untuk reset password atau gunakan fitur lupa password",
-                          duration: 5000,
-                        });
+                        toast.info("Reset Password: Hubungi Admin");
                       }}
                       className="ml-auto text-sm underline-offset-2 hover:underline text-muted-foreground transition-colors"
                     >
