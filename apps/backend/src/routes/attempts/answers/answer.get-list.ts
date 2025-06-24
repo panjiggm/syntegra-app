@@ -302,6 +302,20 @@ export async function getAttemptAnswersHandler(
         )
       );
 
+    // Get question types for the test
+    const questionTypesResult = await db
+      .select({
+        question_type: questions.question_type,
+        count: count(),
+      })
+      .from(questions)
+      .where(eq(questions.test_id, test.id))
+      .groupBy(questions.question_type);
+
+    const questionTypes = questionTypesResult.map((qt) => qt.question_type);
+    const hasRatingScale = questionTypes.includes("rating_scale");
+    const hasOtherTypes = questionTypes.some((type) => type !== "rating_scale");
+
     const totalQuestions = test.total_questions || 0;
     const answeredQuestions = Number(statsResult.answered_count) || 0;
     const correctAnswers = Number(statsResult.correct_count) || 0;
@@ -343,6 +357,9 @@ export async function getAttemptAnswersHandler(
         correct_answers: correctAnswers,
         wrong_answers: wrongAnswers,
         unanswered_questions: unansweredQuestions,
+        question_types: questionTypes,
+        has_rating_scale: hasRatingScale,
+        has_other_types: hasOtherTypes,
       },
       summary,
       timestamp: new Date().toISOString(),

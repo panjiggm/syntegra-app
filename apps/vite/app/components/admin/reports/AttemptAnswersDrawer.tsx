@@ -74,9 +74,11 @@ export function AttemptAnswersDrawer({
 
   const getAnswerStatusColor = (
     isCorrect: boolean | null,
-    isAnswered: boolean
+    isAnswered: boolean,
+    questionType: string
   ) => {
     if (!isAnswered) return "bg-gray-100 text-gray-700";
+    if (questionType === "rating_scale") return "bg-blue-100 text-blue-700";
     if (isCorrect === null) return "bg-blue-100 text-blue-700";
     return isCorrect
       ? "bg-green-100 text-green-700"
@@ -85,15 +87,28 @@ export function AttemptAnswersDrawer({
 
   const getAnswerStatusIcon = (
     isCorrect: boolean | null,
-    isAnswered: boolean
+    isAnswered: boolean,
+    questionType: string
   ) => {
     if (!isAnswered) return <Clock className="h-3 w-3" />;
+    if (questionType === "rating_scale") return <FileText className="h-3 w-3" />;
     if (isCorrect === null) return <FileText className="h-3 w-3" />;
     return isCorrect ? (
       <CheckCircle2 className="h-3 w-3" />
     ) : (
       <XCircle className="h-3 w-3" />
     );
+  };
+
+  const getAnswerStatusText = (
+    isCorrect: boolean | null,
+    isAnswered: boolean,
+    questionType: string
+  ) => {
+    if (!isAnswered) return "Belum dijawab";
+    if (questionType === "rating_scale") return "Terjawab";
+    if (isCorrect === null) return "Tidak dinilai";
+    return isCorrect ? "Benar" : "Salah";
   };
 
   const formatAnswerDisplay = (answer: any) => {
@@ -156,15 +171,25 @@ export function AttemptAnswersDrawer({
                     <Badge variant="outline" className="bg-blue-50">
                       Total: {meta.total_answers}
                     </Badge>
-                    <Badge
-                      variant="outline"
-                      className="bg-green-50 text-green-700"
-                    >
-                      Benar: {correctAnswers}
-                    </Badge>
-                    <Badge variant="outline" className="bg-red-50 text-red-700">
-                      Salah: {wrongAnswers}
-                    </Badge>
+                    {/* Only show correct/wrong badges if test has non-rating_scale questions */}
+                    {meta.has_other_types && (
+                      <>
+                        <Badge
+                          variant="outline"
+                          className="bg-green-50 text-green-700"
+                        >
+                          Benar: {correctAnswers}
+                        </Badge>
+                        <Badge variant="outline" className="bg-red-50 text-red-700">
+                          Salah: {wrongAnswers}
+                        </Badge>
+                      </>
+                    )}
+                    {meta.has_rating_scale && !meta.has_other_types && (
+                      <Badge variant="outline" className="bg-blue-50 text-blue-700">
+                        Terjawab: {meta.total_answers - meta.unanswered_questions}
+                      </Badge>
+                    )}
                     <Badge variant="outline" className="bg-gray-50">
                       Belum: {meta.unanswered_questions}
                     </Badge>
@@ -241,23 +266,23 @@ export function AttemptAnswersDrawer({
                                 "ml-2 flex-shrink-0",
                                 getAnswerStatusColor(
                                   answer.is_correct,
-                                  answer.is_answered
+                                  answer.is_answered,
+                                  answer.question.question_type
                                 )
                               )}
                             >
                               <div className="flex items-center gap-1">
                                 {getAnswerStatusIcon(
                                   answer.is_correct,
-                                  answer.is_answered
+                                  answer.is_answered,
+                                  answer.question.question_type
                                 )}
                                 <span className="text-xs">
-                                  {!answer.is_answered
-                                    ? "Belum dijawab"
-                                    : answer.is_correct === null
-                                      ? "Tidak dinilai"
-                                      : answer.is_correct
-                                        ? "Benar"
-                                        : "Salah"}
+                                  {getAnswerStatusText(
+                                    answer.is_correct,
+                                    answer.is_answered,
+                                    answer.question.question_type
+                                  )}
                                 </span>
                               </div>
                             </Badge>
@@ -313,15 +338,17 @@ export function AttemptAnswersDrawer({
                             </div>
                           </div>
 
-                          {/* Correct Answer */}
-                          <div className="bg-green-50 p-3 rounded-lg border border-green-200">
-                            <p className="text-xs text-green-700 font-medium mb-1">
-                              Jawaban yang Benar:
-                            </p>
-                            <p className="text-sm font-medium text-green-800">
-                              {getCorrectAnswerDisplay(answer.question)}
-                            </p>
-                          </div>
+                          {/* Correct Answer - Hide for rating_scale questions */}
+                          {answer.question.question_type !== "rating_scale" && (
+                            <div className="bg-green-50 p-3 rounded-lg border border-green-200">
+                              <p className="text-xs text-green-700 font-medium mb-1">
+                                Jawaban yang Benar:
+                              </p>
+                              <p className="text-sm font-medium text-green-800">
+                                {getCorrectAnswerDisplay(answer.question)}
+                              </p>
+                            </div>
+                          )}
                         </div>
                       </div>
                     </CardContent>

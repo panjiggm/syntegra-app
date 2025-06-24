@@ -178,6 +178,9 @@ export const GetAttemptAnswersResponseSchema = z.object({
     correct_answers: z.number(),
     wrong_answers: z.number(),
     unanswered_questions: z.number(),
+    question_types: z.array(z.string()).optional(),
+    has_rating_scale: z.boolean().optional(),
+    has_other_types: z.boolean().optional(),
   }),
   summary: z.object({
     total_questions: z.number(),

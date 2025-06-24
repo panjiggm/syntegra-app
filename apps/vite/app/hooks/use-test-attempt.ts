@@ -363,6 +363,9 @@ export function useTestAttempt() {
             correct_answers: number;
             wrong_answers: number;
             unanswered_questions: number;
+            question_types: string[];
+            has_rating_scale: boolean;
+            has_other_types: boolean;
           };
           summary: {
             total_questions: number;
