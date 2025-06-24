@@ -58,6 +58,7 @@ export default function QuestionPage() {
   const [questionStartTime, setQuestionStartTime] = useState<Date | null>(null);
   const [displayTimeRemaining, setDisplayTimeRemaining] = useState<number>(0);
   const [isNavigationOpen, setIsNavigationOpen] = useState(false);
+  const [isExpiring, setIsExpiring] = useState(false);
 
   // ==================== REFS ====================
   const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -130,6 +131,81 @@ export default function QuestionPage() {
   const isTimeCritical = displayTimeRemaining <= 300; // 5 minutes
   const isTimeAlmostUp = displayTimeRemaining <= 60; // 1 minute
 
+  const handleTimeExpiry = useCallback(async () => {
+    if (!user?.id || !sessionId || !attemptId || isExpiring) {
+      console.log("Time expiry blocked - already expiring or missing data");
+      return;
+    }
+
+    // Set flag to prevent multiple calls
+    setIsExpiring(true);
+    console.log("Time expired - starting auto-completion flow (single execution)");
+
+    try {
+      // Step 1: Auto-save current answer if there is one
+      if (selectedAnswer.trim()) {
+        console.log("Auto-saving current answer before time expiry");
+        await autoSave.mutateAsync({
+          attemptId,
+          data: {
+            question_id: questionId,
+            answer: selectedAnswer,
+            time_taken: questionStartTime
+              ? Math.floor((Date.now() - questionStartTime.getTime()) / 1000)
+              : 0,
+          },
+        });
+      }
+
+      // Step 2: Complete the test with auto-completion flag
+      console.log("Completing test automatically");
+      await completeTest.mutateAsync({
+        sessionId: sessionId,
+        participantId: user.id,
+        testId,
+        is_auto_completed: true,
+      });
+
+      // Step 3: Finish the attempt
+      console.log("Finishing attempt with auto-completion");
+      await finishAttempt.mutateAsync({
+        attemptId: attemptId,
+        data: {
+          completion_type: "expired",
+          questions_answered: answeredCount + (selectedAnswer.trim() ? 1 : 0),
+        },
+      });
+
+      // Step 4: Clean up and redirect
+      sessionStorage.removeItem(`attempt_${testId}`);
+      toast.error("Waktu habis! Test telah diselesaikan secara otomatis.");
+
+      console.log("Redirecting to complete page");
+      navigate(`/psikotes/${sessionCode}/${sessionId}/complete`);
+    } catch (error) {
+      console.error("Auto-completion failed:", error);
+      toast.error("Gagal menyelesaikan test secara otomatis");
+      
+      // Still try to redirect even if some steps failed
+      navigate(`/psikotes/${sessionCode}/${sessionId}/complete`);
+    }
+  }, [
+    sessionId,
+    user?.id,
+    testId,
+    attemptId,
+    selectedAnswer,
+    questionId,
+    questionStartTime,
+    answeredCount,
+    autoSave,
+    completeTest,
+    finishAttempt,
+    navigate,
+    sessionCode,
+    isExpiring,
+  ]);
+
   // ==================== TIMER SYNC ====================
   // Sync display timer with API data
   useEffect(() => {
@@ -138,9 +214,9 @@ export default function QuestionPage() {
     }
   }, [timeRemaining, isTimeExpired, testProgress?.status]);
 
-  // Real-time countdown display
+  // Real-time countdown display with backup timer trigger
   useEffect(() => {
-    if (displayTimeRemaining > 0 && !isTimeExpired) {
+    if (displayTimeRemaining > 0 && !isTimeExpired && !isExpiring) {
       countdownIntervalRef.current = setInterval(() => {
         setDisplayTimeRemaining((prev) => {
           const newTime = Math.max(0, prev - 1);
@@ -152,6 +228,19 @@ export default function QuestionPage() {
               "seconds"
             );
           }
+
+          // Backup trigger when local timer hits 0 (in case API is slow)
+          if (newTime === 0 && !isExpiring) {
+            console.log("Local timer reached 0 - backup trigger for auto-completion");
+            // Add small delay to let API update first, then trigger if needed
+            setTimeout(() => {
+              if (!isExpiring) {
+                console.log("API didn't respond in time - using backup trigger");
+                handleTimeExpiry();
+              }
+            }, 1000); // 1 second grace period for API
+          }
+
           return newTime;
         });
       }, 1000);
@@ -167,7 +256,7 @@ export default function QuestionPage() {
         clearInterval(countdownIntervalRef.current);
       }
     };
-  }, [displayTimeRemaining, isTimeExpired]);
+  }, [displayTimeRemaining, isTimeExpired, isExpiring, handleTimeExpiry]);
 
   // ==================== INITIALIZATION ====================
   useEffect(() => {
@@ -200,6 +289,12 @@ export default function QuestionPage() {
       setHasUnsavedChanges(false);
     }
   }, [questionId, answerQuery.data]);
+
+  // ==================== EVENT HANDLERS ====================
+  const handleAnswerChange = (value: string) => {
+    setSelectedAnswer(value);
+    setHasUnsavedChanges(true);
+  };
 
   // ==================== AUTO-SAVE ====================
   const triggerAutoSave = useCallback(async () => {
@@ -267,38 +362,26 @@ export default function QuestionPage() {
     };
   }, [hasUnsavedChanges, selectedAnswer, triggerAutoSave]);
 
-  // ==================== EVENT HANDLERS ====================
-  const handleAnswerChange = (value: string) => {
-    setSelectedAnswer(value);
-    setHasUnsavedChanges(true);
-  };
-
-  const handleTimeExpiry = useCallback(async () => {
-    if (!user?.id || !sessionId) return;
-
-    try {
-      await completeTest.mutateAsync({
-        sessionId: sessionId,
-        participantId: user.id,
-        testId,
-        is_auto_completed: true,
-      });
-
-      toast.error("Waktu habis!");
-
-      navigate(`/psikotes/${sessionCode}/${sessionId}/complete`);
-    } catch (error) {
-      console.error("Auto-completion failed:", error);
-      toast.error("Gagal menyelesaikan test secara otomatis");
-    }
-  }, [sessionId, user?.id, testId, completeTest, navigate, sessionCode]);
-
   // ==================== TIME EXPIRY CHECK ====================
   useEffect(() => {
-    if (isTimeExpired) {
+    if (isTimeExpired && !isExpiring) {
+      console.log("API detected time expired - triggering auto-completion");
       handleTimeExpiry();
     }
-  }, [isTimeExpired, handleTimeExpiry]);
+  }, [isTimeExpired, handleTimeExpiry, isExpiring]);
+
+  // ==================== CLEANUP ====================
+  useEffect(() => {
+    return () => {
+      // Clear all timers on unmount
+      if (autoSaveTimeoutRef.current) {
+        clearTimeout(autoSaveTimeoutRef.current);
+      }
+      if (countdownIntervalRef.current) {
+        clearInterval(countdownIntervalRef.current);
+      }
+    };
+  }, []);
 
   const handleNext = async () => {
     if (!attemptId) return;

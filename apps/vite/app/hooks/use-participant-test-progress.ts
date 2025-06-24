@@ -152,7 +152,14 @@ export function useParticipantTestProgress() {
       },
       enabled: !!sessionId && !!participantId && !!testId,
       staleTime: 0, // Always refetch for real-time data
-      refetchInterval: 60 * 1000, // Revalidate every 1 minute
+      refetchInterval: ({ state }) => {
+        // Adaptive polling based on time remaining
+        const timeRemaining = state.data?.time_remaining || 0;
+        if (timeRemaining <= 120) return 3000; // 3 seconds when ≤ 2 minutes
+        if (timeRemaining <= 300) return 10000; // 10 seconds when ≤ 5 minutes
+        if (timeRemaining <= 600) return 20000; // 20 seconds when ≤ 10 minutes
+        return 30000; // 30 seconds otherwise (improved from 60s)
+      },
       refetchIntervalInBackground: true,
       refetchOnWindowFocus: true,
       retry: (failureCount, error: any) => {
