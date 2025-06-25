@@ -85,9 +85,7 @@ export function parseCSVContentSmart(csvContent: string): CSVParseResult {
     let lines = csvContent.split("\n").filter((line) => line.trim());
 
     if (lines.length === 1 && lines[0].length > 500) {
-      console.log("Detected single long line, parsing Syntegra format");
       lines = parseSyntegraCSVSingleLine(lines[0]);
-      console.log(`Split single line into ${lines.length} lines`);
     }
 
     // For this specific format, we know headers are on line 5 (index 4)
@@ -279,7 +277,9 @@ export function transformSyntegraCSVRowToBulkUser(
     mappedData.name = row[columnMapping.name] || "";
     mappedData.email = row[columnMapping.email] || "";
     mappedData.gender = normalizeSyntegraGender(row[columnMapping.gender]);
-    mappedData.phone = normalizeSyntegraPhoneNumber(row[columnMapping.phone]);
+    mappedData.phone = row[columnMapping.phone]
+      ? row[columnMapping.phone].trim()
+      : "";
 
     // Optional fields
     if (columnMapping.birth_place && row[columnMapping.birth_place]) {
@@ -346,29 +346,6 @@ function normalizeSyntegraGender(value: any): string | undefined {
   }
 
   return "other";
-}
-
-function normalizeSyntegraPhoneNumber(value: any): string {
-  if (!value) return "";
-
-  let phone = String(value).trim();
-
-  // Remove common formatting
-  phone = phone.replace(/[-\s\(\)]/g, "");
-
-  // Skip if empty after cleaning
-  if (!phone) return "";
-
-  // Convert to Indonesian format
-  if (phone.startsWith("0")) {
-    phone = "+62" + phone.substring(1);
-  } else if (phone.startsWith("62")) {
-    phone = "+" + phone;
-  } else if (!phone.startsWith("+")) {
-    phone = "+62" + phone;
-  }
-
-  return phone;
 }
 
 function normalizeSyntegraDate(value: any): string | undefined {

@@ -285,6 +285,126 @@ export function useUsers() {
     });
   };
 
+  // Bulk CSV validation (Mutation)
+  const useBulkValidateCSV = () => {
+    return useMutation({
+      mutationFn: async (data: {
+        csv_content: string;
+        file_name: string;
+        column_mapping?: Record<string, string>;
+        options?: {
+          validate_only?: boolean;
+          skip_duplicates?: boolean;
+          default_role?: "admin" | "participant";
+        };
+      }) => {
+        const response = await apiClient.post("/users/bulk/validate-csv", data);
+        if (!response.success) {
+          throw new Error(response.message || "Failed to validate CSV");
+        }
+        return response;
+      },
+      onError: (error: Error) => {
+        console.error("CSV validation error:", error);
+        toast.error("Gagal memvalidasi CSV", {
+          description: error.message,
+        });
+      },
+    });
+  };
+
+  // Bulk create from CSV (Mutation)
+  const useBulkCreateFromCSV = () => {
+    return useMutation({
+      mutationFn: async (data: {
+        csv_content: string;
+        file_name: string;
+        column_mapping?: Record<string, string>;
+        options?: {
+          validate_only?: boolean;
+          skip_duplicates?: boolean;
+          default_role?: "admin" | "participant";
+        };
+      }) => {
+        const response = await apiClient.post("/users/bulk/csv", data);
+        if (!response.success) {
+          throw new Error(
+            response.message || "Failed to create users from CSV"
+          );
+        }
+        return response;
+      },
+      onSuccess: (data) => {
+        // Invalidate and refetch users list
+        queryClient.invalidateQueries({ queryKey: queryKeys.users.lists() });
+
+        toast.success("Bulk import berhasil!", {
+          description: `${data.data.successful} users berhasil ditambahkan`,
+        });
+      },
+      onError: (error: Error) => {
+        console.error("Bulk CSV creation error:", error);
+        toast.error("Gagal mengimport users", {
+          description: error.message,
+        });
+      },
+    });
+  };
+
+  // Bulk create from JSON (Mutation)
+  const useBulkCreateFromJSON = () => {
+    return useMutation({
+      mutationFn: async (data: {
+        users: Array<{
+          nik: string;
+          name: string;
+          email: string;
+          role?: "admin" | "participant";
+          gender?: "male" | "female" | "other";
+          phone?: string;
+          birth_place?: string;
+          birth_date?: string;
+          religion?: string;
+          education?: string;
+          address?: string;
+          province?: string;
+          regency?: string;
+          district?: string;
+          village?: string;
+          postal_code?: string;
+          profile_picture_url?: string;
+        }>;
+        options?: {
+          skip_duplicates?: boolean;
+          validate_only?: boolean;
+          default_role?: "admin" | "participant";
+        };
+      }) => {
+        const response = await apiClient.post("/users/bulk/json", data);
+        if (!response.success) {
+          throw new Error(
+            response.message || "Failed to create users from JSON"
+          );
+        }
+        return response;
+      },
+      onSuccess: (data) => {
+        // Invalidate and refetch users list
+        queryClient.invalidateQueries({ queryKey: queryKeys.users.lists() });
+
+        toast.success("Bulk import berhasil!", {
+          description: `${data.data.successful} users berhasil ditambahkan`,
+        });
+      },
+      onError: (error: Error) => {
+        console.error("Bulk JSON creation error:", error);
+        toast.error("Gagal mengimport users", {
+          description: error.message,
+        });
+      },
+    });
+  };
+
   return {
     // Queries
     useGetUsers,
@@ -295,5 +415,8 @@ export function useUsers() {
     useCreateParticipant,
     useUpdateUser,
     useDeleteUser,
+    useBulkValidateCSV,
+    useBulkCreateFromCSV,
+    useBulkCreateFromJSON,
   };
 }

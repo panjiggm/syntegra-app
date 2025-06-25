@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { Button } from "~/components/ui/button";
 import { useUsers } from "~/hooks/use-users";
-import { UserPlus, RefreshCw } from "lucide-react";
+import { UserPlus, RefreshCw, Upload } from "lucide-react";
 import { CardAnalyticUser } from "~/components/admin/users/CardAnalyticUser";
 import { FilterUser } from "~/components/admin/users/FilterUser";
 import { TableUser } from "~/components/admin/users/TableUser";
@@ -108,6 +108,14 @@ export default function AdminUsersPage() {
               className={`size-4 mr-2 ${isLoading ? "animate-spin" : ""}`}
             />
             Refresh
+          </Button>
+          <Button
+            variant="outline"
+            className="cursor-pointer"
+            onClick={() => navigate("/admin/users/bulk")}
+          >
+            <Upload className="size-4 mr-2" />
+            Bulk Import
           </Button>
           <Button
             className="cursor-pointer"
