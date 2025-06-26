@@ -355,6 +355,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const interval = setInterval(
       () => {
+        // Double check authentication status before refresh
+        if (!state.isAuthenticated) return;
+        
         const tokens = apiClient.getTokens();
         if (tokens && apiClient.isTokenExpired(tokens)) {
           refreshTokens().catch(console.error);

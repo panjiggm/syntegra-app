@@ -160,6 +160,23 @@ export class ApiClient {
   clearAuth(): void {
     Cookies.remove(TOKEN_KEY);
     Cookies.remove(USER_KEY);
+    
+    // Clear all sessionStorage data
+    try {
+      const keys = Object.keys(sessionStorage);
+      keys.forEach((key) => {
+        if (
+          key.startsWith("attempt_") ||
+          key.startsWith("attempt_data_") ||
+          key.startsWith("draft_") ||
+          key.startsWith("test_result_")
+        ) {
+          sessionStorage.removeItem(key);
+        }
+      });
+    } catch (error) {
+      console.error("Failed to clear session storage:", error);
+    }
   }
 
   isTokenExpired(token?: AuthTokens): boolean {
