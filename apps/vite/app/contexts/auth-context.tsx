@@ -53,7 +53,7 @@ interface AuthContextValue extends AuthState {
 const initialState: AuthState = {
   user: null,
   tokens: null,
-  isLoading: true,
+  isLoading: false,
   isAuthenticated: false,
 };
 
@@ -346,6 +346,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Initialize auth on mount
   useEffect(() => {
+    // Quick check first - if no tokens, skip loading
+    const tokens = apiClient.getTokens();
+    const user = apiClient.getUser();
+    
+    if (!tokens || !user) {
+      dispatch({ type: "SET_LOADING", payload: false });
+      return;
+    }
+    
+    // Only restore session if we have tokens
     restoreSession();
   }, [restoreSession]);
 

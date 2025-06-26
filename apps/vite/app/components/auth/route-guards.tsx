@@ -1,5 +1,5 @@
-import React from "react";
-import { Navigate, useLocation } from "react-router";
+import React, { useEffect } from "react";
+import { Navigate, useLocation, useNavigate } from "react-router";
 import { useAuth } from "~/contexts/auth-context";
 import { LoadingSpinner } from "~/components/ui/loading-spinner";
 
@@ -38,26 +38,40 @@ export function ProtectedRoute({
 }: ProtectedRouteProps) {
   const { isAuthenticated, isLoading, user, canAccess } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
+
+  // Handle redirects in useEffect to avoid StaticRouter issues
+  useEffect(() => {
+    if (isLoading) return;
+
+    // Redirect to login if not authenticated
+    if (!isAuthenticated) {
+      navigate(fallbackPath, { 
+        state: { from: location.pathname }, 
+        replace: true 
+      });
+      return;
+    }
+
+    // Check role-based access
+    if (requiredRole && !canAccess(requiredRole)) {
+      // Redirect based on user role
+      const redirectPath =
+        user?.role === "admin" ? "/admin/dashboard" : "/participant/dashboard";
+      
+      navigate(redirectPath, { replace: true });
+      return;
+    }
+  }, [isLoading, isAuthenticated, requiredRole, canAccess, user, navigate, fallbackPath, location.pathname]);
 
   // Show loading while checking auth
   if (isLoading) {
     return <AuthLoading />;
   }
 
-  // Redirect to login if not authenticated
-  if (!isAuthenticated) {
-    return (
-      <Navigate to={fallbackPath} state={{ from: location.pathname }} replace />
-    );
-  }
-
-  // Check role-based access
-  if (requiredRole && !canAccess(requiredRole)) {
-    // Redirect based on user role
-    const redirectPath =
-      user?.role === "admin" ? "/admin/dashboard" : "/participant/dashboard";
-
-    return <Navigate to={redirectPath} replace />;
+  // Show loading while redirect is happening
+  if (!isAuthenticated || (requiredRole && !canAccess(requiredRole))) {
+    return <AuthLoading />;
   }
 
   return <>{children}</>;
@@ -96,18 +110,30 @@ export function ParticipantRoute({
 // Public Route - accessible only when not authenticated
 export function PublicRoute({ children, redirectTo }: PublicRouteProps) {
   const { isAuthenticated, isLoading, user } = useAuth();
+  const navigate = useNavigate();
+
+  // Handle redirects in useEffect to avoid StaticRouter issues
+  useEffect(() => {
+    if (isLoading) return;
+
+    // Redirect authenticated users
+    if (isAuthenticated && user) {
+      const defaultRedirect =
+        user.role === "admin" ? "/admin/dashboard" : "/participant/dashboard";
+
+      navigate(redirectTo || defaultRedirect, { replace: true });
+      return;
+    }
+  }, [isLoading, isAuthenticated, user, navigate, redirectTo]);
 
   // Show loading while checking auth
   if (isLoading) {
     return <AuthLoading />;
   }
 
-  // Redirect authenticated users
+  // Show loading while redirect is happening
   if (isAuthenticated && user) {
-    const defaultRedirect =
-      user.role === "admin" ? "/admin/dashboard" : "/participant/dashboard";
-
-    return <Navigate to={redirectTo || defaultRedirect} replace />;
+    return <AuthLoading />;
   }
 
   return <>{children}</>;
