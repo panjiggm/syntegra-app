@@ -56,7 +56,7 @@ export async function getSessionReportsListHandler(
       testAttempts,
       sessionModules,
     } = await import("@/db");
-    const { sql, and, or, eq, count, desc, asc, isNotNull } = await import(
+    const { sql, and, or, eq, count, desc, asc, isNotNull, inArray } = await import(
       "drizzle-orm"
     );
 
@@ -223,45 +223,57 @@ export async function getSessionReportsListHandler(
 
     if (sessionIds.length > 0) {
       // Get participation statistics
-      const participationStats = await db
-        .select({
-          session_id: sessionParticipants.session_id,
-          total_registered: count(),
-          total_completed: sql<number>`COUNT(CASE WHEN ${sessionParticipants.status} = 'completed' THEN 1 END)`,
-        })
-        .from(sessionParticipants)
-        .where(
-          sql`${sessionParticipants.session_id} IN (${sql.join(sessionIds, sql`, `)})`
-        )
-        .groupBy(sessionParticipants.session_id);
+      let participationStats: any[] = [];
+      try {
+        participationStats = await db
+          .select({
+            session_id: sessionParticipants.session_id,
+            total_registered: count(),
+            total_completed: sql<number>`COUNT(CASE WHEN ${sessionParticipants.status} = 'completed' THEN 1 END)`,
+          })
+          .from(sessionParticipants)
+          .where(inArray(sessionParticipants.session_id, sessionIds))
+          .groupBy(sessionParticipants.session_id);
+      } catch (participationError) {
+        console.error("Error getting participation stats:", participationError);
+        participationStats = [];
+      }
 
       // Get timing and activity statistics
-      const timingStats = await db
-        .select({
-          session_id: testAttempts.session_test_id,
-          avg_time: sql<number>`AVG(${testAttempts.time_spent})`,
-          total_attempts: count(),
-          last_activity: sql<string>`MAX(${testAttempts.end_time})`,
-        })
-        .from(testAttempts)
-        .where(
-          sql`${testAttempts.session_test_id} IN (${sql.join(sessionIds, sql`, `)})`
-        )
-        .groupBy(testAttempts.session_test_id);
+      let timingStats: any[] = [];
+      try {
+        timingStats = await db
+          .select({
+            session_id: testAttempts.session_test_id,
+            avg_time: sql<number>`COALESCE(AVG(${testAttempts.time_spent}), 0)`,
+            total_attempts: count(),
+            last_activity: sql<string>`MAX(${testAttempts.end_time})`,
+          })
+          .from(testAttempts)
+          .where(inArray(testAttempts.session_test_id, sessionIds))
+          .groupBy(testAttempts.session_test_id);
+      } catch (timingError) {
+        console.error("Error getting timing stats:", timingError);
+        timingStats = [];
+      }
 
       // Get test modules count and total duration
-      const testModulesStats = await db
-        .select({
-          session_id: sessionModules.session_id,
-          total_modules: count(),
-          total_duration: sql<number>`SUM(${tests.time_limit})`,
-        })
-        .from(sessionModules)
-        .innerJoin(tests, eq(sessionModules.test_id, tests.id))
-        .where(
-          sql`${sessionModules.session_id} IN (${sql.join(sessionIds, sql`, `)})`
-        )
-        .groupBy(sessionModules.session_id);
+      let testModulesStats: any[] = [];
+      try {
+        testModulesStats = await db
+          .select({
+            session_id: sessionModules.session_id,
+            total_modules: count(),
+            total_duration: sql<number>`COALESCE(SUM(${tests.time_limit}), 0)`,
+          })
+          .from(sessionModules)
+          .innerJoin(tests, eq(sessionModules.test_id, tests.id))
+          .where(inArray(sessionModules.session_id, sessionIds))
+          .groupBy(sessionModules.session_id);
+      } catch (modulesError) {
+        console.error("Error getting test modules stats:", modulesError);
+        testModulesStats = [];
+      }
 
       // Build session statistics map
       participationStats.forEach((stat) => {

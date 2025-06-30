@@ -211,36 +211,57 @@ export async function getIndividualReportsListHandler(
       const userFreshScores = groupFreshScoresByUser(allUsersFreshScores);
 
       // Get test results statistics for completion rates and timing
-      const testStats = await db
-        .select({
-          user_id: testResults.user_id,
-          total_tests: count(),
-          total_completed: sql<number>`COUNT(CASE WHEN ${testResults.raw_score} IS NOT NULL THEN 1 END)`,
-          total_time: sql<number>`SUM(COALESCE(${testAttempts.time_spent}, 0))`,
-          first_test: sql<string>`MIN(${testResults.calculated_at})`,
-          last_test: sql<string>`MAX(${testResults.calculated_at})`,
-        })
-        .from(testResults)
-        .leftJoin(testAttempts, eq(testResults.attempt_id, testAttempts.id))
-        .where(inArray(testResults.user_id, userIds))
-        .groupBy(testResults.user_id);
+      let testStats = [];
+      try {
+        testStats = await db
+          .select({
+            user_id: testResults.user_id,
+            total_tests: count(),
+            total_completed: sql<number>`COUNT(CASE WHEN ${testResults.raw_score} IS NOT NULL THEN 1 END)`,
+            total_time: sql<number>`COALESCE(SUM(${testAttempts.time_spent}), 0)`,
+            first_test: sql<string>`MIN(${testResults.calculated_at})`,
+            last_test: sql<string>`MAX(${testResults.calculated_at})`,
+          })
+          .from(testResults)
+          .leftJoin(testAttempts, eq(testResults.attempt_id, testAttempts.id))
+          .where(inArray(testResults.user_id, userIds))
+          .groupBy(testResults.user_id);
+      } catch (testStatsError) {
+        console.error("Error getting test stats:", testStatsError);
+        // Initialize with empty stats for all users
+        testStats = userIds.map(userId => ({
+          user_id: userId,
+          total_tests: 0,
+          total_completed: 0,
+          total_time: 0,
+          first_test: null,
+          last_test: null,
+        }));
+      }
 
       // Get session participation data
-      const sessionStats = await db
-        .select({
-          user_id: sessionParticipants.user_id,
-          session_id: testSessions.id,
-          session_name: testSessions.session_name,
-          participation_date: sessionParticipants.registered_at,
-          status: sessionParticipants.status,
-        })
-        .from(sessionParticipants)
-        .innerJoin(
-          testSessions,
-          eq(sessionParticipants.session_id, testSessions.id)
-        )
-        .where(inArray(sessionParticipants.user_id, userIds))
-        .orderBy(desc(sessionParticipants.registered_at));
+      let sessionStats: any[] = [];
+      try {
+        sessionStats = await db
+          .select({
+            user_id: sessionParticipants.user_id,
+            session_id: testSessions.id,
+            session_name: testSessions.session_name,
+            participation_date: sessionParticipants.registered_at,
+            status: sessionParticipants.status,
+          })
+          .from(sessionParticipants)
+          .innerJoin(
+            testSessions,
+            eq(sessionParticipants.session_id, testSessions.id)
+          )
+          .where(inArray(sessionParticipants.user_id, userIds))
+          .orderBy(desc(sessionParticipants.registered_at));
+      } catch (sessionStatsError) {
+        console.error("Error getting session stats:", sessionStatsError);
+        // Initialize with empty session stats
+        sessionStats = [];
+      }
 
       // Build user statistics map
       testStats.forEach((stat) => {
