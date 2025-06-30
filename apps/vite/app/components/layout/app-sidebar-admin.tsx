@@ -7,6 +7,8 @@ import {
   Clock,
   Monitor,
   Target,
+  FolderOpen,
+  Activity,
 } from "lucide-react";
 
 import { NavMain } from "./nav-main";
@@ -27,13 +29,15 @@ const data = {
     subTitle: "Sistem Psikotes Digital",
     logo: "/images/syntegra-clear-logo.png",
   },
-  navMain: [
+  navHome: [
     {
       title: "Dashboard",
       url: "/admin/dashboard",
       icon: BarChart3,
       isActive: true,
     },
+  ],
+  navMain: [
     {
       title: "Manajemen Peserta",
       url: "/admin/users",
@@ -60,6 +64,20 @@ const data = {
       icon: FileText,
     },
   ],
+  navAdministration: [
+    {
+      title: "Dokumen Peserta",
+      url: "/admin/participant-documents",
+      icon: FolderOpen,
+    },
+  ],
+  navPhysicsTest: [
+    {
+      title: "Tes Fisik",
+      url: "/admin/physical-tests",
+      icon: Activity,
+    },
+  ],
 };
 
 export function AppSidebarAdmin({
@@ -71,7 +89,10 @@ export function AppSidebarAdmin({
         <TeamSwitcher company={data.company} />
       </SidebarHeader>
       <SidebarContent>
-        <NavMain items={data.navMain} />
+        <NavMain items={data.navHome} label="Beranda" />
+        <NavMain items={data.navMain} label="Psikotes" />
+        <NavMain items={data.navAdministration} label="Administrasi (Next)" />
+        <NavMain items={data.navPhysicsTest} label="Tes Fisik (Next)" />
       </SidebarContent>
       <SidebarFooter>
         <NavUserAdmin />

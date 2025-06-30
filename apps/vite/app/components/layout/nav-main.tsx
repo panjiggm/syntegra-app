@@ -11,6 +11,7 @@ import {
 
 export function NavMain({
   items,
+  label = "Menu",
 }: {
   items: {
     title: string;
@@ -22,12 +23,13 @@ export function NavMain({
       url: string;
     }[];
   }[];
+  label?: string;
 }) {
   const location = useLocation();
 
   return (
     <SidebarGroup>
-      <SidebarGroupLabel>Menu</SidebarGroupLabel>
+      <SidebarGroupLabel>{label}</SidebarGroupLabel>
       <SidebarMenu>
         {items.map((item) => {
           const isActive =
