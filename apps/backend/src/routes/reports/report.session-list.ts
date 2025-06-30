@@ -229,7 +229,7 @@ export async function getSessionReportsListHandler(
           .select({
             session_id: sessionParticipants.session_id,
             total_registered: count(),
-            total_completed: sql<number>`COUNT(CASE WHEN ${sessionParticipants.status} = 'completed' THEN 1 END)`,
+            total_completed: sql<number>`COUNT(CASE WHEN ${sessionParticipants.status} = 'completed' THEN 1 END)::integer`,
           })
           .from(sessionParticipants)
           .where(inArray(sessionParticipants.session_id, sessionIds))
@@ -238,11 +238,12 @@ export async function getSessionReportsListHandler(
         console.error("Error getting participation stats:", participationError);
         participationStats = [];
       }
+      console.log("Participation stats:", participationStats);
 
-      // Get timing and activity statistics
+      // Get timing and activity statistics from testAttempts
       let timingStats: any[] = [];
       try {
-        timingStats = await db
+        const attemptQuery = db
           .select({
             session_id: testAttempts.session_test_id,
             avg_time: sql<number>`COALESCE(AVG(${testAttempts.time_spent}), 0)`,
@@ -252,6 +253,9 @@ export async function getSessionReportsListHandler(
           .from(testAttempts)
           .where(inArray(testAttempts.session_test_id, sessionIds))
           .groupBy(testAttempts.session_test_id);
+        
+        timingStats = await attemptQuery;
+        console.log("Timing stats:", timingStats);
       } catch (timingError) {
         console.error("Error getting timing stats:", timingError);
         timingStats = [];
@@ -260,7 +264,7 @@ export async function getSessionReportsListHandler(
       // Get test modules count and total duration
       let testModulesStats: any[] = [];
       try {
-        testModulesStats = await db
+        const modulesQuery = db
           .select({
             session_id: sessionModules.session_id,
             total_modules: count(),
@@ -270,6 +274,9 @@ export async function getSessionReportsListHandler(
           .innerJoin(tests, eq(sessionModules.test_id, tests.id))
           .where(inArray(sessionModules.session_id, sessionIds))
           .groupBy(sessionModules.session_id);
+        
+        testModulesStats = await modulesQuery;
+        console.log("Test modules stats:", testModulesStats);
       } catch (modulesError) {
         console.error("Error getting test modules stats:", modulesError);
         testModulesStats = [];
@@ -297,14 +304,12 @@ export async function getSessionReportsListHandler(
         let scoreRange = { min: 0, max: 0 };
 
         if (sessionScores.length > 0) {
-          // Calculate average from fresh scores
           const totalScore = sessionScores.reduce(
             (sum: number, fs: any) => sum + fs.scaledScore,
             0
           );
           averageScore = totalScore / sessionScores.length;
 
-          // Calculate score range from fresh scores
           const scores = sessionScores.map(
             (fs: { scaledScore: number }) => fs.scaledScore
           );
@@ -322,7 +327,7 @@ export async function getSessionReportsListHandler(
           score_range: scoreRange,
           average_time_per_participant: stat.avg_time
             ? Math.round((stat.avg_time / 60) * 100) / 100
-            : 0, // convert seconds to minutes
+            : 0,
           total_test_attempts: stat.total_attempts,
           last_activity: stat.last_activity,
         });
@@ -334,6 +339,23 @@ export async function getSessionReportsListHandler(
           ...existing,
           total_test_modules: stat.total_modules,
           total_duration_minutes: stat.total_duration || 0,
+        });
+      });
+
+      // Ensure all sessions have complete stats with defaults for missing data
+      sessionIds.forEach(sessionId => {
+        const existing = sessionStats.get(sessionId) || {};
+        sessionStats.set(sessionId, {
+          total_registered: existing.total_registered || 0,
+          total_completed: existing.total_completed || 0,
+          completion_rate: existing.completion_rate || 0,
+          average_score: existing.average_score || null,
+          score_range: existing.score_range || { min: null, max: null },
+          average_time_per_participant: existing.average_time_per_participant || 0,
+          total_test_attempts: existing.total_test_attempts || 0,
+          last_activity: existing.last_activity || null,
+          total_test_modules: existing.total_test_modules || 0,
+          total_duration_minutes: existing.total_duration_minutes || 0,
         });
       });
     }

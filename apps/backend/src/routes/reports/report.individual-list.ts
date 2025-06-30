@@ -210,22 +210,21 @@ export async function getIndividualReportsListHandler(
       // Group fresh scores by user
       const userFreshScores = groupFreshScoresByUser(allUsersFreshScores);
 
-      // Get test results statistics for completion rates and timing
+      // Get test statistics from attempts (more accurate for total tests taken)
       let testStats = [];
       try {
         testStats = await db
           .select({
-            user_id: testResults.user_id,
+            user_id: testAttempts.user_id,
             total_tests: count(),
-            total_completed: sql<number>`COUNT(CASE WHEN ${testResults.raw_score} IS NOT NULL THEN 1 END)`,
+            total_completed: sql<number>`COUNT(CASE WHEN ${testAttempts.status} = 'completed' THEN 1 END)`,
             total_time: sql<number>`COALESCE(SUM(${testAttempts.time_spent}), 0)`,
-            first_test: sql<string>`MIN(${testResults.calculated_at})`,
-            last_test: sql<string>`MAX(${testResults.calculated_at})`,
+            first_test: sql<string>`MIN(${testAttempts.start_time})`,
+            last_test: sql<string>`MAX(${testAttempts.end_time})`,
           })
-          .from(testResults)
-          .leftJoin(testAttempts, eq(testResults.attempt_id, testAttempts.id))
-          .where(inArray(testResults.user_id, userIds))
-          .groupBy(testResults.user_id);
+          .from(testAttempts)
+          .where(inArray(testAttempts.user_id, userIds))
+          .groupBy(testAttempts.user_id);
       } catch (testStatsError) {
         console.error("Error getting test stats:", testStatsError);
         // Initialize with empty stats for all users
@@ -340,6 +339,28 @@ export async function getIndividualReportsListHandler(
           sessions_count: sessions.length,
           sessions_participated: sessions,
         });
+      });
+
+      // Ensure all users have session data even if they don't have test stats
+      userIds.forEach(userId => {
+        if (!userStats.has(userId)) {
+          const userSessions = sessionMap.get(userId) || [];
+          userStats.set(userId, {
+            total_tests_taken: 0,
+            total_tests_completed: 0,
+            completion_rate: 0,
+            total_time_spent_minutes: 0,
+            average_score: null,
+            overall_score: null,
+            overall_percentile: null,
+            overall_grade: null,
+            first_test_date: null,
+            last_test_date: null,
+            data_quality_score: 0,
+            sessions_count: userSessions.length,
+            sessions_participated: userSessions,
+          });
+        }
       });
     }
 
