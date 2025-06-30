@@ -51,7 +51,7 @@ export async function getIndividualReportsListHandler(
       sessionParticipants,
       testAttempts,
     } = await import("@/db");
-    const { sql, and, or, eq, count, desc, asc, isNotNull } = await import(
+    const { sql, and, or, eq, count, desc, asc, isNotNull, inArray } = await import(
       "drizzle-orm"
     );
 
@@ -222,7 +222,7 @@ export async function getIndividualReportsListHandler(
         })
         .from(testResults)
         .leftJoin(testAttempts, eq(testResults.attempt_id, testAttempts.id))
-        .where(sql`${testResults.user_id} IN (${sql.join(userIds, sql`, `)})`)
+        .where(inArray(testResults.user_id, userIds))
         .groupBy(testResults.user_id);
 
       // Get session participation data
@@ -239,9 +239,7 @@ export async function getIndividualReportsListHandler(
           testSessions,
           eq(sessionParticipants.session_id, testSessions.id)
         )
-        .where(
-          sql`${sessionParticipants.user_id} IN (${sql.join(userIds, sql`, `)})`
-        )
+        .where(inArray(sessionParticipants.user_id, userIds))
         .orderBy(desc(sessionParticipants.registered_at));
 
       // Build user statistics map
