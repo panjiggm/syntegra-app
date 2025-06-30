@@ -5,6 +5,13 @@
   "compatibility_date": "2025-05-29",
   "compatibility_flags": ["nodejs_compat"],
 
+  // Observability configuration
+  "observability": {
+    "logs": {
+      "enabled": true
+    }
+  },
+
   // Cron triggers for background jobs
   "triggers": {
     "crons": [
