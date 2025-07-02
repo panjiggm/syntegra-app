@@ -2,14 +2,14 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "backend",
   "main": "src/index.ts",
-  "compatibility_date": "2025-05-29",
+  "compatibility_date": "2025-05-25",
   "compatibility_flags": ["nodejs_compat"],
 
   // Observability configuration
   "observability": {
     "logs": {
-      "enabled": true
-    }
+      "enabled": true,
+    },
   },
 
   // Cron triggers for background jobs

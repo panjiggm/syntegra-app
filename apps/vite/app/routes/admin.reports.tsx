@@ -9,6 +9,9 @@ import {
   EmptyDetailView,
   IndividualDetailView,
   SessionDetailView,
+  IndividualDetailViewReadOnly,
+  SessionDetailViewReadOnly,
+  BulkExportManager,
   type IndividualReportsListItem,
   type SessionReportsListItem,
 } from "~/components/admin/reports";
@@ -21,6 +24,7 @@ import {
   TrendingUp,
   AlertCircle,
   CheckCircle,
+  Download,
 } from "lucide-react";
 import type { Route } from "./+types/admin.reports";
 
@@ -153,60 +157,82 @@ function ReportsContent() {
       </div>
 
       {/* Main Reports Content */}
-      <div>
-        {/* New Layout: List and Detail View */}
-        <div>
-          {/* Tabs and Actions */}
-          <Card>
-            <CardContent className="p-6 pt-0">
-              <Tabs value={selectedTab} onValueChange={setSelectedTab}>
-                <div className="flex items-center justify-between mb-4">
-                  <TabsList className="grid w-full max-w-md grid-cols-2">
-                    <TabsTrigger value="individual" className="text-xs">
-                      <Users className="h-4 w-4 mr-1" />
-                      Peserta
-                    </TabsTrigger>
-                    <TabsTrigger value="session" className="text-xs">
-                      <Calendar className="h-4 w-4 mr-1" />
-                      Sesi Tes
-                    </TabsTrigger>
-                  </TabsList>
+      <div className="space-y-6">
+        {/* Bulk Export Manager - Main Feature */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Download className="h-5 w-5" />
+              Export Laporan
+            </CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Export laporan berdasarkan periode atau pilih data spesifik
+            </p>
+          </CardHeader>
+          <CardContent>
+            <BulkExportManager />
+          </CardContent>
+        </Card>
+
+        {/* Data View Tabs - View Only */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              Data Hasil Tes
+            </CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Lihat dan analisa data hasil tes (view only)
+            </p>
+          </CardHeader>
+          <CardContent className="p-6 pt-0">
+            <Tabs value={selectedTab} onValueChange={setSelectedTab}>
+              <div className="flex items-center justify-between mb-4">
+                <TabsList className="grid w-full max-w-md grid-cols-2">
+                  <TabsTrigger value="individual" className="text-xs">
+                    <Users className="h-4 w-4 mr-1" />
+                    Peserta
+                  </TabsTrigger>
+                  <TabsTrigger value="session" className="text-xs">
+                    <Calendar className="h-4 w-4 mr-1" />
+                    Sesi Tes
+                  </TabsTrigger>
+                </TabsList>
+              </div>
+
+              {/* Grid Layout: 50-50 Split */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 min-h-[600px]">
+                {/* Left Side: List */}
+                <div className="space-y-4">
+                  <TabsContent value="individual" className="m-0">
+                    <TabIndividual
+                      onSelectIndividual={setSelectedIndividual}
+                      selectedIndividual={selectedIndividual}
+                    />
+                  </TabsContent>
+
+                  <TabsContent value="session" className="m-0">
+                    <TabSession
+                      onSelectSession={setSelectedSessionDetail}
+                      selectedSession={selectedSessionDetail}
+                    />
+                  </TabsContent>
                 </div>
 
-                {/* Grid Layout: 50-50 Split */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 min-h-[600px]">
-                  {/* Left Side: List */}
-                  <div className="space-y-4">
-                    <TabsContent value="individual" className="m-0">
-                      <TabIndividual
-                        onSelectIndividual={setSelectedIndividual}
-                        selectedIndividual={selectedIndividual}
-                      />
-                    </TabsContent>
-
-                    <TabsContent value="session" className="m-0">
-                      <TabSession
-                        onSelectSession={setSelectedSessionDetail}
-                        selectedSession={selectedSessionDetail}
-                      />
-                    </TabsContent>
-                  </div>
-
-                  {/* Right Side: Detail View */}
-                  <div className="space-y-4">
-                    {selectedTab === "individual" && selectedIndividual ? (
-                      <IndividualDetailView individual={selectedIndividual} />
-                    ) : selectedTab === "session" && selectedSessionDetail ? (
-                      <SessionDetailView session={selectedSessionDetail} />
-                    ) : (
-                      <EmptyDetailView activeTab={selectedTab} />
-                    )}
-                  </div>
+                {/* Right Side: Detail View (No Export) */}
+                <div className="space-y-4">
+                  {selectedTab === "individual" && selectedIndividual ? (
+                    <IndividualDetailViewReadOnly individual={selectedIndividual} />
+                  ) : selectedTab === "session" && selectedSessionDetail ? (
+                    <SessionDetailViewReadOnly session={selectedSessionDetail} />
+                  ) : (
+                    <EmptyDetailView activeTab={selectedTab} />
+                  )}
                 </div>
-              </Tabs>
-            </CardContent>
-          </Card>
-        </div>
+              </div>
+            </Tabs>
+          </CardContent>
+        </Card>
       </div>
     </>
   );

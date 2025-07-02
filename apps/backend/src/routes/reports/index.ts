@@ -20,6 +20,7 @@ import { getIndividualReportHandler } from "./report.individual";
 import { getSessionSummaryReportHandler } from "./report.session-summary";
 import { getComparativeReportHandler } from "./report.comparative";
 import { getBatchReportHandler } from "./report.batch";
+import { getSessionExportDataHandler } from "./report.export-data";
 import { authenticateUser, requireAdmin } from "@/middleware/auth";
 import { generalApiRateLimit } from "@/middleware/rateLimiter";
 
@@ -235,6 +236,17 @@ reportRoutes.get(
     }
   }),
   getBatchReportHandler
+);
+
+// ==================== EXPORT DATA ENDPOINTS ====================
+
+// Get Session Export Data (for professional PDF generation)
+reportRoutes.get(
+  "/export/session/:sessionId",
+  generalApiRateLimit,
+  authenticateUser,
+  requireAdmin,
+  getSessionExportDataHandler
 );
 
 // ==================== UTILITY ROUTES ====================

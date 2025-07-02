@@ -1,4 +1,3 @@
-import { useRef, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { Badge } from "~/components/ui/badge";
 import {
@@ -9,7 +8,6 @@ import {
   Lightbulb,
   Brain,
   Eye,
-  Download,
 } from "lucide-react";
 import { cn } from "~/lib/utils";
 import {
@@ -18,8 +16,6 @@ import {
 } from "~/hooks/use-reports";
 import { formatScore, formatTime, getGradeLabel } from "~/lib/utils/score";
 import { Label } from "~/components/ui/label";
-import jsPDF from "jspdf";
-import * as htmlToImage from "html-to-image";
 import {
   Accordion,
   AccordionContent,
@@ -42,8 +38,6 @@ export function IndividualDetailView({
   const { data: reportData, isLoading } = useGetIndividualReport(
     individual.user_id
   );
-  const contentRef = useRef<HTMLDivElement>(null);
-  const [isExporting, setIsExporting] = useState(false);
 
   const data = reportData?.data;
 
@@ -84,91 +78,6 @@ export function IndividualDetailView({
     }
   };
 
-  const exportToPDF = async () => {
-    if (!contentRef.current || isExporting) return;
-
-    setIsExporting(true);
-    try {
-      const element = contentRef.current;
-
-      // Get the full height of the content
-      const fullHeight = element.scrollHeight;
-      const fullWidth = element.scrollWidth;
-
-      // Create canvas with full dimensions
-      const canvas = await htmlToImage.toCanvas(element, {
-        quality: 1,
-        pixelRatio: 2,
-        backgroundColor: "#ffffff",
-        width: fullWidth,
-        height: fullHeight,
-        // useCORS: true,
-        // allowTaint: true,
-      });
-
-      const pdf = new jsPDF("p", "mm", "a4");
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = pdf.internal.pageSize.getHeight();
-
-      // Convert pixel dimensions to mm (1px = 0.264583mm)
-      const canvasWidthMM = (canvas.width * 0.264583) / 2; // Divide by 2 because of pixelRatio
-      const canvasHeightMM = (canvas.height * 0.264583) / 2;
-
-      // Calculate scale to fit PDF width
-      const scale = pdfWidth / canvasWidthMM;
-      const scaledHeight = canvasHeightMM * scale;
-
-      // Calculate how many pages we need
-      const totalPages = Math.ceil(scaledHeight / pdfHeight);
-
-      for (let i = 0; i < totalPages; i++) {
-        if (i > 0) {
-          pdf.addPage();
-        }
-
-        // Calculate the portion of canvas for this page
-        const sourceY = ((i * pdfHeight) / scale / 0.264583) * 2; // Convert back to canvas pixels
-        const sourceHeight = (pdfHeight / scale / 0.264583) * 2;
-
-        // Create a temporary canvas for this page slice
-        const pageCanvas = document.createElement("canvas");
-        const pageCtx = pageCanvas.getContext("2d");
-
-        if (pageCtx) {
-          pageCanvas.width = canvas.width;
-          pageCanvas.height = Math.min(sourceHeight, canvas.height - sourceY);
-
-          // Draw the slice from the main canvas
-          pageCtx.drawImage(
-            canvas,
-            0,
-            sourceY,
-            canvas.width,
-            pageCanvas.height,
-            0,
-            0,
-            canvas.width,
-            pageCanvas.height
-          );
-
-          // Convert to image and add to PDF
-          const pageDataUrl = pageCanvas.toDataURL("image/png");
-          const actualHeight = Math.min(
-            pdfHeight,
-            scaledHeight - i * pdfHeight
-          );
-
-          pdf.addImage(pageDataUrl, "PNG", 0, 0, pdfWidth, actualHeight);
-        }
-      }
-
-      pdf.save(`${individual.name}_Individual_Report.pdf`);
-      setIsExporting(false);
-    } catch (error) {
-      console.error("Error generating PDF:", error);
-      setIsExporting(false);
-    }
-  };
 
   if (isLoading) {
     return (
@@ -183,21 +92,7 @@ export function IndividualDetailView({
   }
 
   return (
-    <div>
-      <div className="flex justify-end mb-4">
-        <Button
-          onClick={exportToPDF}
-          variant="outline"
-          size="sm"
-          className="gap-2"
-          disabled={isLoading || isExporting}
-        >
-          <Download className="h-4 w-4" />
-          {isExporting ? "Generating PDF..." : "Export PDF"}
-        </Button>
-      </div>
-
-      <div ref={contentRef}>
+    <div className="space-y-6">
         <Card>
           <CardHeader>
             <div className="flex items-start justify-between">
@@ -216,6 +111,11 @@ export function IndividualDetailView({
                   <div className="flex items-center gap-2 text-xs text-muted-foreground">
                     <FileText className="h-3 w-3" />
                     NIK: {individual.nik}
+                  </div>
+                  <div className="mt-2">
+                    <Badge variant="outline" className="text-xs">
+                      📊 Laporan Individual - Export tersedia di bagian atas
+                    </Badge>
                   </div>
                 </div>
               </div>
@@ -493,7 +393,6 @@ export function IndividualDetailView({
             </div>
           </CardContent>
         </Card>
-      </div>
     </div>
   );
 }

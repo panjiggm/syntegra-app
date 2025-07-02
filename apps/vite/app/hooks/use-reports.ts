@@ -6,6 +6,14 @@ import { env } from "~/lib/env-config";
 
 // ==================== TYPES ====================
 
+// Export data interface
+export interface ExportDataQuery {
+  date_from?: string;
+  date_to?: string;
+  status?: string;
+  position?: string;
+}
+
 // New types for list endpoints
 export interface IndividualReportsListQuery {
   page?: number;
@@ -998,6 +1006,28 @@ export function useReports() {
     };
   };
 
+  // Session Export Data (for professional PDF generation)
+  const useGetSessionExportData = (
+    sessionId: string,
+    params?: ExportDataQuery
+  ) => {
+    const queryString = params ? buildQueryParams(params) : "";
+
+    return useQuery({
+      queryKey: [...reportQueryKeys.all, "export-data", sessionId, params] as const,
+      queryFn: async () => {
+        const url = `/reports/export/session/${sessionId}${queryString ? `?${queryString}` : ""}`;
+        const response = await apiClient.get(url);
+        if (!response.success) {
+          throw new Error(response.message || "Failed to fetch export data");
+        }
+        return response;
+      },
+      enabled: !!sessionId,
+      staleTime: 2 * 60 * 1000, // 2 minutes
+    });
+  };
+
   return {
     // List query hooks (new)
     useGetIndividualReportsList,
@@ -1015,6 +1045,9 @@ export function useReports() {
     // Mutation hooks
     useDownloadReport,
     useRegenerateReport,
+
+    // Export hooks
+    useGetSessionExportData,
 
     // Utility hooks
     useInvalidateIndividualsList,
