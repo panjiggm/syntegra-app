@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { format } from "date-fns";
+import { format, differenceInYears } from "date-fns";
 import { id } from "date-fns/locale";
 import {
   CalendarIcon,
@@ -11,6 +11,7 @@ import {
   Mail,
   CreditCard,
   MapPin,
+  AlertTriangle,
 } from "lucide-react";
 
 // UI Components
@@ -25,6 +26,7 @@ import {
   PopoverTrigger,
 } from "~/components/ui/popover";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
+import { Alert, AlertDescription } from "~/components/ui/alert";
 
 // Store
 import { useRegistrationStore } from "~/stores/registration";
@@ -50,7 +52,14 @@ const step1Schema = z.object({
     required_error: "Jenis kelamin harus dipilih",
   }),
   birth_place: z.string().min(2, "Tempat lahir minimal 2 karakter"),
-  birth_date: z.string().min(1, "Tanggal lahir harus diisi"),
+  birth_date: z
+    .string()
+    .min(1, "Tanggal lahir harus diisi")
+    .refine((date) => {
+      const birthDate = new Date(date);
+      const age = differenceInYears(new Date(), birthDate);
+      return age >= 18;
+    }, "Usia minimal 18 tahun untuk mendaftar"),
 });
 
 type Step1FormData = z.infer<typeof step1Schema>;
@@ -64,6 +73,7 @@ export function Step1DataWajib({ onNext }: Step1DataWajibProps) {
   const [birthDate, setBirthDate] = useState<Date | undefined>(
     data.birth_date ? new Date(data.birth_date) : undefined
   );
+  const [showAgeWarning, setShowAgeWarning] = useState(false);
 
   const {
     register,
@@ -92,6 +102,10 @@ export function Step1DataWajib({ onNext }: Step1DataWajibProps) {
       setBirthDate(date);
       const formattedDate = format(date, "yyyy-MM-dd");
       setValue("birth_date", formattedDate, { shouldValidate: true });
+
+      // Check if user is under 18
+      const age = differenceInYears(new Date(), date);
+      setShowAgeWarning(age < 18);
     }
   };
 
@@ -127,7 +141,7 @@ export function Step1DataWajib({ onNext }: Step1DataWajibProps) {
                 className={cn(errors.name && "border-red-500")}
               />
               {errors.name && (
-                <p className="text-sm text-red-500">{errors.name.message}</p>
+                <p className="text-xs text-red-500">{errors.name.message}</p>
               )}
             </div>
 
@@ -145,7 +159,7 @@ export function Step1DataWajib({ onNext }: Step1DataWajibProps) {
                 className={cn(errors.phone && "border-red-500")}
               />
               {errors.phone && (
-                <p className="text-sm text-red-500">{errors.phone.message}</p>
+                <p className="text-xs text-red-500">{errors.phone.message}</p>
               )}
             </div>
 
@@ -163,7 +177,7 @@ export function Step1DataWajib({ onNext }: Step1DataWajibProps) {
                 className={cn(errors.email && "border-red-500")}
               />
               {errors.email && (
-                <p className="text-sm text-red-500">{errors.email.message}</p>
+                <p className="text-xs text-red-500">{errors.email.message}</p>
               )}
             </div>
 
@@ -181,7 +195,7 @@ export function Step1DataWajib({ onNext }: Step1DataWajibProps) {
                 className={cn(errors.nik && "border-red-500")}
               />
               {errors.nik && (
-                <p className="text-sm text-red-500">{errors.nik.message}</p>
+                <p className="text-xs text-red-500">{errors.nik.message}</p>
               )}
             </div>
 
@@ -198,7 +212,7 @@ export function Step1DataWajib({ onNext }: Step1DataWajibProps) {
                 className={cn(errors.birth_place && "border-red-500")}
               />
               {errors.birth_place && (
-                <p className="text-sm text-red-500">
+                <p className="text-xs text-red-500">
                   {errors.birth_place.message}
                 </p>
               )}
@@ -241,9 +255,19 @@ export function Step1DataWajib({ onNext }: Step1DataWajibProps) {
                 </PopoverContent>
               </Popover>
               {errors.birth_date && (
-                <p className="text-sm text-red-500">
+                <p className="text-xs text-red-500">
                   {errors.birth_date.message}
                 </p>
+              )}
+              {showAgeWarning && (
+                <Alert className="border-red-200 bg-red-50">
+                  <AlertTriangle className="h-4 w-4 text-red-600" />
+                  <AlertDescription className="text-red-800 text-xs">
+                    Pendaftaran hanya diperuntukkan bagi peserta yang berusia
+                    minimal 18 tahun. Silakan periksa kembali tanggal lahir
+                    Anda.
+                  </AlertDescription>
+                </Alert>
               )}
             </div>
           </div>
