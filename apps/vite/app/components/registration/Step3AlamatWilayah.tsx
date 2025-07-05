@@ -180,7 +180,7 @@ export function Step3AlamatWilayah({
               className={cn(errors.address && "border-red-500")}
             />
             {errors.address && (
-              <p className="text-sm text-red-500">{errors.address.message}</p>
+              <p className="text-xs text-red-500">{errors.address.message}</p>
             )}
           </div>
 
@@ -215,7 +215,7 @@ export function Step3AlamatWilayah({
                 </SelectContent>
               </Select>
               {errors.province_code && (
-                <p className="text-sm text-red-500">
+                <p className="text-xs text-red-500">
                   {errors.province_code.message}
                 </p>
               )}
@@ -253,7 +253,7 @@ export function Step3AlamatWilayah({
                 </SelectContent>
               </Select>
               {errors.regency_code && (
-                <p className="text-sm text-red-500">
+                <p className="text-xs text-red-500">
                   {errors.regency_code.message}
                 </p>
               )}
@@ -291,7 +291,7 @@ export function Step3AlamatWilayah({
                 </SelectContent>
               </Select>
               {errors.district_code && (
-                <p className="text-sm text-red-500">
+                <p className="text-xs text-red-500">
                   {errors.district_code.message}
                 </p>
               )}
@@ -329,7 +329,7 @@ export function Step3AlamatWilayah({
                 </SelectContent>
               </Select>
               {errors.village_code && (
-                <p className="text-sm text-red-500">
+                <p className="text-xs text-red-500">
                   {errors.village_code.message}
                 </p>
               )}
@@ -347,7 +347,7 @@ export function Step3AlamatWilayah({
               className={cn(errors.postal_code && "border-red-500", "max-w-32")}
             />
             {errors.postal_code && (
-              <p className="text-sm text-red-500">
+              <p className="text-xs text-red-500">
                 {errors.postal_code.message}
               </p>
             )}
@@ -380,7 +380,7 @@ export function Step3AlamatWilayah({
               <h4 className="font-medium text-red-900 mb-2">
                 Gagal Memuat Data Wilayah
               </h4>
-              <p className="text-sm text-red-800">
+              <p className="text-xs text-red-800">
                 Terjadi masalah saat memuat data wilayah. Silakan refresh
                 halaman atau coba lagi nanti.
               </p>

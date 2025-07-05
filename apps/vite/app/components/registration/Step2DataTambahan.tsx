@@ -129,7 +129,7 @@ export function Step2DataTambahan({ onNext, onPrev }: Step2DataTambahanProps) {
                 </SelectContent>
               </Select>
               {errors.education && (
-                <p className="text-sm text-red-500">
+                <p className="text-xs text-red-500">
                   {errors.education.message}
                 </p>
               )}
@@ -161,7 +161,7 @@ export function Step2DataTambahan({ onNext, onPrev }: Step2DataTambahanProps) {
                 </SelectContent>
               </Select>
               {errors.religion && (
-                <p className="text-sm text-red-500">
+                <p className="text-xs text-red-500">
                   {errors.religion.message}
                 </p>
               )}
