@@ -26,6 +26,7 @@ import {
 import { LoadingSpinner } from "~/components/ui/loading-spinner";
 import { ChartContainer } from "~/components/ui/chart";
 import { AttemptAnswersDrawer } from "./AttemptAnswersDrawer";
+import { Button } from "~/components/ui/button";
 
 interface IndividualDetailViewReadOnlyProps {
   individual: IndividualReportsListItem;
@@ -94,7 +95,7 @@ export function IndividualDetailViewReadOnly({
                 {formatScore(individual.overall_score)}
               </p>
               <p className="text-xs text-muted-foreground">
-                {getGradeLabel(individual.overall_score)}
+                {getGradeLabel(String(individual.overall_score))}
               </p>
             </Card>
 
@@ -125,10 +126,10 @@ export function IndividualDetailViewReadOnly({
                 </p>
               </div>
               <p className="text-2xl font-bold text-purple-600">
-                {individual.total_tests}
+                {individual.total_tests_taken}
               </p>
               <p className="text-xs text-muted-foreground">
-                {individual.completed_tests} selesai
+                {individual.total_tests_completed} selesai
               </p>
             </Card>
 
@@ -153,7 +154,7 @@ export function IndividualDetailViewReadOnly({
           </div>
 
           {/* Test Performance Analysis */}
-          {data?.test_performance && data.test_performance.length > 0 && (
+          {data?.test_performances && data.test_performances.length > 0 && (
             <Card className="mb-6">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -163,7 +164,7 @@ export function IndividualDetailViewReadOnly({
               </CardHeader>
               <CardContent>
                 <Accordion type="multiple" className="w-full">
-                  {data.test_performance.map((test: any, index: number) => (
+                  {data.test_performances.map((test: any, index: number) => (
                     <AccordionItem key={index} value={`test-${index}`}>
                       <AccordionTrigger className="cursor-pointer">
                         <div className="flex items-center justify-between w-full pr-4">
@@ -223,7 +224,16 @@ export function IndividualDetailViewReadOnly({
                             <AttemptAnswersDrawer
                               attemptId={test.attempt_id}
                               testName={test.test_name}
-                            />
+                            >
+                              <Button
+                                variant="link"
+                                size="sm"
+                                className="gap-2 cursor-pointer"
+                              >
+                                <Eye className="h-4 w-4" />
+                                Lihat Detail Jawaban
+                              </Button>
+                            </AttemptAnswersDrawer>
                           </div>
                         )}
                       </AccordionContent>
@@ -264,7 +274,7 @@ export function IndividualDetailViewReadOnly({
           )}
 
           {/* Trait Analysis */}
-          {data?.trait_analysis && data.trait_analysis.length > 0 && (
+          {/* {data?. && data.trait_analysis.length > 0 && (
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -313,7 +323,7 @@ export function IndividualDetailViewReadOnly({
                 </div>
               </CardContent>
             </Card>
-          )}
+          )} */}
         </CardContent>
       </Card>
     </div>

@@ -58,13 +58,13 @@ export async function getTestResultsReportHandler(
       period_type: query.period_type,
       startDate: startDate.toISOString(),
       endDate: endDate.toISOString(),
-      label
+      label,
     });
 
     // Get database connection
     const db = getDbFromEnv(c.env);
 
-    // Build base date filter  
+    // Build base date filter
     const dateFilter = between(testSessions.start_time, startDate, endDate);
     // Temporarily remove status filter to debug
     // const dateFilter = and(
@@ -88,34 +88,34 @@ export async function getTestResultsReportHandler(
       .select({ count: count() })
       .from(testSessions)
       .where(between(testSessions.start_time, startDate, endDate));
-    
+
     // Debug: Check total sessions in database
     const totalSessionsAll = await db
       .select({ count: count() })
       .from(testSessions);
-    
+
     // Debug: Check all sessions with their dates
     const allSessionsDates = await db
-      .select({ 
+      .select({
         id: testSessions.id,
         start_time: testSessions.start_time,
-        status: testSessions.status 
+        status: testSessions.status,
       })
       .from(testSessions)
       .limit(10);
-    
+
     console.log("Debug sessions extensive check:", {
       totalSessionsInDateRange: totalSessionsInDateRange[0]?.count || 0,
       totalSessionsAll: totalSessionsAll[0]?.count || 0,
-      sampleSessions: allSessionsDates.map(s => ({
+      sampleSessions: allSessionsDates.map((s) => ({
         id: s.id,
         start_time: s.start_time?.toISOString(),
-        status: s.status
+        status: s.status,
       })),
       queryDateRange: {
         startDate: startDate.toISOString(),
-        endDate: endDate.toISOString()
-      }
+        endDate: endDate.toISOString(),
+      },
     });
 
     // Get summary statistics
@@ -214,7 +214,14 @@ function calculateDateRange(query: GetTestResultsReportQuery) {
     case "last_month":
       const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
       startDate = new Date(lastMonth.getFullYear(), lastMonth.getMonth(), 1);
-      endDate = new Date(lastMonth.getFullYear(), lastMonth.getMonth() + 1, 0, 23, 59, 59);
+      endDate = new Date(
+        lastMonth.getFullYear(),
+        lastMonth.getMonth() + 1,
+        0,
+        23,
+        59,
+        59
+      );
       label = `${lastMonth.toLocaleDateString("id-ID", {
         month: "long",
         year: "numeric",
@@ -335,100 +342,213 @@ async function getSessionsWithStats(db: any, whereClause: any) {
     .where(whereClause)
     .orderBy(desc(testSessions.start_time));
 
-  // Get statistics for each session
-  const sessions = await Promise.all(
-    sessionsData.map(async (session: any) => {
-      const [participantsCount] = await db
-        .select({ count: count() })
-        .from(sessionParticipants)
-        .where(eq(sessionParticipants.session_id, session.session_id));
-
-      const [completedCount] = await db
-        .select({ count: count() })
-        .from(sessionParticipants)
-        .where(
-          and(
-            eq(sessionParticipants.session_id, session.session_id),
-            eq(sessionParticipants.status, "completed")
-          )
-        );
-
-      const avgScoreResult = await db
-        .select({
-          avg_score: sql`AVG(${sessionResults.weighted_score})`,
-          avg_duration: sql`AVG(${testAttempts.time_spent})`,
-        })
-        .from(sessionResults)
-        .leftJoin(
-          testAttempts,
-          eq(sessionResults.user_id, testAttempts.user_id)
-        )
-        .where(eq(sessionResults.session_id, session.session_id));
-
-      const modules = await db
-        .select({
-          test_name: tests.name,
-        })
-        .from(sessionModules)
-        .innerJoin(tests, eq(sessionModules.test_id, tests.id))
-        .where(eq(sessionModules.session_id, session.session_id))
-        .orderBy(asc(sessionModules.sequence));
-
-      return {
-        session_id: session.session_id,
-        session_code: session.session_code,
-        session_name: session.session_name,
-        date: session.start_time.toISOString().split("T")[0],
-        time: `${session.start_time.toTimeString().slice(0, 5)}-${session.end_time.toTimeString().slice(0, 5)}`,
-        target_position: session.target_position || "Unknown",
-        location: session.location,
-        proctor_name: session.proctor_name,
-        total_participants: participantsCount.count,
-        completed_participants: completedCount.count,
-        completion_rate:
-          participantsCount.count > 0
-            ? Number(
-                (
-                  (completedCount.count / participantsCount.count) *
-                  100
-                ).toFixed(1)
-              )
-            : 0,
-        average_score: avgScoreResult[0]?.avg_score
-          ? Number(Number(avgScoreResult[0].avg_score).toFixed(1))
-          : 0,
-        average_duration_minutes: avgScoreResult[0]?.avg_duration
-          ? Math.round(Number(avgScoreResult[0].avg_duration) / 60)
-          : 0,
-        test_modules: modules
-          .map((m: { test_name: string }) => m.test_name)
-          .join(", "),
-      };
-    })
+  console.log(
+    `Found ${sessionsData.length} sessions for statistics calculation`
   );
 
+  // Get session IDs for batch processing
+  const sessionIds = sessionsData.map((s: any) => s.session_id);
+
+  // Import fresh scores calculation function and drizzle utilities
+  const { calculateFreshScoresForSession } = await import(
+    "@/lib/reportCalculations"
+  );
+  const { inArray } = await import("drizzle-orm");
+
+  // Calculate fresh scores for all sessions
+  const allSessionsFreshScores = await Promise.all(
+    sessionIds.map((sessionId: string) =>
+      calculateFreshScoresForSession(db, sessionId)
+    )
+  );
+
+  // Create a map for each session's fresh scores
+  const sessionFreshScoresMap = new Map();
+  allSessionsFreshScores.forEach((sessionScores, index) => {
+    sessionFreshScoresMap.set(sessionIds[index], sessionScores);
+  });
+
+  const totalFreshScores = allSessionsFreshScores.reduce(
+    (sum, scores) => sum + scores.length,
+    0
+  );
+  console.log(
+    `Calculated ${totalFreshScores} fresh scores for ${sessionIds.length} sessions`
+  );
+
+  // Get statistics for each session
+  const sessionStats = new Map();
+
+  if (sessionIds.length > 0) {
+    // Get participation statistics
+    let participationStats: any[] = [];
+    try {
+      participationStats = await db
+        .select({
+          session_id: sessionParticipants.session_id,
+          total_registered: count(),
+          total_completed: sql<number>`COUNT(CASE WHEN ${sessionParticipants.status} = 'completed' THEN 1 END)::integer`,
+        })
+        .from(sessionParticipants)
+        .where(inArray(sessionParticipants.session_id, sessionIds))
+        .groupBy(sessionParticipants.session_id);
+    } catch (participationError) {
+      console.error("Error getting participation stats:", participationError);
+      participationStats = [];
+    }
+    console.log("Participation stats:", participationStats);
+
+    // Get timing and activity statistics from testAttempts
+    let timingStats: any[] = [];
+    try {
+      const attemptQuery = db
+        .select({
+          session_id: testAttempts.session_test_id,
+          avg_time: sql<number>`COALESCE(AVG(${testAttempts.time_spent}), 0)`,
+          total_attempts: count(),
+          last_activity: sql<string>`MAX(${testAttempts.end_time})`,
+        })
+        .from(testAttempts)
+        .where(inArray(testAttempts.session_test_id, sessionIds))
+        .groupBy(testAttempts.session_test_id);
+
+      timingStats = await attemptQuery;
+      console.log("Timing stats:", timingStats);
+    } catch (timingError) {
+      console.error("Error getting timing stats:", timingError);
+      timingStats = [];
+    }
+
+    // Build session statistics map
+    participationStats.forEach((stat) => {
+      const completionRate =
+        stat.total_registered > 0
+          ? (stat.total_completed / stat.total_registered) * 100
+          : 0;
+      sessionStats.set(stat.session_id, {
+        total_registered: stat.total_registered,
+        total_completed: stat.total_completed,
+        completion_rate: Math.round(completionRate * 100) / 100,
+      });
+    });
+
+    timingStats.forEach((stat) => {
+      const existing = sessionStats.get(stat.session_id) || {};
+
+      // Get fresh scores for this session
+      const sessionScores = sessionFreshScoresMap.get(stat.session_id) || [];
+      let averageScore = null;
+      let scoreRange = { min: 0, max: 0 };
+
+      if (sessionScores.length > 0) {
+        const totalScore = sessionScores.reduce(
+          (sum: number, fs: any) => sum + fs.scaledScore,
+          0
+        );
+        averageScore = totalScore / sessionScores.length;
+
+        const scores = sessionScores.map(
+          (fs: { scaledScore: number }) => fs.scaledScore
+        );
+        scoreRange = {
+          min: Math.min(...scores),
+          max: Math.max(...scores),
+        };
+      }
+
+      sessionStats.set(stat.session_id, {
+        ...existing,
+        average_score: averageScore
+          ? Math.round(averageScore * 100) / 100
+          : null,
+        score_range: scoreRange,
+        average_time_per_participant: stat.avg_time
+          ? Math.round((stat.avg_time / 60) * 100) / 100
+          : 0,
+        total_test_attempts: stat.total_attempts,
+        last_activity: stat.last_activity,
+      });
+    });
+
+    // Ensure all sessions have complete stats with defaults for missing data
+    sessionIds.forEach((sessionId: any) => {
+      const existing = sessionStats.get(sessionId) || {};
+      sessionStats.set(sessionId, {
+        total_registered: existing.total_registered || 0,
+        total_completed: existing.total_completed || 0,
+        completion_rate: existing.completion_rate || 0,
+        average_score: existing.average_score || null,
+        score_range: existing.score_range || { min: null, max: null },
+        average_time_per_participant:
+          existing.average_time_per_participant || 0,
+        total_test_attempts: existing.total_test_attempts || 0,
+        last_activity: existing.last_activity || null,
+      });
+    });
+  }
+
+  // Get test modules for each session
+  const sessionModulesData = await db
+    .select({
+      session_id: sessionModules.session_id,
+      test_name: tests.name,
+    })
+    .from(sessionModules)
+    .innerJoin(tests, eq(sessionModules.test_id, tests.id))
+    .where(inArray(sessionModules.session_id, sessionIds))
+    .orderBy(asc(sessionModules.sequence));
+
+  // Group modules by session
+  const modulesMap = new Map();
+  sessionModulesData.forEach((module: any) => {
+    if (!modulesMap.has(module.session_id)) {
+      modulesMap.set(module.session_id, []);
+    }
+    modulesMap.get(module.session_id).push(module.test_name);
+  });
+
+  // Format response data
+  const sessions = sessionsData.map((session: any) => {
+    const stats = sessionStats.get(session.session_id) || {};
+    const modules = modulesMap.get(session.session_id) || [];
+
+    return {
+      session_id: session.session_id,
+      session_code: session.session_code,
+      session_name: session.session_name,
+      date: session.start_time.toISOString().split("T")[0],
+      time: `${session.start_time.toTimeString().slice(0, 5)}-${session.end_time.toTimeString().slice(0, 5)}`,
+      target_position: session.target_position || "Unknown",
+      location: session.location,
+      proctor_name: session.proctor_name,
+      total_participants: stats.total_registered || 0,
+      completed_participants: stats.total_completed || 0,
+      completion_rate: stats.completion_rate || 0,
+      average_score: stats.average_score || 0,
+      average_duration_minutes: stats.average_time_per_participant || 0,
+      test_modules: modules.join(", "),
+    };
+  });
+
+  console.log(`Processed ${sessions.length} sessions with statistics`);
   return sessions;
 }
 
 // Get participants with their results
 async function getParticipantsWithResults(db: any, whereClause: any) {
-  // First, get the participant data without JSON fields to avoid GROUP BY issues
-  const participantsData = await db
+  // First, get all session participants that match the filter
+  const sessionParticipantsData = await db
     .select({
+      session_id: testSessions.id,
       session_code: testSessions.session_code,
       session_name: testSessions.session_name,
+      user_id: sessionParticipants.user_id,
+      participant_status: sessionParticipants.status,
       nik: users.nik,
       name: users.name,
       gender: users.gender,
       birth_date: users.birth_date,
       education: users.education,
-      total_score: sessionResults.weighted_score,
-      overall_grade: sessionResults.overall_grade,
-      overall_percentile: sessionResults.overall_percentile,
-      completion_rate: sessionResults.completion_rate,
-      status: sessionParticipants.status,
-      user_id: users.id,
-      session_id: testSessions.id,
     })
     .from(sessionParticipants)
     .innerJoin(
@@ -436,72 +556,163 @@ async function getParticipantsWithResults(db: any, whereClause: any) {
       eq(sessionParticipants.session_id, testSessions.id)
     )
     .innerJoin(users, eq(sessionParticipants.user_id, users.id))
-    .leftJoin(
-      sessionResults,
-      and(
-        eq(sessionResults.user_id, users.id),
-        eq(sessionResults.session_id, testSessions.id)
-      )
-    )
     .where(whereClause)
     .orderBy(asc(testSessions.session_code), asc(users.name));
 
-  // Then, for each participant, get their test attempts and additional data
-  const participantsWithDetails = await Promise.all(
-    participantsData.map(async (participant: any) => {
-      // Get test attempts for this user
-      const attempts = await db
-        .select({
-          start_time: testAttempts.start_time,
-          actual_end_time: testAttempts.actual_end_time,
-        })
-        .from(testAttempts)
-        .where(eq(testAttempts.user_id, participant.user_id));
-
-      // Get session results with JSON fields
-      const [sessionResult] = await db
-        .select({
-          recommended_positions: sessionResults.recommended_positions,
-          primary_traits: sessionResults.primary_traits,
-        })
-        .from(sessionResults)
-        .where(
-          and(
-            eq(sessionResults.user_id, participant.user_id),
-            eq(sessionResults.session_id, participant.session_id)
-          )
-        )
-        .limit(1);
-
-      const startTimes = attempts
-        .map((a: { start_time: Date }) => a.start_time)
-        .filter(Boolean);
-      const endTimes = attempts
-        .map((a: { actual_end_time: Date }) => a.actual_end_time)
-        .filter(Boolean);
-
-      const start_time =
-        startTimes.length > 0
-          ? new Date(
-              Math.min(...startTimes.map((t: any) => new Date(t).getTime()))
-            )
-          : null;
-      const end_time =
-        endTimes.length > 0
-          ? new Date(
-              Math.max(...endTimes.map((t: any) => new Date(t).getTime()))
-            )
-          : null;
-
-      return {
-        ...participant,
-        start_time,
-        end_time,
-        recommended_positions: sessionResult?.recommended_positions,
-        primary_traits: sessionResult?.primary_traits,
-      };
-    })
+  console.log(
+    `Found ${sessionParticipantsData.length} session participants matching filter`
   );
+
+  // Import calculation functions and Drizzle utilities
+  const {
+    calculateFreshScoresForUsers,
+    groupFreshScoresByUser,
+    calculateUserAverageFromFreshScores,
+  } = await import("@/lib/reportCalculations");
+
+  const { inArray } = await import("drizzle-orm");
+
+  // Get all unique user IDs
+  const userIds = [
+    ...new Set(sessionParticipantsData.map((p: any) => p.user_id)),
+  ] as string[];
+
+  // Calculate fresh scores for all users (this will give us the real scores and grades)
+  const allUsersFreshScores = await calculateFreshScoresForUsers(db, userIds);
+
+  console.log(
+    `Calculated ${allUsersFreshScores.length} fresh scores for ${userIds.length} users`
+  );
+
+  // Group fresh scores by user
+  const userFreshScores = groupFreshScoresByUser(allUsersFreshScores);
+
+  // Get session results for additional data
+  const sessionIds = [
+    ...new Set(sessionParticipantsData.map((p: any) => p.session_id)),
+  ] as string[];
+
+  let sessionResultsData: any[] = [];
+
+  if (userIds.length > 0 && sessionIds.length > 0) {
+    sessionResultsData = await db
+      .select({
+        user_id: sessionResults.user_id,
+        session_id: sessionResults.session_id,
+        weighted_score: sessionResults.weighted_score,
+        overall_grade: sessionResults.overall_grade,
+        overall_percentile: sessionResults.overall_percentile,
+        completion_rate: sessionResults.completion_rate,
+        recommended_positions: sessionResults.recommended_positions,
+        primary_traits: sessionResults.primary_traits,
+      })
+      .from(sessionResults)
+      .where(
+        and(
+          inArray(sessionResults.user_id, userIds),
+          inArray(sessionResults.session_id, sessionIds)
+        )
+      );
+  }
+
+  // Create maps for quick lookup
+  const sessionResultsMap = new Map();
+  sessionResultsData.forEach((result) => {
+    const key = `${result.user_id}-${result.session_id}`;
+    sessionResultsMap.set(key, result);
+  });
+
+  // Now combine the data
+  const participantsData = sessionParticipantsData.map((participant: any) => {
+    const sessionResultKey = `${participant.user_id}-${participant.session_id}`;
+    const sessionResult = sessionResultsMap.get(sessionResultKey);
+
+    // Get fresh scores for this user
+    const userScores = userFreshScores[participant.user_id] || [];
+    let freshAverage = null;
+    let calculatedGrade = null;
+
+    if (userScores.length > 0) {
+      freshAverage = calculateUserAverageFromFreshScores(userScores);
+
+      // Calculate grade based on fresh scores
+      if (freshAverage.overallScore > 0) {
+        if (freshAverage.overallScore >= 90) calculatedGrade = "A";
+        else if (freshAverage.overallScore >= 80) calculatedGrade = "B";
+        else if (freshAverage.overallScore >= 70) calculatedGrade = "C";
+        else if (freshAverage.overallScore >= 60) calculatedGrade = "D";
+        else calculatedGrade = "E";
+      }
+    }
+
+    return {
+      ...participant,
+      // Use session results if available, otherwise use calculated fresh scores
+      total_score:
+        sessionResult?.weighted_score ||
+        (freshAverage ? freshAverage.overallScore : null),
+      overall_grade: sessionResult?.overall_grade || calculatedGrade,
+      overall_percentile:
+        sessionResult?.overall_percentile ||
+        (freshAverage ? freshAverage.overallPercentile : null),
+      completion_rate: sessionResult?.completion_rate,
+      status: participant.participant_status,
+      recommended_positions: sessionResult?.recommended_positions,
+      primary_traits: sessionResult?.primary_traits,
+    };
+  });
+
+  // Get test attempts for duration calculation
+  let userAttemptsData: any[] = [];
+
+  if (userIds.length > 0) {
+    userAttemptsData = await db
+      .select({
+        user_id: testAttempts.user_id,
+        start_time: testAttempts.start_time,
+        actual_end_time: testAttempts.actual_end_time,
+      })
+      .from(testAttempts)
+      .where(inArray(testAttempts.user_id, userIds));
+  }
+
+  // Group attempts by user
+  const userAttemptsMap = new Map();
+  userAttemptsData.forEach((attempt) => {
+    if (!userAttemptsMap.has(attempt.user_id)) {
+      userAttemptsMap.set(attempt.user_id, []);
+    }
+    userAttemptsMap.get(attempt.user_id).push(attempt);
+  });
+
+  // Add timing data to participants
+  const participantsWithDetails = participantsData.map((participant: any) => {
+    const attempts = userAttemptsMap.get(participant.user_id) || [];
+
+    const startTimes = attempts
+      .map((a: { start_time: Date }) => a.start_time)
+      .filter(Boolean);
+    const endTimes = attempts
+      .map((a: { actual_end_time: Date }) => a.actual_end_time)
+      .filter(Boolean);
+
+    const start_time =
+      startTimes.length > 0
+        ? new Date(
+            Math.min(...startTimes.map((t: any) => new Date(t).getTime()))
+          )
+        : null;
+    const end_time =
+      endTimes.length > 0
+        ? new Date(Math.max(...endTimes.map((t: any) => new Date(t).getTime())))
+        : null;
+
+    return {
+      ...participant,
+      start_time,
+      end_time,
+    };
+  });
 
   return participantsWithDetails.map((participant: any) => {
     const age = participant.birth_date
@@ -533,6 +744,17 @@ async function getParticipantsWithResults(db: any, whereClause: any) {
       }
     }
 
+    // Determine proper status text
+    let statusText = "Not Started";
+    if (participant.status === "completed") {
+      statusText = "Completed";
+    } else if (
+      participant.status === "started" ||
+      participant.status === "in_progress"
+    ) {
+      statusText = "In Progress";
+    }
+
     return {
       session_code: participant.session_code,
       session_name: participant.session_name,
@@ -557,12 +779,7 @@ async function getParticipantsWithResults(db: any, whereClause: any) {
         ? Number(participant.completion_rate)
         : 0,
       duration_minutes: duration,
-      status:
-        participant.status === "completed"
-          ? "Completed"
-          : participant.status === "started"
-            ? "In Progress"
-            : "Not Started",
+      status: statusText,
       recommended_position: recommendedPosition,
       compatibility_score: compatibilityScore,
       primary_traits: (() => {
