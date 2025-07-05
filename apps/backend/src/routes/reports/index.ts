@@ -12,6 +12,7 @@ import {
   GetComparativeReportQuerySchema,
   GetBatchReportRequestSchema,
   GetBatchReportQuerySchema,
+  GetTestResultsReportQuerySchema,
   type ReportErrorResponse,
 } from "shared-types";
 import { getIndividualReportsListHandler } from "./report.individual-list";
@@ -23,6 +24,7 @@ import { getBatchReportHandler } from "./report.batch";
 import { getSessionExportDataHandler } from "./report.export-data";
 import { authenticateUser, requireAdmin } from "@/middleware/auth";
 import { generalApiRateLimit } from "@/middleware/rateLimiter";
+import { getTestResultsReportHandler } from "./report.test-results";
 
 const reportRoutes = new Hono<{ Bindings: CloudflareBindings }>();
 
@@ -238,11 +240,35 @@ reportRoutes.get(
   getBatchReportHandler
 );
 
+// Get Test Results Report (Admin only)
+reportRoutes.get(
+  "/test-results",
+  generalApiRateLimit,
+  authenticateUser,
+  requireAdmin,
+  zValidator("query", GetTestResultsReportQuerySchema, (result, c) => {
+    if (!result.success) {
+      const errorResponse: ReportErrorResponse = {
+        success: false,
+        message: "Invalid query parameters",
+        errors: result.error.errors.map((err) => ({
+          field: err.path.join("."),
+          message: err.message,
+          code: err.code,
+        })),
+        timestamp: new Date().toISOString(),
+      };
+      return c.json(errorResponse, 400);
+    }
+  }),
+  getTestResultsReportHandler
+);
+
 // ==================== EXPORT DATA ENDPOINTS ====================
 
 // Get Session Export Data (for professional PDF generation)
 reportRoutes.get(
-  "/export/session/:sessionId",
+  "/export-data/:sessionId",
   generalApiRateLimit,
   authenticateUser,
   requireAdmin,

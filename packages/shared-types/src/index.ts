@@ -75,6 +75,9 @@ export * from "./answer";
 // Export all test-result-related types and schemas
 export * from "./test-result";
 
+// Export all test-results-related types and schemas
+export * from "./test-results";
+
 // Export all dashboard-related types and schemas
 export * from "./dashboard";
 
