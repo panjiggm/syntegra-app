@@ -98,11 +98,26 @@ export function useUsers() {
     });
   };
 
+  // Bulk delete users
+  const useBulkDeleteUsers = () => {
+    return useMutation({
+      mutationFn: (userIds: string[]) =>
+        apiCall(`/users/bulk/delete`, {
+          method: "DELETE",
+          body: JSON.stringify({ userIds }),
+        }),
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ["users"] });
+      },
+    });
+  };
+
   return {
     useGetUsers,
     useGetUserById,
     useCreateUser,
     useUpdateUser,
     useDeleteUser,
+    useBulkDeleteUsers,
   };
 }

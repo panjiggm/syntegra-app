@@ -349,6 +349,32 @@ export const DeleteUserByIdRequestSchema = z.object({
   userId: z.string().uuid("Invalid user ID format"),
 });
 
+// Bulk Delete Users Schema
+export const BulkDeleteUsersRequestSchema = z.object({
+  userIds: z.array(z.string().uuid("Invalid user ID format")).min(1, "At least one user ID is required"),
+});
+
+export const BulkDeleteUsersResponseSchema = z.object({
+  success: z.literal(true),
+  message: z.string(),
+  data: z.object({
+    deleted_count: z.number(),
+    failed_count: z.number(),
+    deleted_users: z.array(z.object({
+      id: z.string().uuid(),
+      name: z.string(),
+      email: z.string().email(),
+    })),
+    failed_users: z.array(z.object({
+      id: z.string().uuid(),
+      name: z.string().optional(),
+      email: z.string().email().optional(),
+      error: z.string(),
+    })),
+  }),
+  timestamp: z.string(),
+});
+
 // ==================== TYPE EXPORTS ====================
 
 export type Role = z.infer<typeof RoleEnum>;
@@ -368,6 +394,8 @@ export type UpdateUserDB = z.infer<typeof UpdateUserDBSchema>;
 export type UpdateUserResponse = z.infer<typeof UpdateUserResponseSchema>;
 export type UpdateUserByIdRequest = z.infer<typeof UpdateUserByIdRequestSchema>;
 export type DeleteUserByIdRequest = z.infer<typeof DeleteUserByIdRequestSchema>;
+export type BulkDeleteUsersRequest = z.infer<typeof BulkDeleteUsersRequestSchema>;
+export type BulkDeleteUsersResponse = z.infer<typeof BulkDeleteUsersResponseSchema>;
 
 // Additional response types
 export type UserData = z.infer<typeof UserDataSchema>;

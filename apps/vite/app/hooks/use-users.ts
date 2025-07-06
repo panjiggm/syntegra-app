@@ -405,6 +405,51 @@ export function useUsers() {
     });
   };
 
+  // Bulk delete users (Mutation)
+  const useBulkDeleteUsers = () => {
+    return useMutation({
+      mutationFn: async (userIds: string[]) => {
+        const response = await apiClient.delete("/users/bulk/delete", {
+          data: { userIds },
+        });
+        if (!response.success) {
+          throw new Error(response.message || "Failed to delete users");
+        }
+        return response;
+      },
+      onSuccess: (data) => {
+        // Invalidate and refetch users list
+        queryClient.invalidateQueries({ queryKey: queryKeys.users.lists() });
+
+        const { deleted_count, failed_count } = data.data;
+        
+        if (failed_count > 0) {
+          toast.success(`${deleted_count} users berhasil dihapus`, {
+            description: `${failed_count} users gagal dihapus`,
+          });
+        } else {
+          toast.success(`${deleted_count} users berhasil dihapus`);
+        }
+      },
+      onError: (error: Error) => {
+        console.error("Bulk delete error:", error);
+        const errorMessage = error.message.toLowerCase();
+        
+        if (errorMessage.includes("last admin")) {
+          toast.error("Tidak dapat menghapus semua admin", {
+            description: "Minimal satu admin harus tetap aktif",
+          });
+        } else if (errorMessage.includes("own account")) {
+          toast.error("Tidak dapat menghapus akun sendiri");
+        } else {
+          toast.error("Gagal menghapus users", {
+            description: error.message,
+          });
+        }
+      },
+    });
+  };
+
   return {
     // Queries
     useGetUsers,
@@ -418,5 +463,6 @@ export function useUsers() {
     useBulkValidateCSV,
     useBulkCreateFromCSV,
     useBulkCreateFromJSON,
+    useBulkDeleteUsers,
   };
 }

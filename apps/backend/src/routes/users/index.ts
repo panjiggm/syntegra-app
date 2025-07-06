@@ -9,6 +9,7 @@ import {
   DeleteUserByIdRequestSchema,
   CSVUploadRequestSchema,
   BulkCreateUsersRequestSchema,
+  BulkDeleteUsersRequestSchema,
   type ErrorResponse,
   z,
 } from "shared-types";
@@ -32,6 +33,7 @@ import {
   validateSyntegraCSVHandler,
   createUsersFromCSVHandler,
 } from "./user.bulk.csv";
+import { bulkDeleteUsersHandler } from "./user.bulk.delete";
 import {
   userRegistrationRateLimit,
   generalApiRateLimit,
@@ -296,6 +298,30 @@ userRoutes.post(
       501
     );
   }
+);
+
+// Bulk Delete Users
+userRoutes.delete(
+  "/bulk/delete",
+  generalApiRateLimit,
+  authenticateUser,
+  requireAdmin,
+  zValidator("json", BulkDeleteUsersRequestSchema, (result, c) => {
+    if (!result.success) {
+      const errorResponse: ErrorResponse = {
+        success: false,
+        message: "Validation failed",
+        errors: result.error.errors.map((err) => ({
+          field: err.path.join("."),
+          message: err.message,
+          code: err.code,
+        })),
+        timestamp: new Date().toISOString(),
+      };
+      return c.json(errorResponse, 400);
+    }
+  }),
+  bulkDeleteUsersHandler
 );
 
 // ==================== USER STATISTICS (Admin only) ====================
