@@ -44,6 +44,11 @@ export const CreateTestRequestSchema = z.object({
   module_type: ModuleTypeEnum,
   category: CategoryEnum,
   time_limit: z.number().min(0, "Time limit default adalah 0").optional(),
+  default_question_time_limit: z
+    .number()
+    .min(10, "Default question time limit must be at least 10 seconds")
+    .max(600, "Default question time limit cannot exceed 600 seconds")
+    .optional(),
   icon: z
     .string()
     .max(10, "Icon must be an emoji (max 10 characters)")
@@ -84,6 +89,11 @@ export const UpdateTestRequestSchema = z
     module_type: ModuleTypeEnum.optional(),
     category: CategoryEnum.optional(),
     time_limit: z.number().min(0, "Time limit default adalah 0").optional(),
+    default_question_time_limit: z
+      .number()
+      .min(10, "Default question time limit must be at least 10 seconds")
+      .max(600, "Default question time limit cannot exceed 600 seconds")
+      .optional(),
     icon: z
       .string()
       .max(10, "Icon must be an emoji (max 10 characters)")
@@ -210,6 +220,7 @@ export const TestDataSchema = z.object({
   module_type: ModuleTypeEnum,
   category: CategoryEnum,
   time_limit: z.number(), // in minutes
+  default_question_time_limit: z.number().nullable(), // in seconds
   icon: z.string().nullable(),
   card_color: z.string().nullable(),
   test_prerequisites: z.array(z.string().uuid()).nullable(),

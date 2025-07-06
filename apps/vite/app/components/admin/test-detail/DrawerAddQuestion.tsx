@@ -35,6 +35,7 @@ import {
 import { toast } from "sonner";
 import { useQuestionDialogStore } from "~/stores/use-question-dialog-store";
 import { useQuestions } from "~/hooks/use-questions";
+import { useTests } from "~/hooks/use-tests";
 import {
   getDefaultTimeLimitByQuestionType,
   QUESTION_TYPE_LABELS,
@@ -201,6 +202,7 @@ export function DrawerAddQuestion() {
     useGetQuestionById,
     useGetQuestionStats,
   } = useQuestions();
+  const { useGetTestById } = useTests();
   const createQuestionMutation = useCreateQuestion(testId || "");
   const updateQuestionMutation = useUpdateQuestion(testId || "");
   const editQuestionQuery = useGetQuestionById(
@@ -209,7 +211,10 @@ export function DrawerAddQuestion() {
   );
 
   const { data: questionStats } = useGetQuestionStats(testId || "");
+  const { data: testData } = useGetTestById(testId || "");
   const total_questions = Number(questionStats?.data?.total_questions) || 0;
+  const testDefaultTimeLimit =
+    testData?.data?.default_question_time_limit || 20;
 
   // Calculate next sequence number
   const nextSequence =
@@ -238,7 +243,7 @@ export function DrawerAddQuestion() {
       correct_answer: "",
       is_required: true,
       sequence: nextSequence,
-      time_limit: getDefaultTimeLimitByQuestionType(questionType),
+      time_limit: testDefaultTimeLimit,
       sequence_items: [],
     },
   });
@@ -280,9 +285,7 @@ export function DrawerAddQuestion() {
         options: question.options || [],
         correct_answer: question.correct_answer || "",
         sequence: question.sequence,
-        time_limit:
-          question.time_limit ||
-          getDefaultTimeLimitByQuestionType(question.question_type),
+        time_limit: question.time_limit || testDefaultTimeLimit,
         is_required: question.is_required,
       });
 
@@ -309,7 +312,7 @@ export function DrawerAddQuestion() {
     } else if (mode === "create") {
       // Set default values berdasarkan question type
       setValue("question_type", questionType);
-      setValue("time_limit", getDefaultTimeLimitByQuestionType(questionType));
+      setValue("time_limit", testDefaultTimeLimit);
       setValue("sequence", total_questions + 1);
 
       // Setup fields berdasarkan question type
@@ -383,8 +386,12 @@ export function DrawerAddQuestion() {
         submissionData.sequence = data.sequence;
       }
 
-      if (data.time_limit !== undefined && data.time_limit >= 0) {
+      // Add time_limit - use provided value or fall back to test default
+      if (data.time_limit !== undefined && data.time_limit > 0) {
         submissionData.time_limit = data.time_limit;
+      } else {
+        // Don't send time_limit to let backend use test's default_question_time_limit
+        // submissionData.time_limit = testDefaultTimeLimit;
       }
 
       // Handle data spesifik berdasarkan question type
@@ -618,8 +625,8 @@ export function DrawerAddQuestion() {
                     {...register("time_limit", { valueAsNumber: true })}
                   />
                   <p className="text-xs text-muted-foreground mt-1">
-                    Default: {getDefaultTimeLimitByQuestionType(questionType)}{" "}
-                    detik. Set 0 untuk tidak ada batas waktu.
+                    Default: {testDefaultTimeLimit} detik (dari pengaturan tes).
+                    Kosongkan untuk menggunakan default.
                   </p>
                   {errors.time_limit && (
                     <p className="text-sm text-red-600 flex items-center gap-1 mt-1">

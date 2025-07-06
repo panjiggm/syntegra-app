@@ -72,6 +72,7 @@ export async function createQuestionHandler(
         status: tests.status,
         total_questions: tests.total_questions,
         question_type: tests.question_type,
+        default_question_time_limit: tests.default_question_time_limit,
       })
       .from(tests)
       .where(eq(tests.id, testId))
@@ -182,7 +183,9 @@ export async function createQuestionHandler(
 
     // Apply defaults if not provided
     const timeLimit =
-      data.time_limit || getDefaultTimeLimitByQuestionType(data.question_type);
+      data.time_limit || 
+      targetTest.default_question_time_limit ||
+      getDefaultTimeLimitByQuestionType(data.question_type);
     const isRequired = data.is_required ?? true;
 
     // Prepare question data for database

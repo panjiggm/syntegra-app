@@ -208,6 +208,7 @@ export const tests = pgTable(
     module_type: moduleTypeEnum("module_type").notNull(),
     category: categoryEnum("category").notNull(),
     time_limit: integer("time_limit").notNull(), // in minutes
+    default_question_time_limit: integer("default_question_time_limit").default(60), // in seconds
     icon: varchar("icon", { length: 10 }), // emoji
     card_color: varchar("card_color", { length: 100 }), // e.g., "from-green-500 to-emerald-600"
     test_prerequisites: json("test_prerequisites").$type<string[]>(), // array of test IDs

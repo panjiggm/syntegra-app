@@ -35,6 +35,7 @@ import {
 import { toast } from "sonner";
 import { useQuestionDialogStore } from "~/stores/use-question-dialog-store";
 import { useQuestions } from "~/hooks/use-questions";
+import { useTests } from "~/hooks/use-tests";
 
 // Question form schema
 const questionSchema = z.object({
@@ -142,6 +143,7 @@ export function DialogAddQuestion() {
     useGetQuestionById,
     useGetQuestionStats,
   } = useQuestions();
+  const { useGetTestById } = useTests();
   const createQuestionMutation = useCreateQuestion(testId || "");
   const updateQuestionMutation = useUpdateQuestion(testId || "");
   const editQuestionQuery = useGetQuestionById(
@@ -150,7 +152,9 @@ export function DialogAddQuestion() {
   );
 
   const { data: questionStats } = useGetQuestionStats(testId || "");
+  const { data: testData } = useGetTestById(testId || "");
   const total_questions = Number(questionStats?.data?.total_questions) || 0;
+  const testDefaultTimeLimit = testData?.data?.default_question_time_limit || 60;
 
   // Calculate next sequence number
   const nextSequence =
@@ -179,7 +183,7 @@ export function DialogAddQuestion() {
       correct_answer: "",
       is_required: true,
       sequence: nextSequence,
-      time_limit: 30,
+      time_limit: testDefaultTimeLimit,
       sequence_items: [],
     },
   });
@@ -228,7 +232,7 @@ export function DialogAddQuestion() {
         options: question.options || [],
         correct_answer: question.correct_answer || "",
         sequence: question.sequence,
-        time_limit: question.time_limit || 30,
+        time_limit: question.time_limit || testDefaultTimeLimit,
         image_url: question.image_url || "",
         audio_url: question.audio_url || "",
         is_required: question.is_required,
@@ -319,9 +323,12 @@ export function DialogAddQuestion() {
         submissionData.sequence = data.sequence;
       }
 
-      // Add time_limit if provided and valid
+      // Add time_limit - use provided value or fall back to test default
       if (data.time_limit && data.time_limit > 0) {
         submissionData.time_limit = data.time_limit;
+      } else {
+        // Don't send time_limit to let backend use test's default_question_time_limit
+        // submissionData.time_limit = testDefaultTimeLimit;
       }
 
       // Handle type-specific data
@@ -614,16 +621,20 @@ export function DialogAddQuestion() {
 
             <div>
               <Label htmlFor="time_limit" className="text-sm font-medium">
-                Batas Waktu (detik) - Opsional
+                Batas Waktu (detik)
               </Label>
               <Input
                 id="time_limit"
                 type="number"
-                min="1"
-                placeholder="30"
+                min="10"
+                max="600"
+                placeholder={testDefaultTimeLimit.toString()}
                 disabled={isSubmitting}
                 {...register("time_limit", { valueAsNumber: true })}
               />
+              <p className="text-xs text-muted-foreground mt-1">
+                Default: {testDefaultTimeLimit} detik (dari pengaturan tes). Kosongkan untuk menggunakan default.
+              </p>
             </div>
 
             {/* Media fields - only show for supported question types */}

@@ -70,6 +70,7 @@ export async function updateTestHandler(
         module_type: tests.module_type,
         category: tests.category,
         time_limit: tests.time_limit,
+        default_question_time_limit: tests.default_question_time_limit,
         icon: tests.icon,
         card_color: tests.card_color,
         test_prerequisites: tests.test_prerequisites,
@@ -253,6 +254,8 @@ export async function updateTestHandler(
       updateData.module_type = data.module_type;
     if (data.category !== undefined) updateData.category = data.category;
     if (data.time_limit !== undefined) updateData.time_limit = data.time_limit;
+    if (data.default_question_time_limit !== undefined) 
+      updateData.default_question_time_limit = data.default_question_time_limit;
     if (data.icon !== undefined) updateData.icon = data.icon || null;
     if (data.card_color !== undefined)
       updateData.card_color = data.card_color || null;
@@ -297,6 +300,7 @@ export async function updateTestHandler(
       module_type: updatedTest.module_type,
       category: updatedTest.category,
       time_limit: updatedTest.time_limit,
+      default_question_time_limit: updatedTest.default_question_time_limit,
       icon: updatedTest.icon,
       card_color: updatedTest.card_color,
       test_prerequisites: updatedTest.test_prerequisites || [],

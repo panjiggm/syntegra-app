@@ -131,6 +131,7 @@ export async function createTestHandler(
 
     // Apply defaults if not provided
     const timeLimit = data.time_limit ?? 0;
+    const defaultQuestionTimeLimit = data.default_question_time_limit ?? 60;
     const cardColor =
       data.card_color || getRecommendedCardColorByCategory(data.category);
     const displayOrder = data.display_order ?? 0;
@@ -145,6 +146,7 @@ export async function createTestHandler(
         module_type: data.module_type,
         category: data.category,
         time_limit: timeLimit,
+        default_question_time_limit: defaultQuestionTimeLimit,
         icon: data.icon || null,
         card_color: cardColor,
         test_prerequisites: data.test_prerequisites || null,
@@ -177,6 +179,7 @@ export async function createTestHandler(
       module_type: newTest.module_type,
       category: newTest.category,
       time_limit: newTest.time_limit,
+      default_question_time_limit: newTest.default_question_time_limit,
       icon: newTest.icon,
       card_color: cardColor,
       test_prerequisites: newTest.test_prerequisites || [],

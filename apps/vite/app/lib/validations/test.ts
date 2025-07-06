@@ -64,6 +64,15 @@ export const createTestSchema = z.object({
     .int("Batas waktu harus berupa bilangan bulat")
     .optional(),
 
+  default_question_time_limit: z
+    .number({
+      invalid_type_error: "Waktu default per soal harus berupa angka",
+    })
+    .min(10, "Waktu minimal 10 detik per soal")
+    .max(600, "Waktu maksimal 600 detik (10 menit) per soal")
+    .int("Waktu harus berupa bilangan bulat")
+    .default(60),
+
   icon: z
     .string()
     .max(10, "Icon maksimal 10 karakter")
@@ -123,6 +132,7 @@ export const createTestDefaultValues: Partial<CreateTestFormData> = {
   module_type: "intelligence",
   category: "wais",
   time_limit: 0,
+  default_question_time_limit: 60,
   icon: "",
   card_color: "",
   passing_score: 80,

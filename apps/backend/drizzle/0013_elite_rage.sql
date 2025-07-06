@@ -1,0 +1,1 @@
+ALTER TABLE "tests" ADD COLUMN "default_question_time_limit" integer DEFAULT 60;

@@ -334,6 +334,33 @@ export function FormNewTest({
 
               <FormField
                 control={form.control}
+                name="default_question_time_limit"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Waktu Default per Soal</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        placeholder="60"
+                        min="10"
+                        max="600"
+                        {...field}
+                        onChange={(e) =>
+                          field.onChange(parseInt(e.target.value) || 60)
+                        }
+                        disabled={isSubmitting}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      Waktu default untuk setiap soal (dalam detik)
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
                 name="passing_score"
                 render={({ field }) => (
                   <FormItem>

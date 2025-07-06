@@ -33,6 +33,7 @@ export interface TestData {
     | "iq"
     | "eq";
   time_limit: number;
+  default_question_time_limit?: number;
   total_questions: number;
   icon?: string;
   card_color?: string;
