@@ -32,13 +32,6 @@ export function DialogDeleteUser() {
   } = useUsersStore();
   const navigate = useNavigate();
 
-  // Debug logging
-  console.log("Dialog state:", {
-    isDeleteUserModalOpen,
-    deleteUserId,
-    deleteUserName,
-  });
-
   const queryClient = useQueryClient();
   const [confirmationText, setConfirmationText] = useState("");
   const [isTypingConfirmation, setIsTypingConfirmation] = useState(false);
