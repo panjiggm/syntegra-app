@@ -2,11 +2,13 @@ import { useState, useMemo } from "react";
 import { Button } from "~/components/ui/button";
 import { useUsers } from "~/hooks/use-users";
 import { UserPlus, RefreshCw, Upload } from "lucide-react";
+import { toast } from "sonner";
 import { CardAnalyticUser } from "~/components/admin/users/CardAnalyticUser";
 import { FilterUser } from "~/components/admin/users/FilterUser";
 import { TableUser } from "~/components/admin/users/TableUser";
 import { useNavigate } from "react-router";
 import { DialogDeleteUser } from "~/components/admin/users/DialogDeleteUser";
+import { DialogBulkDeleteUser } from "~/components/admin/users/DialogBulkDeleteUser";
 
 export function meta() {
   return [
@@ -34,7 +36,7 @@ const initialFilters: FilterState = {
   religion: "",
   education: "",
   province: "",
-  is_active: "",
+  is_active: "true", // Default: hanya tampilkan user aktif
   sort_by: "created_at",
   sort_order: "desc",
 };
@@ -58,7 +60,7 @@ export default function AdminUsersPage() {
 
     // Add non-empty filters
     Object.entries(filters).forEach(([key, value]) => {
-      if (value && key !== "sort_by" && key !== "sort_order") {
+      if (value && value !== "all" && key !== "sort_by" && key !== "sort_order") {
         params[key] = value;
       }
     });
@@ -85,7 +87,6 @@ export default function AdminUsersPage() {
     setCurrentPage(1);
   };
 
-  console.log("usersData", usersData);
 
   return (
     <>
@@ -153,6 +154,7 @@ export default function AdminUsersPage() {
       />
 
       <DialogDeleteUser />
+      <DialogBulkDeleteUser />
     </>
   );
 }

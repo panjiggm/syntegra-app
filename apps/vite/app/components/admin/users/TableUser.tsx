@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import {
@@ -17,6 +17,7 @@ import {
   SelectValue,
 } from "~/components/ui/select";
 import { Badge } from "~/components/ui/badge";
+import { Checkbox } from "~/components/ui/checkbox";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -32,9 +33,8 @@ import {
   Eye,
   Edit,
   Trash2,
-  UserCheck,
-  UserX,
   Clock,
+  Trash,
 } from "lucide-react";
 import type { GetUsersResponse } from "~/hooks/use-users";
 import { Link } from "react-router";
@@ -82,7 +82,64 @@ export function TableUser({
   onPageSizeChange,
   onRefetch,
 }: TableUserProps) {
-  const { openDeleteUserModal } = useUsersStore();
+  const { openDeleteUserModal, openBulkDeleteModal } = useUsersStore();
+
+  // Selection state
+  const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
+  const [isAllSelected, setIsAllSelected] = useState(false);
+
+  // Get current page user IDs
+  const currentPageUserIds = usersData?.data?.map((user) => user.id) || [];
+
+  // Update select all state when data changes
+  useEffect(() => {
+    if (currentPageUserIds.length > 0) {
+      const allCurrentPageSelected = currentPageUserIds.every((id) =>
+        selectedUsers.includes(id)
+      );
+      setIsAllSelected(allCurrentPageSelected);
+    } else {
+      setIsAllSelected(false);
+    }
+  }, [selectedUsers, currentPageUserIds]);
+
+  // Handle select all checkbox
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      // Add all current page users to selection
+      const newSelected = [
+        ...new Set([...selectedUsers, ...currentPageUserIds]),
+      ];
+      setSelectedUsers(newSelected);
+    } else {
+      // Remove all current page users from selection
+      const newSelected = selectedUsers.filter(
+        (id) => !currentPageUserIds.includes(id)
+      );
+      setSelectedUsers(newSelected);
+    }
+  };
+
+  // Handle individual user selection
+  const handleUserSelect = (userId: string, checked: boolean) => {
+    if (checked) {
+      setSelectedUsers((prev) => [...prev, userId]);
+    } else {
+      setSelectedUsers((prev) => prev.filter((id) => id !== userId));
+    }
+  };
+
+  // Handle bulk delete
+  const handleBulkDelete = () => {
+    if (selectedUsers.length > 0) {
+      const userNames = usersData?.data
+        ?.filter(user => selectedUsers.includes(user.id))
+        ?.map(user => user.name) || [];
+      
+      openBulkDeleteModal(selectedUsers, userNames);
+      setSelectedUsers([]);
+    }
+  };
   const formatDate = (date: Date) => {
     return new Date(date).toLocaleDateString("id-ID", {
       day: "2-digit",
@@ -99,25 +156,30 @@ export function TableUser({
     );
   };
 
-  const getStatusBadge = (isActive: boolean) => {
-    return isActive ? (
-      <Badge className="bg-green-100 text-green-700">
-        <UserCheck className="size-3 mr-1" />
-        Aktif
-      </Badge>
-    ) : (
-      <Badge className="bg-red-100 text-red-700">
-        <UserX className="size-3 mr-1" />
-        Nonaktif
-      </Badge>
-    );
-  };
 
   return (
     <Card>
       <CardHeader>
         <div className="flex items-center justify-between">
-          <CardTitle>Daftar Users</CardTitle>
+          <div className="flex items-center gap-4">
+            <CardTitle>Daftar Users</CardTitle>
+            {selectedUsers.length > 0 && (
+              <div className="flex items-center gap-2">
+                <Badge variant="secondary">
+                  {selectedUsers.length} dipilih
+                </Badge>
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  onClick={handleBulkDelete}
+                  className="h-8"
+                >
+                  <Trash className="size-4 mr-1" />
+                  Hapus Terpilih
+                </Button>
+              </div>
+            )}
+          </div>
           <div className="flex items-center gap-2">
             <span className="text-sm text-muted-foreground">Show:</span>
             <Select
@@ -156,11 +218,17 @@ export function TableUser({
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead className="w-[50px]">
+                      <Checkbox
+                        checked={isAllSelected}
+                        onCheckedChange={handleSelectAll}
+                        aria-label="Pilih semua user"
+                      />
+                    </TableHead>
                     <TableHead>User</TableHead>
                     <TableHead>Role</TableHead>
                     <TableHead>Gender</TableHead>
                     <TableHead>Kontak</TableHead>
-                    <TableHead>Status</TableHead>
                     <TableHead>Bergabung</TableHead>
                     <TableHead className="w-[70px]">Aksi</TableHead>
                   </TableRow>
@@ -175,6 +243,15 @@ export function TableUser({
                   ) : usersData?.data && usersData.data.length > 0 ? (
                     usersData.data.map((user) => (
                       <TableRow key={user.id}>
+                        <TableCell>
+                          <Checkbox
+                            checked={selectedUsers.includes(user.id)}
+                            onCheckedChange={(checked) =>
+                              handleUserSelect(user.id, Boolean(checked))
+                            }
+                            aria-label={`Pilih user ${user.name}`}
+                          />
+                        </TableCell>
                         <TableCell>
                           <div>
                             <div className="font-medium hover:underline cursor-pointer">
@@ -212,7 +289,6 @@ export function TableUser({
                             )}
                           </div>
                         </TableCell>
-                        <TableCell>{getStatusBadge(user.is_active)}</TableCell>
                         <TableCell>
                           <div className="flex items-center gap-1">
                             <Clock className="size-3 text-muted-foreground" />
