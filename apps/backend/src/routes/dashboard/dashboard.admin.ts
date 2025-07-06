@@ -44,7 +44,9 @@ export async function getAdminDashboardHandler(
     const [activeSessions] = await db
       .select({ count: count() })
       .from(testSessions)
-      .where(eq(testSessions.status, "active"));
+      .where(
+        sql`${testSessions.start_time} <= NOW() AND ${testSessions.end_time} >= NOW()`
+      );
 
     const [totalAttempts] = await db
       .select({ count: count() })
