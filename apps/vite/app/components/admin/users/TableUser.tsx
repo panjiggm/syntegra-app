@@ -35,8 +35,11 @@ import {
   Trash2,
   Clock,
   Trash,
+  FileSpreadsheet,
+  FileText,
 } from "lucide-react";
 import type { GetUsersResponse } from "~/hooks/use-users";
+import { useUsers } from "~/hooks/use-users";
 import { Link } from "react-router";
 import { useUsersStore } from "~/stores/use-users-store";
 
@@ -83,6 +86,8 @@ export function TableUser({
   onRefetch,
 }: TableUserProps) {
   const { openDeleteUserModal, openBulkDeleteModal } = useUsersStore();
+  const { useBulkExportUsers } = useUsers();
+  const bulkExportMutation = useBulkExportUsers();
 
   // Selection state
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
@@ -132,12 +137,37 @@ export function TableUser({
   // Handle bulk delete
   const handleBulkDelete = () => {
     if (selectedUsers.length > 0) {
-      const userNames = usersData?.data
-        ?.filter(user => selectedUsers.includes(user.id))
-        ?.map(user => user.name) || [];
-      
+      const userNames =
+        usersData?.data
+          ?.filter((user) => selectedUsers.includes(user.id))
+          ?.map((user) => user.name) || [];
+
       openBulkDeleteModal(selectedUsers, userNames);
       setSelectedUsers([]);
+    }
+  };
+
+  // Handle bulk export Excel
+  const handleBulkExportExcel = () => {
+    if (selectedUsers.length > 0) {
+      bulkExportMutation.mutate({
+        user_ids: selectedUsers,
+        format: "excel",
+        include_details: true,
+        filename: `users_export_${new Date().toISOString().slice(0, 10)}.xlsx`,
+      });
+    }
+  };
+
+  // Handle bulk export PDF
+  const handleBulkExportPDF = () => {
+    if (selectedUsers.length > 0) {
+      bulkExportMutation.mutate({
+        user_ids: selectedUsers,
+        format: "pdf",
+        include_details: true,
+        filename: `users_export_${new Date().toISOString().slice(0, 10)}.pdf`,
+      });
     }
   };
   const formatDate = (date: Date) => {
@@ -156,7 +186,6 @@ export function TableUser({
     );
   };
 
-
   return (
     <Card>
       <CardHeader>
@@ -170,9 +199,30 @@ export function TableUser({
                 </Badge>
                 <Button
                   size="sm"
+                  variant="outline"
+                  onClick={handleBulkExportExcel}
+                  className="h-8"
+                  disabled={bulkExportMutation.isPending}
+                >
+                  <FileSpreadsheet className="size-4 mr-1" />
+                  Export Excel
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={handleBulkExportPDF}
+                  className="h-8"
+                  disabled={bulkExportMutation.isPending}
+                >
+                  <FileText className="size-4 mr-1" />
+                  Export PDF
+                </Button>
+                <Button
+                  size="sm"
                   variant="destructive"
                   onClick={handleBulkDelete}
                   className="h-8"
+                  disabled={bulkExportMutation.isPending}
                 >
                   <Trash className="size-4 mr-1" />
                   Hapus Terpilih

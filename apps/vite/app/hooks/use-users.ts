@@ -2,6 +2,186 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "~/lib/api-client";
 import { queryKeys } from "~/lib/query-client";
 import { toast } from "sonner";
+import { pdf } from "@react-pdf/renderer";
+import * as XLSX from "xlsx";
+import fileSaver from "file-saver";
+const { saveAs } = fileSaver;
+
+// Helper function to generate PDF
+const generatePDF = async (exportData: any, filename: string) => {
+  try {
+    console.log("Starting PDF generation with data:", exportData);
+
+    const { default: UsersBulkExportPDF } = await import(
+      "~/components/admin/users/pdf/UsersBulkExportPDF"
+    );
+    const React = await import("react");
+
+    // Validate data structure
+    if (!exportData || !exportData.users || !Array.isArray(exportData.users)) {
+      throw new Error("Invalid export data structure: missing users array");
+    }
+
+    if (!exportData.metadata) {
+      throw new Error("Invalid export data structure: missing metadata");
+    }
+
+    console.log("Data validation passed, creating PDF component...");
+
+    // UsersBulkExportPDF sudah return <Document>, jadi perlu wrap jika belum <Document>
+    const { Document } = await import("@react-pdf/renderer");
+    const pdfComponent = React.createElement(
+      Document,
+      null,
+      React.createElement(UsersBulkExportPDF, {
+        data: exportData,
+      })
+    );
+
+    console.log("PDF component created, generating blob...");
+    const blob = await pdf(pdfComponent).toBlob();
+
+    console.log("PDF blob generated successfully, saving file...");
+    saveAs(blob, filename);
+
+    console.log("PDF file saved successfully");
+  } catch (error) {
+    console.error("Error in generatePDF:", error);
+    throw error;
+  }
+};
+
+// Helper function to generate Excel
+const generateExcel = async (exportData: any, filename: string) => {
+  const { users, metadata } = exportData;
+
+  // Create a new workbook
+  const workbook = XLSX.utils.book_new();
+
+  // Summary sheet
+  const summaryData = [
+    ["LAPORAN EXPORT DATA USERS"],
+    [""],
+    ["Tanggal Export", metadata.export_date],
+    ["Total Users", metadata.total_users],
+    ["Include Details", metadata.include_details ? "Ya" : "Tidak"],
+    [""],
+    ["STATISTIK"],
+    ["Total Users", users.length],
+    ["Users Aktif", users.filter((u: any) => u.is_active).length],
+    ["Email Terverifikasi", users.filter((u: any) => u.email_verified).length],
+    ["Admin", users.filter((u: any) => u.role === "admin").length],
+    ["Participant", users.filter((u: any) => u.role === "participant").length],
+    [""],
+    ["DISTRIBUSI GENDER"],
+    ["Laki-laki", users.filter((u: any) => u.gender === "male").length],
+    ["Perempuan", users.filter((u: any) => u.gender === "female").length],
+    [
+      "Lainnya",
+      users.filter((u: any) => u.gender === "other" || !u.gender).length,
+    ],
+  ];
+
+  const summarySheet = XLSX.utils.aoa_to_sheet(summaryData);
+  XLSX.utils.book_append_sheet(workbook, summarySheet, "Ringkasan");
+
+  // Users data sheet
+  const usersData = [
+    [
+      "No",
+      "NIK",
+      "Nama",
+      "Email",
+      "Role",
+      "Gender",
+      "Telepon",
+      "Tempat Lahir",
+      "Tanggal Lahir",
+      "Agama",
+      "Pendidikan",
+      "Alamat",
+      "Provinsi",
+      "Kabupaten",
+      "Kecamatan",
+      "Kelurahan",
+      "Kode Pos",
+      "Status Aktif",
+      "Email Terverifikasi",
+      "Tanggal Dibuat",
+      "Tanggal Update",
+    ],
+    ...users.map((user: any, index: number) => [
+      index + 1,
+      user.nik || "",
+      user.name,
+      user.email,
+      user.role,
+      user.gender === "male"
+        ? "Laki-laki"
+        : user.gender === "female"
+          ? "Perempuan"
+          : "Lainnya",
+      user.phone || "",
+      user.birth_place || "",
+      user.birth_date
+        ? new Date(user.birth_date).toLocaleDateString("id-ID")
+        : "",
+      user.religion || "",
+      user.education || "",
+      user.address || "",
+      user.province || "",
+      user.regency || "",
+      user.district || "",
+      user.village || "",
+      user.postal_code || "",
+      user.is_active ? "Aktif" : "Tidak Aktif",
+      user.email_verified ? "Terverifikasi" : "Belum Terverifikasi",
+      user.created_at
+        ? new Date(user.created_at).toLocaleDateString("id-ID")
+        : "",
+      user.updated_at
+        ? new Date(user.updated_at).toLocaleDateString("id-ID")
+        : "",
+    ]),
+  ];
+
+  const usersSheet = XLSX.utils.aoa_to_sheet(usersData);
+
+  // Set column widths
+  const colWidths = [
+    { wch: 5 }, // No
+    { wch: 20 }, // NIK
+    { wch: 25 }, // Nama
+    { wch: 30 }, // Email
+    { wch: 12 }, // Role
+    { wch: 12 }, // Gender
+    { wch: 15 }, // Telepon
+    { wch: 20 }, // Tempat Lahir
+    { wch: 15 }, // Tanggal Lahir
+    { wch: 15 }, // Agama
+    { wch: 15 }, // Pendidikan
+    { wch: 30 }, // Alamat
+    { wch: 20 }, // Provinsi
+    { wch: 20 }, // Kabupaten
+    { wch: 20 }, // Kecamatan
+    { wch: 20 }, // Kelurahan
+    { wch: 10 }, // Kode Pos
+    { wch: 15 }, // Status Aktif
+    { wch: 18 }, // Email Terverifikasi
+    { wch: 15 }, // Tanggal Dibuat
+    { wch: 15 }, // Tanggal Update
+  ];
+  usersSheet["!cols"] = colWidths;
+
+  XLSX.utils.book_append_sheet(workbook, usersSheet, "Data Users");
+
+  // Generate Excel file
+  const excelBuffer = XLSX.write(workbook, { bookType: "xlsx", type: "array" });
+  const blob = new Blob([excelBuffer], {
+    type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  });
+  saveAs(blob, filename);
+};
 
 // Define types locally for now (to be replaced with shared-types later)
 interface CreateUserRequest {
@@ -422,7 +602,7 @@ export function useUsers() {
         queryClient.invalidateQueries({ queryKey: queryKeys.users.lists() });
 
         const { deleted_count, failed_count } = data.data;
-        
+
         if (failed_count > 0) {
           toast.success(`${deleted_count} users berhasil dihapus`, {
             description: `${failed_count} users gagal dihapus`,
@@ -434,7 +614,7 @@ export function useUsers() {
       onError: (error: Error) => {
         console.error("Bulk delete error:", error);
         const errorMessage = error.message.toLowerCase();
-        
+
         if (errorMessage.includes("last admin")) {
           toast.error("Tidak dapat menghapus semua admin", {
             description: "Minimal satu admin harus tetap aktif",
@@ -446,6 +626,57 @@ export function useUsers() {
             description: error.message,
           });
         }
+      },
+    });
+  };
+
+  // Bulk export users (Mutation)
+  const useBulkExportUsers = () => {
+    return useMutation({
+      mutationFn: async (data: {
+        user_ids: string[];
+        format: "excel" | "pdf" | "csv";
+        include_details?: boolean;
+        filename?: string;
+      }) => {
+        const response = await apiClient.post("/users/bulk/export", data);
+        if (!response.success) {
+          throw new Error(response.message || "Failed to export users");
+        }
+        return response;
+      },
+      onSuccess: async (data, variables) => {
+        const { format, user_ids } = variables;
+        const { file_content, filename } = data.data;
+
+        try {
+          // Parse the JSON data from backend
+          const exportData = JSON.parse(file_content);
+
+          if (format === "pdf") {
+            // Generate PDF using @react-pdf/renderer
+            await generatePDF(exportData, filename);
+          } else if (format === "excel") {
+            // Generate Excel using xlsx
+            await generateExcel(exportData, filename);
+          }
+
+          toast.success(`${user_ids.length} users berhasil diexport`, {
+            description: `File ${filename} telah didownload`,
+          });
+        } catch (error) {
+          console.error("Error generating file:", error);
+          toast.error("Gagal membuat file export", {
+            description:
+              error instanceof Error ? error.message : "Unknown error",
+          });
+        }
+      },
+      onError: (error: Error) => {
+        console.error("Bulk export error:", error);
+        toast.error("Gagal mengexport users", {
+          description: error.message,
+        });
       },
     });
   };
@@ -464,5 +695,6 @@ export function useUsers() {
     useBulkCreateFromCSV,
     useBulkCreateFromJSON,
     useBulkDeleteUsers,
+    useBulkExportUsers,
   };
 }

@@ -34,6 +34,7 @@ import {
   createUsersFromCSVHandler,
 } from "./user.bulk.csv";
 import { bulkDeleteUsersHandler } from "./user.bulk.delete";
+import { bulkExportUsersHandler } from "./user.bulk.export";
 import {
   userRegistrationRateLimit,
   generalApiRateLimit,
@@ -322,6 +323,15 @@ userRoutes.delete(
     }
   }),
   bulkDeleteUsersHandler
+);
+
+// Bulk Export Users
+userRoutes.post(
+  "/bulk/export",
+  generalApiRateLimit,
+  authenticateUser,
+  requireAdmin,
+  bulkExportUsersHandler
 );
 
 // ==================== USER STATISTICS (Admin only) ====================
