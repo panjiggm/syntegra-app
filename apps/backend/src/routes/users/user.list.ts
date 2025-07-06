@@ -1,5 +1,5 @@
 import { Context } from "hono";
-import { and, or, eq, like, gte, lte, count, asc, desc } from "drizzle-orm";
+import { and, or, eq, like, ilike, gte, lte, count, asc, desc } from "drizzle-orm";
 import { getDbFromEnv, users, isDatabaseConfigured } from "../../db";
 import { getEnv, type CloudflareBindings } from "../../lib/env";
 import {
@@ -73,10 +73,10 @@ export async function getUsersListHandler(
       const searchTerm = `%${queryParams.search}%`;
       conditions.push(
         or(
-          like(users.name, searchTerm),
-          like(users.email, searchTerm),
-          like(users.nik, searchTerm),
-          like(users.phone, searchTerm)
+          ilike(users.name, searchTerm),
+          ilike(users.email, searchTerm),
+          ilike(users.nik, searchTerm),
+          ilike(users.phone, searchTerm)
         )
       );
     }
