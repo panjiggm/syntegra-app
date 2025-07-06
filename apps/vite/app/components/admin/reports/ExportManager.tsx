@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { Button } from "~/components/ui/button";
-import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import {
   Select,
@@ -31,9 +30,8 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { id } from "date-fns/locale";
-import { PDFDownloadLink, pdf } from "@react-pdf/renderer";
+import { pdf } from "@react-pdf/renderer";
 import SessionReportPDF from "./pdf/SessionReportPDF";
-import IndividualReportPDF from "./pdf/IndividualReportPDF";
 import { cn } from "~/lib/utils";
 import { toast } from "sonner";
 import fileSaver from "file-saver";
@@ -45,7 +43,6 @@ interface ExportFilter {
   datePeriod?: string;
   status?: string;
   format: "pdf" | "excel" | "csv";
-  reportType: "session" | "individual" | "comparative" | "batch";
   includeCharts: boolean;
   includeDetailedAnalysis: boolean;
   includeRecommendations: boolean;
@@ -55,18 +52,11 @@ interface ExportManagerProps {
   sessionId?: string;
   userId?: string;
   data: any; // Data yang akan di-export
-  type: "session" | "individual" | "comparative";
 }
 
-export function ExportManager({
-  sessionId,
-  userId,
-  data,
-  type,
-}: ExportManagerProps) {
+export function ExportManager({ sessionId, userId, data }: ExportManagerProps) {
   const [filter, setFilter] = useState<ExportFilter>({
     format: "pdf",
-    reportType: type as any,
     datePeriod: "all",
     includeCharts: true,
     includeDetailedAnalysis: true,
@@ -155,7 +145,7 @@ export function ExportManager({
           : { dateFrom: filter.dateFrom, dateTo: filter.dateTo };
 
       let exportData;
-      
+
       if (data) {
         // Use existing data if available
         exportData = {
@@ -183,7 +173,12 @@ export function ExportManager({
           // Add placeholder data that will be replaced by API call
           session: { session_name: "Loading..." },
           participants: [],
-          statistics: { total_participants: 0, completed_tests: 0, average_score: 0, completion_rate: 0 },
+          statistics: {
+            total_participants: 0,
+            completed_tests: 0,
+            average_score: 0,
+            completion_rate: 0,
+          },
         };
       }
 
@@ -211,29 +206,16 @@ export function ExportManager({
   };
 
   const handlePDFExport = async (exportData: any) => {
-    const fileName = `${type}_report_${format(new Date(), "yyyy-MM-dd_HH-mm")}.pdf`;
+    const fileName = `report_${format(new Date(), "yyyy-MM-dd_HH-mm")}.pdf`;
 
-    let pdfComponent;
-
-    if (type === "session") {
-      pdfComponent = (
-        <SessionReportPDF
-          data={exportData}
-          generatedAt={exportData.generatedAt}
-          filters={exportData.filters}
-        />
-      );
-    } else if (type === "individual") {
-      pdfComponent = (
-        <IndividualReportPDF
-          data={exportData}
-          generatedAt={exportData.generatedAt}
-          filters={exportData.filters}
-        />
-      );
-    } else {
-      throw new Error("Unsupported report type for PDF export");
-    }
+    // Default to SessionReportPDF for general export
+    const pdfComponent = (
+      <SessionReportPDF
+        data={exportData}
+        generatedAt={exportData.generatedAt}
+        filters={exportData.filters}
+      />
+    );
 
     // Generate PDF
     const blob = await pdf(pdfComponent).toBlob();
@@ -251,7 +233,7 @@ export function ExportManager({
 
   const handleExcelExport = async (exportData: any) => {
     // Implementasi Excel export menggunakan library seperti exceljs
-    const fileName = `${type}_report_${format(new Date(), "yyyy-MM-dd_HH-mm")}.xlsx`;
+    const fileName = `report_${format(new Date(), "yyyy-MM-dd_HH-mm")}.xlsx`;
 
     // TODO: Implement Excel generation
     // const workbook = new ExcelJS.Workbook();
@@ -262,10 +244,10 @@ export function ExportManager({
   };
 
   const handleCSVExport = async (exportData: any) => {
-    const fileName = `${type}_report_${format(new Date(), "yyyy-MM-dd_HH-mm")}.csv`;
+    const fileName = `report_${format(new Date(), "yyyy-MM-dd_HH-mm")}.csv`;
 
-    // Simple CSV implementation for different types
-    if (type === "session" && exportData.participants) {
+    // Default CSV implementation
+    if (exportData.participants) {
       const csvContent = [
         ["Nama", "Email", "NIK", "Skor", "Status", "Tanggal Tes"],
         ...exportData.participants.map((p: any) => [
@@ -284,7 +266,7 @@ export function ExportManager({
 
       const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
       saveAs(blob, fileName);
-    } else if (type === "individual" && exportData.individual_profile) {
+    } else if (exportData.individual_profile) {
       const csvContent = [
         ["Field", "Value"],
         ["Name", exportData.individual_profile.name],
@@ -304,18 +286,7 @@ export function ExportManager({
   };
 
   const getReportTypeIcon = () => {
-    switch (filter.reportType) {
-      case "session":
-        return <Users className="h-4 w-4" />;
-      case "individual":
-        return <FileText className="h-4 w-4" />;
-      case "comparative":
-        return <BarChart3 className="h-4 w-4" />;
-      case "batch":
-        return <Table className="h-4 w-4" />;
-      default:
-        return <FileText className="h-4 w-4" />;
-    }
+    return <FileText className="h-4 w-4" />;
   };
 
   const getFormatIcon = () => {
@@ -663,16 +634,7 @@ export function ExportManager({
         <div className="text-xs text-muted-foreground space-y-1">
           <div className="flex items-center gap-2">
             {getReportTypeIcon()}
-            <span>
-              Jenis:{" "}
-              {filter.reportType === "session"
-                ? "Laporan Sesi"
-                : filter.reportType === "individual"
-                  ? "Laporan Individual"
-                  : filter.reportType === "comparative"
-                    ? "Laporan Perbandingan"
-                    : "Laporan Batch"}
-            </span>
+            <span>Jenis: Laporan Export</span>
           </div>
           <div className="flex items-center gap-2">
             <TrendingUp className="h-3 w-3" />
@@ -681,13 +643,7 @@ export function ExportManager({
           {data && (
             <div className="flex items-center gap-2">
               <Users className="h-3 w-3" />
-              <span>
-                {type === "session"
-                  ? `${data.participants?.length || 0} peserta`
-                  : type === "individual"
-                    ? "1 peserta"
-                    : "Multiple peserta"}
-              </span>
+              <span>{data.participants?.length || 0} peserta</span>
             </div>
           )}
         </div>
