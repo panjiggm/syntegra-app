@@ -57,7 +57,7 @@ export default function QuestionPage() {
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [questionStartTime, setQuestionStartTime] = useState<Date | null>(null);
   const [displayTimeRemaining, setDisplayTimeRemaining] = useState<number>(0);
-  const [isNavigationOpen, setIsNavigationOpen] = useState(false);
+  const [isNavigationOpen, setIsNavigationOpen] = useState(true);
   const [isExpiring, setIsExpiring] = useState(false);
 
   // ==================== REFS ====================
@@ -267,6 +267,22 @@ export default function QuestionPage() {
       navigate(`/psikotes/${sessionCode}/test/${testId}`);
     }
   }, [testId, sessionCode, navigate]);
+
+  // Set responsive navigation state on mount
+  useEffect(() => {
+    const handleResize = () => {
+      const isMobile = window.innerWidth < 768; // md breakpoint
+      setIsNavigationOpen(isMobile);
+    };
+
+    // Set initial state
+    handleResize();
+
+    // Listen for window resize
+    window.addEventListener('resize', handleResize);
+    
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   useEffect(() => {
     if (currentQuestion) {
