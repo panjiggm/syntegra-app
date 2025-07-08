@@ -118,19 +118,73 @@ export async function startTestHandler(
       .limit(1);
 
     if (existingProgress) {
-      const errorResponse = {
-        success: false,
-        message: "Test already started",
-        errors: [
-          {
-            field: "testId",
-            message: `Test "${testId}" has already been started by this participant`,
-            code: "TEST_ALREADY_STARTED",
+      // Return existing progress instead of error (idempotent operation)
+      console.log(`Test progress already exists for participant ${participant.id}, test ${testId} - returning existing`);
+      
+      // Calculate computed fields for existing progress
+      const now = new Date();
+      let timeRemaining = 0;
+      let isTimeExpired = false;
+
+      if (existingProgress.started_at && existingProgress.status === "in_progress") {
+        const expectedCompletion = new Date(
+          existingProgress.started_at.getTime() + sessionTest.test_time_limit * 60 * 1000
+        );
+        timeRemaining = Math.max(
+          0,
+          Math.floor((expectedCompletion.getTime() - now.getTime()) / 1000)
+        );
+        isTimeExpired = now >= expectedCompletion;
+      } else if (existingProgress.status === "not_started") {
+        timeRemaining = sessionTest.test_time_limit * 60;
+      }
+
+      const progressPercentage =
+        (existingProgress.total_questions ?? 0) > 0
+          ? Math.min(
+              100,
+              Math.round(
+                ((existingProgress.answered_questions ?? 0) /
+                  (existingProgress.total_questions ?? 1)) *
+                  100
+              )
+            )
+          : 0;
+
+      const response = {
+        success: true,
+        message: "Test progress already exists - returning existing progress",
+        data: {
+          id: existingProgress.id,
+          participant_id: existingProgress.participant_id,
+          session_id: existingProgress.session_id,
+          test_id: existingProgress.test_id,
+          user_id: existingProgress.user_id,
+          status: existingProgress.status,
+          started_at: existingProgress.started_at,
+          completed_at: existingProgress.completed_at,
+          expected_completion_at: existingProgress.expected_completion_at,
+          answered_questions: existingProgress.answered_questions,
+          total_questions: existingProgress.total_questions,
+          time_spent: existingProgress.time_spent,
+          is_auto_completed: existingProgress.is_auto_completed,
+          last_activity_at: existingProgress.last_activity_at,
+          created_at: existingProgress.created_at,
+          updated_at: existingProgress.updated_at,
+          test: {
+            id: testId,
+            name: sessionTest.test_name,
+            time_limit: sessionTest.test_time_limit,
+            total_questions: sessionTest.test_total_questions,
           },
-        ],
+          time_remaining: timeRemaining,
+          progress_percentage: progressPercentage,
+          is_time_expired: isTimeExpired,
+        },
         timestamp: new Date().toISOString(),
       };
-      return c.json(errorResponse, 400);
+
+      return c.json(response, 200);
     }
 
     const now = new Date();

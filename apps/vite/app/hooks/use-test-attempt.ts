@@ -327,7 +327,8 @@ export function useTestAttempt() {
         return response.data;
       },
       enabled: !!attemptId && !!questionId,
-      staleTime: 10 * 1000, // 10 seconds
+      staleTime: 0, // Always fetch fresh data when navigating between questions
+      refetchOnWindowFocus: false, // Don't refetch on window focus to avoid UI flicker
     });
   };
 

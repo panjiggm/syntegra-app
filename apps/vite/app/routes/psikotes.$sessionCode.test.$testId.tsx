@@ -135,15 +135,12 @@ export default function PsikotesTestDetailPage() {
         },
       });
 
-      // 1. Start test (only if this is a new attempt, not resuming)
-      const isResuming = attempt.status === "in_progress" || attempt.status === "started";
-      if (!isResuming) {
-        await startTestMutation.mutateAsync({
-          sessionId: sessionData?.id || "",
-          participantId: user?.id || "",
-          testId,
-        });
-      }
+      // 1. Start test progress tracking (always create/ensure participantTestProgress exists)
+      await startTestMutation.mutateAsync({
+        sessionId: sessionData?.id || "",
+        participantId: user?.id || "",
+        testId,
+      });
 
       // 2. Store attemptId ke sessionStorage
       sessionStorage.setItem(`attempt_${testId}`, attempt.id);

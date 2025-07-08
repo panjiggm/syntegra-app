@@ -276,6 +276,18 @@ export default function QuestionPage() {
 
   // ==================== ANSWER MANAGEMENT ====================
   useEffect(() => {
+    // Reset answer state when question changes
+    setSelectedAnswer("");
+    setHasUnsavedChanges(false);
+    
+    // Refetch answer for new question to ensure fresh data
+    if (attemptId && questionId) {
+      answerQuery.refetch();
+    }
+  }, [questionId, attemptId]);
+
+  // Separate effect for setting answer data
+  useEffect(() => {
     if (answerQuery.data?.answer) {
       const existingAnswer = answerQuery.data.answer;
       if (existingAnswer.answer) {
@@ -284,11 +296,8 @@ export default function QuestionPage() {
         setSelectedAnswer(JSON.stringify(existingAnswer.answer_data));
       }
       setHasUnsavedChanges(false);
-    } else {
-      setSelectedAnswer("");
-      setHasUnsavedChanges(false);
     }
-  }, [questionId, answerQuery.data]);
+  }, [answerQuery.data]);
 
   // ==================== EVENT HANDLERS ====================
   const handleAnswerChange = (value: string) => {
