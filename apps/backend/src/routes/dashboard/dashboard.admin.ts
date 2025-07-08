@@ -1,5 +1,5 @@
 import { Context } from "hono";
-import { eq, count, sql } from "drizzle-orm";
+import { eq, and, count, sql } from "drizzle-orm";
 import {
   getDbFromEnv,
   users,
@@ -18,17 +18,17 @@ export async function getAdminDashboardHandler(
     const db = getDbFromEnv(c.env);
 
     // Get basic statistics
-    const [totalUsers] = await db.select({ count: count() }).from(users);
+    const [totalUsers] = await db.select({ count: count() }).from(users).where(eq(users.is_active, true));
 
     const [totalParticipants] = await db
       .select({ count: count() })
       .from(users)
-      .where(eq(users.role, "participant"));
+      .where(and(eq(users.role, "participant"), eq(users.is_active, true)));
 
     const [totalAdmins] = await db
       .select({ count: count() })
       .from(users)
-      .where(eq(users.role, "admin"));
+      .where(and(eq(users.role, "admin"), eq(users.is_active, true)));
 
     const [totalTests] = await db.select({ count: count() }).from(tests);
 

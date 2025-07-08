@@ -56,11 +56,17 @@ export default function AdminUsersPage() {
       limit: pageSize,
       sort_by: filters.sort_by,
       sort_order: filters.sort_order,
+      role: "participant",
     };
 
     // Add non-empty filters
     Object.entries(filters).forEach(([key, value]) => {
-      if (value && value !== "all" && key !== "sort_by" && key !== "sort_order") {
+      if (
+        value &&
+        value !== "all" &&
+        key !== "sort_by" &&
+        key !== "sort_order"
+      ) {
         params[key] = value;
       }
     });
@@ -86,7 +92,6 @@ export default function AdminUsersPage() {
     setFilters(initialFilters);
     setCurrentPage(1);
   };
-
 
   return (
     <>
