@@ -126,7 +126,9 @@ export function useTestAttempt() {
         // Cache the attempt data
         queryClient.setQueryData(["attempt", data.id], data);
 
-        toast.success("Tes dimulai!");
+        // Show appropriate message based on whether this is a new start or resumption
+        const isResuming = data.status === "in_progress" || data.status === "started";
+        toast.success(isResuming ? "Melanjutkan tes..." : "Tes dimulai!");
       },
       onError: (error: Error) => {
         toast.error("Gagal memulai tes");

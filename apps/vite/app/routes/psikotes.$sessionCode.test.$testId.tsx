@@ -135,12 +135,15 @@ export default function PsikotesTestDetailPage() {
         },
       });
 
-      // 1. Start test
-      await startTestMutation.mutateAsync({
-        sessionId: sessionData?.id || "",
-        participantId: user?.id || "",
-        testId,
-      });
+      // 1. Start test (only if this is a new attempt, not resuming)
+      const isResuming = attempt.status === "in_progress" || attempt.status === "started";
+      if (!isResuming) {
+        await startTestMutation.mutateAsync({
+          sessionId: sessionData?.id || "",
+          participantId: user?.id || "",
+          testId,
+        });
+      }
 
       // 2. Store attemptId ke sessionStorage
       sessionStorage.setItem(`attempt_${testId}`, attempt.id);
@@ -159,8 +162,10 @@ export default function PsikotesTestDetailPage() {
         })
       );
 
-      // 4. Navigate ke question pertama
+      // 4. Navigate ke question pertama atau ke question yang sedang dikerjakan
       if (questionsData?.data && questionsData.data.length > 0) {
+        // For resuming tests, try to find the first unanswered question
+        // Otherwise, start from the first question
         const firstQuestion = questionsData.data[0]; // Already sorted by sequence ASC
         navigate(
           `/psikotes/${sessionCode}/test/${testId}/question/${firstQuestion.id}`
