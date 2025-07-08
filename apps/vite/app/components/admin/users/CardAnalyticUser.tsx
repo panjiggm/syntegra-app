@@ -36,7 +36,7 @@ export function CardAnalyticUser({
 
     const users = usersData.data;
     return {
-      totalUsers: users.length,
+      totalUsers: usersData.meta.total,
       totalParticipants: users.filter((user) => user.role === "participant")
         .length,
       totalAdmins: users.filter((user) => user.role === "admin").length,
