@@ -237,7 +237,7 @@ export function useParticipantSessions() {
     session: ParticipantSession
   ) => {
     // Can't start if session is expired or not active
-    if (session.is_expired || !session.is_active) {
+    if (session.is_expired) {
       return false;
     }
 
@@ -262,7 +262,6 @@ export function useParticipantSessions() {
     session: ParticipantSession
   ) => {
     return (
-      session.is_active &&
       !session.is_expired &&
       test.progress_status === "in_progress" &&
       !test.is_time_expired

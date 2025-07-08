@@ -1,4 +1,3 @@
-import React from "react";
 import { Badge } from "~/components/ui/badge";
 import {
   Card,
@@ -18,7 +17,11 @@ import {
 import { ParticipantRoute } from "~/components/auth/route-guards";
 import { useAuth } from "~/contexts/auth-context";
 import { LoadingSpinner } from "~/components/ui/loading-spinner";
-import { useParticipantSessions } from "~/hooks/use-participant-sessions";
+import {
+  useParticipantSessions,
+  type ParticipantSession,
+  type ParticipantSessionTest,
+} from "~/hooks/use-participant-sessions";
 import CardTestModule from "~/components/card/card-test-module";
 import {
   Clock,
@@ -30,12 +33,12 @@ import {
   Timer,
   MapPin,
   BookOpen,
-  ChevronRight,
   Play,
-  Pause,
-  RotateCcw,
+  PlayCircle,
+  PauseCircle,
 } from "lucide-react";
 import type { Route } from "./+types/participant.tests";
+import { useNavigate } from "react-router";
 
 export function meta({}: Route.MetaArgs) {
   return [
@@ -67,6 +70,7 @@ function TestsContent() {
 
   // Get participant's sessions with progress
   const sessionsQuery = useGetParticipantSessions();
+  const navigate = useNavigate();
 
   if (authLoading || sessionsQuery.isLoading) {
     return (
@@ -150,19 +154,10 @@ function TestsContent() {
     );
   };
 
-  const getTestActionButton = (test: any, session: any) => {
-    if (
-      test.progress_status === "completed" ||
-      test.progress_status === "auto_completed"
-    ) {
-      return (
-        <Button variant="outline" size="sm" disabled>
-          <CheckCircle className="size-4 mr-2" />
-          Selesai
-        </Button>
-      );
-    }
-
+  const getTestActionButton = (
+    test: ParticipantSessionTest,
+    session: ParticipantSession
+  ) => {
     if (test.progress_status === "in_progress") {
       if (test.is_time_expired) {
         return (
@@ -175,8 +170,15 @@ function TestsContent() {
 
       if (canContinueTest(test, session)) {
         return (
-          <Button size="sm">
-            <Play className="size-4 mr-2" />
+          <Button
+            size="sm"
+            onClick={() => {
+              navigate(
+                `/psikotes/${session?.session_code}/test/${test?.test_id}`
+              );
+            }}
+          >
+            <PauseCircle className="size-4 mr-2" />
             Lanjutkan Tes
           </Button>
         );
@@ -185,19 +187,19 @@ function TestsContent() {
 
     if (canStartTest(test, session)) {
       return (
-        <Button size="sm">
-          <ChevronRight className="size-4 mr-2" />
+        <Button
+          size="sm"
+          onClick={() => {
+            navigate(
+              `/psikotes/${session?.session_code}/test/${test?.test_id}`
+            );
+          }}
+        >
+          <PlayCircle className="size-4" />
           Mulai Tes
         </Button>
       );
     }
-
-    return (
-      <Button variant="secondary" size="sm" disabled>
-        <Pause className="size-4 mr-2" />
-        Tidak Tersedia
-      </Button>
-    );
   };
 
   return (
@@ -419,28 +421,6 @@ function TestsContent() {
                     </AccordionTrigger>
 
                     <AccordionContent className="pt-4">
-                      {/* Session Action Button */}
-                      <div className="mb-6">
-                        {session.is_active &&
-                          !session.is_expired &&
-                          session.in_progress_tests > 0 && (
-                            <Button className="w-full sm:w-auto mr-2">
-                              <Play className="size-4 mr-2" />
-                              Lanjutkan Tes
-                            </Button>
-                          )}
-
-                        {session.session_status === "completed" && (
-                          <Button
-                            variant="outline"
-                            className="w-full sm:w-auto"
-                          >
-                            <BookOpen className="size-4 mr-2" />
-                            Lihat Hasil
-                          </Button>
-                        )}
-                      </div>
-
                       {/* Test Progress Summary */}
                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6 text-sm">
                         <div className="text-center p-3 bg-green-50 rounded-lg">
