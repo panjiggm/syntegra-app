@@ -10,8 +10,9 @@ import {
 import { useAuth } from "~/contexts/auth-context";
 import { LoadingSpinner } from "~/components/ui/loading-spinner";
 import { useDashboard } from "~/hooks/use-dashboard";
-import { RefreshCw } from "lucide-react";
+import { ArrowUpRight, RefreshCw } from "lucide-react";
 import type { Route } from "./+types/admin.dashboard";
+import { Link } from "react-router";
 
 export function meta({}: Route.MetaArgs) {
   return [
@@ -162,58 +163,6 @@ function DashboardContent() {
         </div>
       )}
 
-      {/* Quick Actions */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
-        <Card>
-          <CardHeader>
-            <CardTitle>Aksi Cepat</CardTitle>
-            <CardDescription>
-              Lakukan tindakan umum dengan cepat
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <Button className="w-full justify-start" variant="outline">
-              <span className="mr-2">👥</span>
-              Kelola Peserta
-            </Button>
-            <Button className="w-full justify-start" variant="outline">
-              <span className="mr-2">📝</span>
-              Buat Sesi Baru
-            </Button>
-            <Button className="w-full justify-start" variant="outline">
-              <span className="mr-2">📊</span>
-              Lihat Laporan
-            </Button>
-            <Button className="w-full justify-start" variant="outline">
-              <span className="mr-2">⚙️</span>
-              Pengaturan Tes
-            </Button>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Profil Admin</CardTitle>
-            <CardDescription>Informasi akun Anda</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center space-x-4">
-              <div className="w-16 h-16 bg-blue-500 rounded-full flex items-center justify-center text-white text-xl font-bold">
-                {user?.name?.charAt(0).toUpperCase()}
-              </div>
-              <div>
-                <h3 className="font-medium">{user?.name}</h3>
-                <p className="text-sm text-gray-600">{user?.email}</p>
-                <p className="text-xs text-gray-500 capitalize">{user?.role}</p>
-              </div>
-            </div>
-            <Button variant="outline" className="w-full">
-              Edit Profil
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-
       {/* Recent Sessions */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
         <Card>
@@ -246,23 +195,16 @@ function DashboardContent() {
                       </p>
                     </div>
                     <div className="text-right">
-                      <span
-                        className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                          session.status === "active"
-                            ? "bg-green-100 text-green-800"
-                            : session.status === "upcoming"
-                              ? "bg-blue-100 text-blue-800"
-                              : "bg-gray-100 text-gray-800"
-                        }`}
-                      >
-                        {session.status === "active"
-                          ? "Aktif"
-                          : session.status === "upcoming"
-                            ? "Mendatang"
-                            : session.status === "completed"
-                              ? "Selesai"
-                              : session.status}
-                      </span>
+                      <Link to={`/admin/sessions/${session?.id}`}>
+                        <Button
+                          variant="link"
+                          size="sm"
+                          className="cursor-pointer text-xs"
+                        >
+                          Lihat Detail
+                          <ArrowUpRight />
+                        </Button>
+                      </Link>
                     </div>
                   </div>
                 ))}
@@ -305,6 +247,18 @@ function DashboardContent() {
                           {test.attempt_count} percobaan
                         </p>
                       </div>
+                    </div>
+                    <div className="text-right">
+                      <Link to={`/admin/tests/${test?.test_id}`}>
+                        <Button
+                          variant="link"
+                          size="sm"
+                          className="cursor-pointer text-xs"
+                        >
+                          Lihat Detail
+                          <ArrowUpRight />
+                        </Button>
+                      </Link>
                     </div>
                   </div>
                 ))}
