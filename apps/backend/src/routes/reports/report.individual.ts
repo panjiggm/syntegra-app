@@ -590,8 +590,10 @@ export async function getIndividualReportHandler(
         let radarData: Array<{ trait: string; score: number }> = [];
 
         // Get all user answers from personality tests
-        const personalityTestIds = personalityPerformances.map(perf => perf.test_id);
-        
+        const personalityTestIds = personalityPerformances.map(
+          (perf) => perf.test_id
+        );
+
         if (personalityTestIds.length > 0) {
           // Get all rating scale answers for personality tests
           const personalityAnswers = await db
@@ -600,7 +602,10 @@ export async function getIndividualReportHandler(
               question_type: questions.question_type,
             })
             .from(userAnswers)
-            .innerJoin(testAttempts, eq(userAnswers.attempt_id, testAttempts.id))
+            .innerJoin(
+              testAttempts,
+              eq(userAnswers.attempt_id, testAttempts.id)
+            )
             .innerJoin(questions, eq(userAnswers.question_id, questions.id))
             .where(
               and(
@@ -635,16 +640,23 @@ export async function getIndividualReportHandler(
             // Calculate percentages for each trait
             const traitMapping = {
               "1": "Extraversion",
-              "2": "Conscientiousness", 
+              "2": "Conscientiousness",
               "3": "Openness",
               "4": "Agreeableness",
               "5": "Neuroticism",
             };
 
-            radarData = Object.entries(traitMapping).map(([rating, traitName]) => ({
-              trait: traitName,
-              score: totalAnswers > 0 ? Math.round((ratingCounts[rating] / totalAnswers) * 100 * 10) / 10 : 0,
-            }));
+            radarData = Object.entries(traitMapping).map(
+              ([rating, traitName]) => ({
+                trait: traitName,
+                score:
+                  totalAnswers > 0
+                    ? Math.round(
+                        (ratingCounts[rating] / totalAnswers) * 100 * 10
+                      ) / 10
+                    : 0,
+              })
+            );
           }
         }
 

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { Button } from "~/components/ui/button";
 import { Label } from "~/components/ui/label";
 import {
@@ -29,8 +29,9 @@ import { pdf } from "@react-pdf/renderer";
 import SessionReportPDF from "./pdf/SessionReportPDF";
 import { cn } from "~/lib/utils";
 import { toast } from "sonner";
-import { useTestResultsReport } from "~/hooks/use-test-results-report";
 import { useSessions } from "~/hooks/use-sessions";
+import { useTestResultsReport } from "~/hooks/use-test-results-report";
+import { DataPreview } from "./DataPreview";
 
 // Define filter interface for test results report
 interface TestResultsFilter {
@@ -59,13 +60,15 @@ export function BulkExportManager() {
     includeRecommendations: true,
   });
 
+  const [isGenerating, setIsGenerating] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  const [generatedData, setGeneratedData] = useState<any>(null);
 
   // Initialize hooks
   const { useGetSessions } = useSessions();
   const sessionsQuery = useGetSessions({ limit: 100 });
 
-  // Test Results Report hook
+  // Dynamic test results report hook that updates based on filter
   const testResultsReport = useTestResultsReport(
     {
       period_type: filter.period_type,
@@ -76,6 +79,11 @@ export function BulkExportManager() {
     { enabled: false }
   );
 
+  // Reset generated data when filter changes
+  React.useEffect(() => {
+    setGeneratedData(null);
+  }, [filter.period_type, filter.start_date, filter.end_date, filter.session_id]);
+
   // Helper function to format date to local YYYY-MM-DD without timezone issues
   const formatDateToLocal = (date: Date): string => {
     const year = date.getFullYear();
@@ -84,7 +92,8 @@ export function BulkExportManager() {
     return `${year}-${month}-${day}`;
   };
 
-  const handleExport = async () => {
+  // Phase 1: Generate Data
+  const handleGenerateData = async () => {
     // Basic validation
     if (
       filter.period_type === "custom" &&
@@ -94,7 +103,7 @@ export function BulkExportManager() {
       return;
     }
 
-    setIsExporting(true);
+    setIsGenerating(true);
 
     try {
       toast.info("Mengambil data test results...");
@@ -108,26 +117,16 @@ export function BulkExportManager() {
       }
 
       const reportData = result.data;
-      console.log("✅ Test Results Report Response:", reportData);
+      console.log("✅ Generated Data:", reportData);
 
-      // Process the data based on format
-      switch (filter.format) {
-        case "pdf":
-          await handlePDFExport(reportData);
-          break;
-        case "excel":
-          await handleExcelExport(reportData);
-          break;
-        case "csv":
-          await handleCSVExport(reportData);
-          break;
-      }
+      // Simpan data yang sudah di-generate
+      setGeneratedData(reportData);
 
       toast.success(
-        `Export berhasil! ${reportData.data.summary.total_sessions} sessions, ${reportData.data.summary.total_participants} participants dalam format ${filter.format.toUpperCase()}`
+        `Data berhasil di-generate! ${reportData.data.summary.total_sessions} sessions, ${reportData.data.summary.total_participants} participants`
       );
     } catch (error: any) {
-      console.error("Export error:", error);
+      console.error("Generate data error:", error);
       const errorMessage = error.message?.toLowerCase();
 
       if (errorMessage?.includes("no data found")) {
@@ -136,9 +135,47 @@ export function BulkExportManager() {
         toast.error("Format tanggal tidak valid");
       } else {
         toast.error(
-          `Gagal melakukan export: ${error.message || "Unknown error"}`
+          `Gagal mengambil data: ${error.message || "Unknown error"}`
         );
       }
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  // Phase 2: Export Data
+  const handleExport = async () => {
+    if (!generatedData) {
+      toast.error("Silakan generate data terlebih dahulu");
+      return;
+    }
+
+    setIsExporting(true);
+
+    try {
+      toast.info(`Mengexport data dalam format ${filter.format.toUpperCase()}...`);
+
+      // Process the data based on format
+      switch (filter.format) {
+        case "pdf":
+          await handlePDFExport(generatedData);
+          break;
+        case "excel":
+          await handleExcelExport(generatedData);
+          break;
+        case "csv":
+          await handleCSVExport(generatedData);
+          break;
+      }
+
+      toast.success(
+        `Export berhasil! Data exported dalam format ${filter.format.toUpperCase()}`
+      );
+    } catch (error: any) {
+      console.error("Export error:", error);
+      toast.error(
+        `Gagal melakukan export: ${error.message || "Unknown error"}`
+      );
     } finally {
       setIsExporting(false);
     }
@@ -681,32 +718,70 @@ export function BulkExportManager() {
         </div>
       )}
 
-      {/* Export Button */}
-      <div className="flex justify-end">
+      {/* Action Buttons */}
+      <div className="flex justify-end gap-3">
+        {/* Phase 1: Generate Data Button */}
         <Button
-          onClick={handleExport}
+          onClick={handleGenerateData}
           disabled={
-            isExporting ||
+            isGenerating ||
             testResultsReport.isLoading ||
             testResultsReport.isFetching
           }
           size="lg"
+          variant="outline"
         >
-          {isExporting ||
+          {isGenerating ||
           testResultsReport.isLoading ||
           testResultsReport.isFetching ? (
             <>
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current"></div>
+              Generating...
+            </>
+          ) : (
+            <>
+              <BarChart3 className="h-4 w-4" />
+              📊 Generate Data
+            </>
+          )}
+        </Button>
+
+        {/* Phase 2: Export Button (only enabled when data is generated) */}
+        <Button
+          onClick={handleExport}
+          disabled={
+            !generatedData || 
+            isExporting ||
+            isGenerating
+          }
+          size="lg"
+        >
+          {isExporting ? (
+            <>
               <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-              Mengexport...
+              Exporting...
             </>
           ) : (
             <>
               {getFormatIcon()}
-              📊 Export Test Results {filter.format.toUpperCase()}
+              📄 Export {filter.format.toUpperCase()}
             </>
           )}
         </Button>
       </div>
+
+      {/* Data Preview - Show after data is generated */}
+      {generatedData && (
+        <div className="mt-8">
+          <div className="mb-4">
+            <h3 className="text-lg font-semibold">Data Preview</h3>
+            <p className="text-sm text-muted-foreground">
+              Review the generated data below. If everything looks correct, click Export to download.
+            </p>
+          </div>
+          <DataPreview data={generatedData} />
+        </div>
+      )}
     </div>
   );
 }

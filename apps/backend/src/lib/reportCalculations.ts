@@ -64,7 +64,7 @@ export async function calculateFreshScoreForAttempt(
     let correctAnswers = 0;
     let answeredQuestions = 0;
     let scorableQuestions = 0; // Track questions that contribute to score
-
+    
     for (const { answer, question } of answersResult) {
       if (!question) continue;
       
