@@ -16,6 +16,7 @@ import {
   calculateAttemptProgress,
   isAttemptExpired,
 } from "shared-types";
+import { calculateComprehensiveResult } from "@/lib/result-calculation";
 
 export async function finishTestAttemptHandler(
   c: Context<{ Bindings: CloudflareBindings; Variables: { user: any } }>
@@ -157,66 +158,120 @@ export async function finishTestAttemptHandler(
 
     let testResult = null;
 
-    // Create or update test result if attempt was completed
-    if (finalStatus === "completed" && existingResult.length === 0) {
-      // Basic result calculation based on completion percentage only
-      // Note: For accurate scoring, use the dedicated result.calculate endpoint
-      const rawScore =
-        (test.total_questions || 0) > 0
-          ? (requestData.questions_answered / (test.total_questions || 1)) * 100
-          : 0;
+    // Create comprehensive test result if attempt was completed
+    if (finalStatus === "completed") {
+      // Use comprehensive calculation with personality analysis and recommendations
+      const calculationResult = await calculateComprehensiveResult(
+        attemptId,
+        c.env,
+        {
+          include_personality_analysis: true,
+          include_recommendations: true,
+          force_recalculate: existingResult.length > 0, // Recalculate if result exists
+        }
+      );
 
-      const resultData = {
-        attempt_id: attemptId,
-        user_id: user.id,
-        test_id: test.id,
-        session_result_id: null, // Will be set when session results are calculated
-        raw_score: rawScore.toString(),
-        scaled_score: rawScore.toString(), // For now, same as raw score
-        percentile: null, // Would need more data to calculate
-        grade:
-          rawScore >= 80
-            ? "A"
-            : rawScore >= 70
-              ? "B"
-              : rawScore >= 60
-                ? "C"
-                : rawScore >= 50
-                  ? "D"
-                  : "E",
-        traits: null, // Would be calculated based on test type and answers
-        trait_names: null,
-        description: `Test completed with ${completionPercentage}% completion rate`,
-        recommendations: null,
-        detailed_analysis: null,
-        is_passed: test.passing_score
-          ? rawScore >= parseFloat(test.passing_score)
-          : rawScore >= 60,
-        completion_percentage: completionPercentage.toString(),
-        calculated_at: now,
-        created_at: now,
-        updated_at: now,
-      };
+      if (calculationResult.success && calculationResult.result) {
+        const result = calculationResult.result;
+        testResult = {
+          id: result.id,
+          raw_score: parseFloat(result.raw_score || "0"),
+          scaled_score: parseFloat(result.scaled_score || "0"),
+          percentile: result.percentile ? parseFloat(result.percentile) : null,
+          grade: result.grade,
+          // traits: result.traits,
+          // trait_names: result.trait_names,
+          // description: result.description,
+          // recommendations: result.recommendations,
+          is_passed: result.is_passed,
+          completion_percentage: parseFloat(
+            result.completion_percentage || "0"
+          ),
+          calculated_at: result.calculated_at,
+        };
+      } else {
+        // Fallback to basic calculation if comprehensive calculation fails
+        console.warn(
+          "Comprehensive calculation failed, using basic calculation:",
+          calculationResult.error
+        );
 
-      const [newResult] = await db
-        .insert(testResults)
-        .values(resultData)
-        .returning();
+        const rawScore =
+          (test.total_questions || 0) > 0
+            ? (requestData.questions_answered / (test.total_questions || 1)) *
+              100
+            : 0;
 
-      testResult = {
-        id: newResult.id,
-        raw_score: parseFloat(newResult.raw_score || "0"),
-        scaled_score: parseFloat(newResult.scaled_score || "0"),
-        percentile: newResult.percentile
-          ? parseFloat(newResult.percentile)
-          : null,
-        grade: newResult.grade,
-        is_passed: newResult.is_passed,
-        completion_percentage: parseFloat(
-          newResult.completion_percentage || "0"
-        ),
-        calculated_at: newResult.calculated_at,
-      };
+        const resultData = {
+          attempt_id: attemptId,
+          user_id: user.id,
+          test_id: test.id,
+          session_result_id: null,
+          raw_score: rawScore.toString(),
+          scaled_score: rawScore.toString(),
+          percentile: null,
+          grade:
+            rawScore >= 80
+              ? "A"
+              : rawScore >= 70
+                ? "B"
+                : rawScore >= 60
+                  ? "C"
+                  : rawScore >= 50
+                    ? "D"
+                    : "E",
+          traits: null,
+          trait_names: null,
+          description: `Test completed with ${completionPercentage}% completion rate`,
+          recommendations: null,
+          detailed_analysis: null,
+          is_passed: test.passing_score
+            ? rawScore >= parseFloat(test.passing_score)
+            : rawScore >= 60,
+          completion_percentage: completionPercentage.toString(),
+          calculated_at: now,
+          created_at: now,
+          updated_at: now,
+        };
+
+        if (existingResult.length === 0) {
+          const [newResult] = await db
+            .insert(testResults)
+            .values(resultData)
+            .returning();
+
+          testResult = {
+            id: newResult.id,
+            raw_score: parseFloat(newResult.raw_score || "0"),
+            scaled_score: parseFloat(newResult.scaled_score || "0"),
+            percentile: newResult.percentile
+              ? parseFloat(newResult.percentile)
+              : null,
+            grade: newResult.grade,
+            is_passed: newResult.is_passed,
+            completion_percentage: parseFloat(
+              newResult.completion_percentage || "0"
+            ),
+            calculated_at: newResult.calculated_at,
+          };
+        } else {
+          const existing = existingResult[0];
+          testResult = {
+            id: existing.id,
+            raw_score: parseFloat(existing.raw_score || "0"),
+            scaled_score: parseFloat(existing.scaled_score || "0"),
+            percentile: existing.percentile
+              ? parseFloat(existing.percentile)
+              : null,
+            grade: existing.grade,
+            is_passed: existing.is_passed,
+            completion_percentage: parseFloat(
+              existing.completion_percentage || "0"
+            ),
+            calculated_at: existing.calculated_at,
+          };
+        }
+      }
     } else if (existingResult.length > 0) {
       const existing = existingResult[0];
       testResult = {
