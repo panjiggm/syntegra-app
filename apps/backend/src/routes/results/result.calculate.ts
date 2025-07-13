@@ -1,5 +1,5 @@
 import { Context } from "hono";
-import { eq, and, count } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import {
   getDbFromEnv,
   testResults,
@@ -44,7 +44,6 @@ export async function calculateTestResultHandler(
       return c.json(errorResponse, 403);
     }
 
-    const startTime = Date.now();
     let attempt = null;
     let existingResult = null;
 
@@ -204,78 +203,123 @@ export async function calculateTestResultHandler(
     const completionPercentage =
       totalQuestions > 0 ? (answeredQuestions / totalQuestions) * 100 : 0;
 
-    // Calculate raw score (simple scoring for now)
+    // Determine scoring method based on test type
+    const isPersonalityTest = attempt.test.module_type === "personality";
+    const isRatingScaleTest = attempt.test.question_type === "rating_scale";
+
     let rawScore = 0;
     let correctAnswers = 0;
-    const scoredAnswers: Array<{
-      trait: string;
-      raw_score: number;
-      scaled_score: number;
-      percentile: number;
-    }> = [];
+    let grade = null;
+    let scaledScore = 0;
+    let percentile = null;
+    let isPassed = null;
 
-    for (const { answer, question } of answersResult) {
-      if (!question) continue;
+    // For personality/rating_scale tests: Calculate trait distribution
+    const ratingDistribution: Record<string, number> = {
+      "1": 0,
+      "2": 0,
+      "3": 0,
+      "4": 0,
+      "5": 0,
+    };
+    // Store trait-based answers for personality tests
+    const traitAnswers: Record<string, number[]> = {};
 
-      // Check if answer has any content (answer text, answer_data, or score)
-      const hasAnswer = answer.answer || answer.answer_data || answer.score;
-      if (!hasAnswer) continue;
+    // Process answers based on test type
+    if (isPersonalityTest || isRatingScaleTest) {
+      // PERSONALITY/RATING_SCALE: Collect answers by trait
+      for (const { answer, question } of answersResult) {
+        if (!question) continue;
 
-      // Calculate question score based on type and available data
-      let questionScore = 0;
-      let isAnswerCorrect = false;
+        // Get trait from scoring_key
+        let traitName = null;
+        if (question.scoring_key && typeof question.scoring_key === "object") {
+          traitName = (question.scoring_key as any).trait;
+        }
 
-      // Use stored score if available (already calculated)
-      if (answer.score !== null && answer.score !== undefined) {
-        questionScore = parseFloat(answer.score) || 0;
-
-        // For multiple choice and true/false, score 1 means correct
-        if (
-          question.question_type === "multiple_choice" ||
-          question.question_type === "true_false"
+        // Get rating value from answer
+        let ratingValue = null;
+        if (answer.answer) {
+          ratingValue = parseInt(answer.answer);
+        } else if (
+          answer.answer_data &&
+          typeof answer.answer_data === "object"
         ) {
-          isAnswerCorrect = questionScore > 0;
-        } else {
-          // For other types (rating_scale, etc.), consider answered as "correct"
-          isAnswerCorrect = true;
+          ratingValue = parseInt(
+            (answer.answer_data as any).value ||
+              (answer.answer_data as any).rating
+          );
+        }
+
+        // Store trait-based answer
+        if (traitName && ratingValue && ratingValue >= 1 && ratingValue <= 5) {
+          if (!traitAnswers[traitName]) {
+            traitAnswers[traitName] = [];
+          }
+          traitAnswers[traitName].push(ratingValue);
+        }
+
+        // Also count for general rating distribution
+        if (
+          ratingValue &&
+          ratingDistribution.hasOwnProperty(ratingValue.toString())
+        ) {
+          ratingDistribution[ratingValue.toString()]++;
         }
       }
-      // Fallback: use is_correct if no score available
-      else if (answer.is_correct === true) {
-        questionScore = 1;
-        isAnswerCorrect = true;
+
+      // For personality tests, no grade/pass/fail - just completion
+      const totalRatings = Object.values(ratingDistribution).reduce(
+        (sum, count) => sum + count,
+        0
+      );
+      rawScore = totalRatings;
+      scaledScore = completionPercentage;
+      percentile = null; // No percentile for personality tests
+      grade = null; // No grade for personality tests
+      isPassed = null; // No pass/fail for personality tests
+    } else {
+      // COGNITIVE TESTS (multiple_choice, true_false): Calculate score and grade
+      for (const { answer, question } of answersResult) {
+        if (!question) continue;
+
+        // Check if answer has any content
+        const hasAnswer = answer.answer || answer.answer_data || answer.score;
+        if (!hasAnswer) continue;
+
+        let questionScore = 0;
+        let isAnswerCorrect = false;
+
+        // Use stored score if available (already calculated)
+        if (answer.score !== null && answer.score !== undefined) {
+          questionScore = parseFloat(answer.score) || 0;
+          isAnswerCorrect = questionScore > 0;
+        }
+        // Fallback: use is_correct if no score available
+        else if (answer.is_correct === true) {
+          questionScore = 1;
+          isAnswerCorrect = true;
+        }
+
+        // Count correct answers for accuracy calculation
+        if (isAnswerCorrect) {
+          correctAnswers++;
+        }
+
+        rawScore += questionScore;
       }
 
-      // Count correct answers for accuracy calculation
-      if (isAnswerCorrect) {
-        correctAnswers++;
-      }
+      // Calculate scaled score and grade for cognitive tests
+      scaledScore = totalQuestions > 0 ? (rawScore / totalQuestions) * 100 : 0;
+      percentile = Math.min(100, scaledScore);
 
-      rawScore += questionScore;
-
-      // For trait-based tests, we would calculate trait scores here
-      // This is a simplified version
-      scoredAnswers.push({
-        trait: question.question_type || "general",
-        raw_score: questionScore,
-        scaled_score: questionScore * 10, // Simple scaling
-        percentile: Math.min(100, questionScore * 20), // Simple percentile
-      });
+      // Calculate grade and pass/fail
+      const passingScore = attempt.test.passing_score
+        ? parseFloat(attempt.test.passing_score)
+        : 60;
+      grade = calculateGrade(scaledScore, passingScore);
+      isPassed = determinePassStatus(scaledScore, passingScore);
     }
-
-    // Calculate scaled score
-    const scaledScore =
-      totalQuestions > 0 ? (rawScore / totalQuestions) * 100 : 0;
-
-    // Calculate percentile (simplified - in real system would compare with norms)
-    const percentile = Math.min(100, scaledScore);
-
-    // Calculate grade
-    const passingScore = attempt.test.passing_score
-      ? parseFloat(attempt.test.passing_score)
-      : 60;
-    const grade = calculateGrade(scaledScore, passingScore);
-    const isPassed = determinePassStatus(scaledScore, passingScore);
 
     // Generate traits based on test category
     let traits = null;
@@ -283,17 +327,23 @@ export async function calculateTestResultHandler(
       (options as any).include_personality_analysis &&
       attempt.test.module_type === "personality"
     ) {
-      traits = generatePersonalityTraits(answersResult, attempt.test.category);
-    } else if (
-      (options as any).include_intelligence_scoring &&
-      attempt.test.module_type === "intelligence"
-    ) {
-      traits = generateIntelligenceTraits(answersResult, attempt.test.category);
+      traits = generatePersonalityTraits(traitAnswers, attempt.test.category);
     }
 
     // Generate description and recommendations
     let description = `Test completed with ${Math.round(completionPercentage)}% completion rate. `;
-    description += `Scored ${Math.round(scaledScore)} out of 100 (${grade}).`;
+
+    if (isPersonalityTest || isRatingScaleTest) {
+      // Description for personality tests - focus on trait distribution
+      const dominantRating = Object.entries(ratingDistribution).reduce(
+        (max, [rating, count]) => (count > max.count ? { rating, count } : max),
+        { rating: "3", count: 0 }
+      );
+      description += `Most responses in rating ${dominantRating.rating} (${Math.round((dominantRating.count / rawScore) * 100)}% of answers).`;
+    } else {
+      // Description for cognitive tests - focus on score and grade
+      description += `Scored ${Math.round(scaledScore)} out of 100 (${grade || "N/A"}).`;
+    }
 
     let recommendations = null;
     if ((options as any).include_recommendations) {
@@ -301,28 +351,11 @@ export async function calculateTestResultHandler(
         scaledScore,
         grade,
         isPassed,
-        attempt.test
+        attempt.test,
+        isPersonalityTest || isRatingScaleTest,
+        ratingDistribution
       );
     }
-
-    // Prepare detailed analysis
-    const detailedAnalysis = {
-      calculation_method: "standard_scoring",
-      total_questions: totalQuestions,
-      answered_questions: answeredQuestions,
-      correct_answers: correctAnswers,
-      accuracy_rate:
-        answeredQuestions > 0 ? (correctAnswers / answeredQuestions) * 100 : 0,
-      time_efficiency: attempt.attempt.time_spent
-        ? Math.max(
-            0,
-            100 -
-              (attempt.attempt.time_spent / (attempt.test.time_limit * 60)) *
-                100
-          )
-        : 0,
-      scoring_breakdown: scoredAnswers,
-    };
 
     const now = new Date();
 
@@ -335,13 +368,12 @@ export async function calculateTestResultHandler(
         .set({
           raw_score: rawScore.toString(),
           scaled_score: scaledScore.toString(),
-          percentile: percentile.toString(),
+          percentile: percentile?.toString() || null,
           grade,
           traits,
           trait_names: traits?.map((t: any) => t.name) || null,
           description,
           recommendations,
-          detailed_analysis: detailedAnalysis,
           is_passed: isPassed,
           completion_percentage: completionPercentage.toString(),
           calculated_at: now,
@@ -362,13 +394,12 @@ export async function calculateTestResultHandler(
           session_result_id: null,
           raw_score: rawScore.toString(),
           scaled_score: scaledScore.toString(),
-          percentile: percentile.toString(),
+          percentile: percentile?.toString() || null,
           grade,
           traits,
           trait_names: traits?.map((t: any) => t.name) || null,
           description,
           recommendations,
-          detailed_analysis: detailedAnalysis,
           is_passed: isPassed,
           completion_percentage: completionPercentage.toString(),
           calculated_at: now,
@@ -380,8 +411,6 @@ export async function calculateTestResultHandler(
       result = newResult;
     }
 
-    const processingTime = Date.now() - startTime;
-
     // Build response
     const responseData = {
       id: result.id,
@@ -391,7 +420,7 @@ export async function calculateTestResultHandler(
       session_result_id: result.session_result_id,
       raw_score: parseFloat(result.raw_score || "0"),
       scaled_score: parseFloat(result.scaled_score || "0"),
-      percentile: parseFloat(result.percentile || "0"),
+      percentile: result.percentile ? parseFloat(result.percentile) : null,
       grade: result.grade,
       traits: result.traits as any,
       trait_names: result.trait_names as string[] | null,
@@ -437,16 +466,7 @@ export async function calculateTestResultHandler(
       message: existingResult
         ? "Test result recalculated successfully"
         : "Test result calculated successfully",
-      data: {
-        result: responseData,
-        calculation_details: {
-          calculation_method: "standard_scoring",
-          raw_answers_processed: answersResult.length,
-          scores_calculated: scoredAnswers,
-          processing_time_ms: processingTime,
-          recalculated: !!existingResult,
-        },
-      },
+      data: responseData,
       timestamp: new Date().toISOString(),
     };
 
@@ -472,109 +492,204 @@ export async function calculateTestResultHandler(
 }
 
 // Helper function to generate personality traits
-function generatePersonalityTraits(answersResult: any[], category: string) {
-  // This is a simplified implementation
-  // In a real system, this would use proper psychometric scoring algorithms
-
+function generatePersonalityTraits(
+  traitAnswers: Record<string, number[]>,
+  category: string
+) {
   const traits = [];
 
-  if (category === "mbti") {
-    traits.push(
+  // Define complete trait sets and descriptions by category (for Radar Charts)
+  const categoryTraits: Record<
+    string,
+    Array<{ name: string; key: string; description: string }>
+  > = {
+    disc: [
+      {
+        name: "Dominance",
+        key: "dominance",
+        description: "Assertive, results-oriented, strong-willed, and forceful",
+      },
+      {
+        name: "Influence",
+        key: "influence",
+        description: "Enthusiastic, optimistic, open, trusting, and energetic",
+      },
+      {
+        name: "Steadiness",
+        key: "steadiness",
+        description:
+          "Even-tempered, accommodating, patient, humble, and tactful",
+      },
+      {
+        name: "Compliance",
+        key: "compliance",
+        description: "Private, analytical, logical, critical, and reserved",
+      },
+    ],
+    mbti: [
       {
         name: "Extraversion",
-        score: 75,
-        description: "Outgoing and energetic",
-        category: "personality",
+        key: "extraversion",
+        description: "Outgoing, energetic, assertive, and sociable",
       },
       {
         name: "Sensing",
-        score: 60,
-        description: "Practical and realistic",
-        category: "personality",
+        key: "sensing",
+        description: "Practical, realistic, detailed, and factual",
       },
       {
         name: "Thinking",
-        score: 80,
-        description: "Logical and analytical",
-        category: "personality",
+        key: "thinking",
+        description: "Logical, analytical, objective, and critical",
       },
       {
         name: "Judging",
-        score: 70,
-        description: "Organized and decisive",
-        category: "personality",
-      }
-    );
-  } else if (category === "big_five") {
-    traits.push(
+        key: "judging",
+        description: "Organized, decisive, scheduled, and structured",
+      },
+    ],
+    big_five: [
       {
         name: "Openness",
-        score: 75,
-        description: "Open to new experiences",
-        category: "personality",
+        key: "openness",
+        description: "Creative, curious, open to new experiences and ideas",
       },
       {
         name: "Conscientiousness",
-        score: 85,
-        description: "Organized and responsible",
-        category: "personality",
+        key: "conscientiousness",
+        description:
+          "Organized, responsible, dependable, and achievement-oriented",
       },
       {
         name: "Extraversion",
-        score: 70,
-        description: "Sociable and assertive",
-        category: "personality",
+        key: "extraversion",
+        description: "Sociable, assertive, energetic, and outgoing",
       },
       {
         name: "Agreeableness",
-        score: 80,
-        description: "Cooperative and trusting",
-        category: "personality",
+        key: "agreeableness",
+        description: "Cooperative, trusting, helpful, and good-natured",
       },
       {
         name: "Neuroticism",
-        score: 40,
-        description: "Emotionally stable",
-        category: "personality",
-      }
-    );
+        key: "neuroticism",
+        description:
+          "Anxious, emotionally reactive, and prone to negative emotions",
+      },
+    ],
+    epps: [
+      {
+        name: "Achievement",
+        key: "achievement",
+        description: "Driven to accomplish difficult tasks and excel",
+      },
+      {
+        name: "Deference",
+        key: "deference",
+        description: "Respectful to authority and willing to follow others",
+      },
+      {
+        name: "Order",
+        key: "order",
+        description: "Organized, neat, and values structure and planning",
+      },
+      {
+        name: "Exhibition",
+        key: "exhibition",
+        description:
+          "Enjoys being the center of attention and impressing others",
+      },
+      {
+        name: "Autonomy",
+        key: "autonomy",
+        description: "Independent, self-reliant, and values freedom",
+      },
+      {
+        name: "Affiliation",
+        key: "affiliation",
+        description: "Enjoys close relationships and being part of groups",
+      },
+      {
+        name: "Intraception",
+        key: "intraception",
+        description:
+          "Analytical, introspective, and interested in understanding motives",
+      },
+      {
+        name: "Succorance",
+        key: "succorance",
+        description: "Seeks help and support from others when needed",
+      },
+      {
+        name: "Dominance",
+        key: "dominance",
+        description: "Assertive, influential, and enjoys leading others",
+      },
+      {
+        name: "Abasement",
+        key: "abasement",
+        description:
+          "Self-critical, accepts blame, and feels inferior at times",
+      },
+      {
+        name: "Nurturance",
+        key: "nurturance",
+        description: "Caring, helpful, and enjoys taking care of others",
+      },
+      {
+        name: "Change",
+        key: "change",
+        description: "Enjoys variety, novelty, and new experiences",
+      },
+      {
+        name: "Endurance",
+        key: "endurance",
+        description: "Persistent, determined, and works hard to completion",
+      },
+      {
+        name: "Heterosexuality",
+        key: "heterosexuality",
+        description: "Interested in and attracted to the opposite sex",
+      },
+      {
+        name: "Aggression",
+        key: "aggression",
+        description: "Competitive, argumentative, and easily angered",
+      },
+    ],
+  };
+
+  // Get expected traits for this category
+  const expectedTraits = categoryTraits[category] || [];
+
+  // Calculate scores for all expected traits (ensure complete data for Radar Chart)
+  for (const traitDef of expectedTraits) {
+    let score = 0; // Default score for Radar Chart
+    let rawAverage = 0; // Default average
+    let questionCount = 0;
+
+    // If we have actual data for this trait, calculate real score
+    if (traitAnswers[traitDef.key] && traitAnswers[traitDef.key].length > 0) {
+      const ratings = traitAnswers[traitDef.key];
+      rawAverage =
+        ratings.reduce((sum, rating) => sum + rating, 0) / ratings.length;
+      score = Math.round(((rawAverage - 1) / 4) * 100); // Convert 1-5 to 0-100
+      questionCount = ratings.length;
+    }
+
+    traits.push({
+      name: traitDef.name,
+      key: traitDef.key, // For frontend identification
+      score: Math.max(0, Math.min(100, score)), // Clamp to 0-100
+      description: traitDef.description,
+      category: "personality",
+      raw_average: Math.round(rawAverage * 10) / 10, // Round to 1 decimal
+      question_count: questionCount,
+    });
   }
 
-  return traits;
-}
-
-// Helper function to generate intelligence traits
-function generateIntelligenceTraits(answersResult: any[], category: string) {
-  const traits = [];
-
-  if (category === "wais") {
-    traits.push(
-      {
-        name: "Verbal Comprehension",
-        score: 110,
-        description: "Verbal reasoning abilities",
-        category: "intelligence",
-      },
-      {
-        name: "Perceptual Reasoning",
-        score: 105,
-        description: "Non-verbal reasoning",
-        category: "intelligence",
-      },
-      {
-        name: "Working Memory",
-        score: 115,
-        description: "Memory and attention",
-        category: "intelligence",
-      },
-      {
-        name: "Processing Speed",
-        score: 100,
-        description: "Mental processing speed",
-        category: "intelligence",
-      }
-    );
-  }
+  // For Radar Charts, maintain original order (don't sort by score)
+  // This ensures consistent positioning on the radar
 
   return traits;
 }
@@ -582,35 +697,59 @@ function generateIntelligenceTraits(answersResult: any[], category: string) {
 // Helper function to generate recommendations
 function generateRecommendations(
   score: number,
-  grade: string,
-  isPassed: boolean,
-  test: any
+  grade: string | null,
+  isPassed: boolean | null,
+  test: any,
+  isPersonalityTest: boolean = false,
+  ratingDistribution: Record<string, number> = {}
 ): string {
   let recommendations = "";
 
-  if (isPassed) {
-    if (score >= 90) {
+  if (isPersonalityTest) {
+    const dominantRating = Object.entries(ratingDistribution).reduce(
+      (max, [rating, count]) => (count > max.count ? { rating, count } : max),
+      { rating: "3", count: 0 }
+    );
+
+    if (parseInt(dominantRating.rating) >= 4) {
       recommendations =
-        "Excellent performance! Consider advanced roles and leadership positions.";
-    } else if (score >= 80) {
+        "Terdeteksi kepribadian yang kuat. Pertimbangkan peran kepemimpinan atau posisi dengan tanggung jawab tinggi yang memanfaatkan kekuatan ini.";
+    } else if (parseInt(dominantRating.rating) === 3) {
       recommendations =
-        "Good performance. Suitable for target position with minor skill development.";
+        "Profil kepribadian yang seimbang. Cocok untuk peran kolaboratif dan posisi berbasis tim.";
     } else {
       recommendations =
-        "Adequate performance. Recommend additional training in key areas.";
+        "Profil kepribadian introspektif. Pertimbangkan peran yang memerlukan analisis teliti dan kerja mandiri.";
     }
-  } else {
-    recommendations =
-      "Performance below passing threshold. Recommend retesting after skill development or consider alternative positions.";
-  }
 
-  // Add test-specific recommendations
-  if (test.module_type === "personality") {
     recommendations +=
-      " Focus on personality development and self-awareness training.";
-  } else if (test.module_type === "intelligence") {
-    recommendations +=
-      " Consider cognitive training and problem-solving skill enhancement.";
+      " Fokus pada pengembangan kepribadian dan pelatihan kesadaran diri untuk meningkatkan kekuatan.";
+  } else {
+    // Rekomendasi untuk tes kognitif berdasarkan skor dan nilai
+    if (isPassed) {
+      if (score >= 90) {
+        recommendations =
+          "Performa sangat baik! Pertimbangkan peran lanjutan dan posisi kepemimpinan.";
+      } else if (score >= 80) {
+        recommendations =
+          "Performa baik. Cocok untuk posisi target dengan sedikit pengembangan keterampilan.";
+      } else {
+        recommendations =
+          "Performa biasa saja. Disarankan pelatihan tambahan untuk meningkatkan kemampuan.";
+      }
+    } else {
+      recommendations =
+        "Performa di bawah ambang batas kelulusan. Disarankan tes ulang setelah pengembangan keterampilan atau pertimbangkan posisi alternatif.";
+    }
+
+    // Tambahkan rekomendasi spesifik tes untuk tes kognitif
+    if (test.module_type === "intelligence") {
+      recommendations +=
+        " Pertimbangkan pelatihan kognitif dan peningkatan keterampilan pemecahan masalah.";
+    } else if (test.module_type === "aptitude") {
+      recommendations +=
+        " Fokus pada pelatihan spesifik keterampilan dan latihan di area yang relevan.";
+    }
   }
 
   return recommendations;

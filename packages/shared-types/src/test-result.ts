@@ -376,23 +376,7 @@ export const GetTestResultsResponseSchema = z.object({
 export const CalculateTestResultResponseSchema = z.object({
   success: z.literal(true),
   message: z.string(),
-  data: z.object({
-    result: TestResultDataSchema,
-    calculation_details: z.object({
-      calculation_method: z.string(),
-      raw_answers_processed: z.number(),
-      scores_calculated: z.array(
-        z.object({
-          trait: z.string(),
-          raw_score: z.number(),
-          scaled_score: z.number(),
-          percentile: z.number(),
-        })
-      ),
-      processing_time_ms: z.number(),
-      recalculated: z.boolean(),
-    }),
-  }),
+  data: TestResultDataSchema,
   timestamp: z.string(),
 });
 
