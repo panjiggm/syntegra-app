@@ -224,7 +224,7 @@ export async function getAttemptAnswersHandler(
           (answer.answer_data as Record<string, any>) || null,
           question.question_type,
           question.correct_answer,
-          (question.scoring_key as Record<string, number>) || undefined,
+          (question.scoring_key as Record<string, number | string>) || undefined,
           (question.options as Array<{
             value: string;
             label: string;

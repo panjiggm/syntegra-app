@@ -255,7 +255,7 @@ export const questions = pgTable(
     time_limit: integer("time_limit"), // per question time limit in seconds
     image_url: varchar("image_url", { length: 500 }),
     audio_url: varchar("audio_url", { length: 500 }),
-    scoring_key: json("scoring_key").$type<Record<string, number>>(), // for complex scoring
+    scoring_key: json("scoring_key").$type<Record<string, number | string>>(), // for complex scoring and trait mapping
     is_required: boolean("is_required").default(true),
     created_at: timestamp("created_at").defaultNow().notNull(),
     updated_at: timestamp("updated_at").defaultNow().notNull(),

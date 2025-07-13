@@ -460,7 +460,7 @@ export function calculateAnswerScore(
   answerData: Record<string, any> | null,
   questionType: string,
   correctAnswer: string | null,
-  scoringKey?: Record<string, number>,
+  scoringKey?: Record<string, number | string>,
   options?: Array<{ value: string; label: string; score?: number }>
 ): { score: number; isCorrect: boolean } {
   if (!answer && !answerData) {

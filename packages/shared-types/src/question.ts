@@ -20,8 +20,8 @@ export const QuestionOptionSchema = z.object({
   score: z.number().optional(), // For scoring-based questions
 });
 
-// Scoring Key Schema for complex scoring
-export const ScoringKeySchema = z.record(z.string(), z.number());
+// Scoring Key Schema for complex scoring and trait mapping
+export const ScoringKeySchema = z.record(z.string(), z.union([z.number(), z.string()]));
 
 // Create Question Request Schema
 export const CreateQuestionRequestSchema = z

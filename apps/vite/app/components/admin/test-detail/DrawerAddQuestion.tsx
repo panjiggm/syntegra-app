@@ -20,6 +20,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { ScrollArea } from "~/components/ui/scroll-area";
 import { RadioGroup, RadioGroupItem } from "~/components/ui/radio-group";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "~/components/ui/select";
+import {
   Plus,
   Trash2,
   Loader2,
@@ -36,12 +43,52 @@ import { toast } from "sonner";
 import { useQuestionDialogStore } from "~/stores/use-question-dialog-store";
 import { useQuestions } from "~/hooks/use-questions";
 import { useTests } from "~/hooks/use-tests";
-import {
-  getDefaultTimeLimitByQuestionType,
-  QUESTION_TYPE_LABELS,
-  type QuestionType,
-} from "~/lib/utils/question";
+import { QUESTION_TYPE_LABELS } from "~/lib/utils/question";
 import { QuestionTypeBadge } from "~/components/question-type-badge";
+
+// Trait mappings for personality tests
+const PERSONALITY_TRAITS = {
+  mbti: [
+    { value: "extraversion", label: "Extraversion" },
+    { value: "introversion", label: "Introversion" },
+    { value: "sensing", label: "Sensing" },
+    { value: "intuition", label: "Intuition" },
+    { value: "thinking", label: "Thinking" },
+    { value: "feeling", label: "Feeling" },
+    { value: "judging", label: "Judging" },
+    { value: "perceiving", label: "Perceiving" },
+  ],
+  big_five: [
+    { value: "openness", label: "Openness" },
+    { value: "conscientiousness", label: "Conscientiousness" },
+    { value: "extraversion", label: "Extraversion" },
+    { value: "agreeableness", label: "Agreeableness" },
+    { value: "neuroticism", label: "Neuroticism" },
+  ],
+  disc: [
+    { value: "dominance", label: "Dominance (D)" },
+    { value: "influence", label: "Influence (I)" },
+    { value: "steadiness", label: "Steadiness (S)" },
+    { value: "compliance", label: "Compliance (C)" },
+  ],
+  epps: [
+    { value: "achievement", label: "Achievement" },
+    { value: "deference", label: "Deference" },
+    { value: "order", label: "Order" },
+    { value: "exhibition", label: "Exhibition" },
+    { value: "autonomy", label: "Autonomy" },
+    { value: "affiliation", label: "Affiliation" },
+    { value: "intraception", label: "Intraception" },
+    { value: "succorance", label: "Succorance" },
+    { value: "dominance", label: "Dominance" },
+    { value: "abasement", label: "Abasement" },
+    { value: "nurturance", label: "Nurturance" },
+    { value: "change", label: "Change" },
+    { value: "endurance", label: "Endurance" },
+    { value: "heterosexuality", label: "Heterosexuality" },
+    { value: "aggression", label: "Aggression" },
+  ],
+};
 
 // Question form schema berdasarkan question_type
 const questionSchema = z.object({
@@ -71,6 +118,7 @@ const questionSchema = z.object({
   sequence: z.number().min(1, "Urutan harus minimal 1").optional(),
   time_limit: z.number().min(0, "Waktu tidak boleh negatif").optional(),
   scoring_key: z.record(z.number()).optional(),
+  trait: z.string().optional(),
   is_required: z.boolean(),
   // Rating scale specific
   rating_min: z.number().optional(),
@@ -279,6 +327,13 @@ export function DrawerAddQuestion() {
   useEffect(() => {
     if (mode === "edit" && editQuestionQuery.data?.data) {
       const question = editQuestionQuery.data.data;
+
+      // Extract trait from scoring_key if it exists
+      let trait = "";
+      if (question.scoring_key && typeof question.scoring_key === "object") {
+        trait = (question.scoring_key as any).trait || "";
+      }
+
       reset({
         question: question.question,
         question_type: question.question_type,
@@ -287,6 +342,7 @@ export function DrawerAddQuestion() {
         sequence: question.sequence,
         time_limit: question.time_limit || testDefaultTimeLimit,
         is_required: question.is_required,
+        trait: trait,
       });
 
       // Set selected correct answer for radio
@@ -367,6 +423,17 @@ export function DrawerAddQuestion() {
       }
     }
 
+    // Validation for personality tests with rating_scale
+    if (
+      currentTest?.module_type === "personality" &&
+      questionType === "rating_scale"
+    ) {
+      if (!data.trait || data.trait.trim() === "") {
+        toast.error("Trait wajib dipilih untuk tes personality");
+        return;
+      }
+    }
+
     setIsSubmitting(true);
     const loadingToast = toast.loading(
       mode === "create" ? "Menambahkan soal..." : "Memperbarui soal..."
@@ -439,6 +506,11 @@ export function DrawerAddQuestion() {
               value: i.toString(),
               label: i.toString(),
             });
+          }
+
+          // For personality tests, set scoring_key with trait
+          if (currentTest?.module_type === "personality" && data.trait) {
+            submissionData.scoring_key = { trait: data.trait };
           }
           break;
 
@@ -864,6 +936,55 @@ export function DrawerAddQuestion() {
                       />
                     </div>
                   </div>
+
+                  {/* Trait Selection for Personality Tests */}
+                  {currentTest?.module_type === "personality" && (
+                    <div>
+                      <Label className="text-sm font-medium">
+                        Trait <span className="text-red-500">*</span>
+                      </Label>
+                      <Controller
+                        name="trait"
+                        control={control}
+                        rules={{
+                          required: "Trait wajib dipilih untuk tes personality",
+                        }}
+                        render={({ field }) => (
+                          <Select
+                            value={field.value}
+                            onValueChange={field.onChange}
+                            disabled={isSubmitting}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Pilih trait..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {currentTest?.category &&
+                                PERSONALITY_TRAITS[
+                                  currentTest.category as keyof typeof PERSONALITY_TRAITS
+                                ]?.map((trait) => (
+                                  <SelectItem
+                                    key={trait.value}
+                                    value={trait.value}
+                                  >
+                                    {trait.label}
+                                  </SelectItem>
+                                ))}
+                            </SelectContent>
+                          </Select>
+                        )}
+                      />
+                      {errors.trait && (
+                        <p className="text-sm text-red-600 flex items-center gap-1 mt-1">
+                          <AlertCircle className="h-3 w-3" />
+                          {errors.trait.message}
+                        </p>
+                      )}
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Pilih trait yang akan diukur oleh pertanyaan ini
+                      </p>
+                    </div>
+                  )}
                 </div>
               )}
 

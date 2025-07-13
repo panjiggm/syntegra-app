@@ -573,6 +573,21 @@ export function TestBankSoal({ testId, test }: TestBankSoalProps) {
                                   question.question_type as keyof typeof QUESTION_TYPE_LABELS
                                 }
                               />
+                              
+                              {/* Trait Badge for Rating Scale Questions */}
+                              {question.question_type === "rating_scale" && 
+                               question.scoring_key && 
+                               typeof question.scoring_key === 'object' && 
+                               (question.scoring_key as any).trait && (
+                                <Badge 
+                                  variant="outline" 
+                                  className="bg-indigo-50 text-indigo-700 border-indigo-200"
+                                >
+                                  <BarChart3 className="w-3 h-3 mr-1" />
+                                  {(question.scoring_key as any).trait}
+                                </Badge>
+                              )}
+
                               {question.is_required ? (
                                 <Badge
                                   variant="secondary"
