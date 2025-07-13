@@ -33,7 +33,6 @@ import {
 import {
   Plus,
   Search,
-  Filter,
   MoreHorizontal,
   Edit,
   Trash2,
@@ -144,12 +143,8 @@ export function TestBankSoal({ testId, test }: TestBankSoalProps) {
   } = useQuestionDialogStore();
 
   // API calls
-  const {
-    useGetQuestions,
-    useGetQuestionStats,
-    useUpdateQuestionSequence,
-    useBulkDeleteQuestions,
-  } = useQuestions();
+  const { useGetQuestions, useUpdateQuestionSequence, useBulkDeleteQuestions } =
+    useQuestions();
 
   // Bulk delete mutation
   const bulkDeleteMutation = useBulkDeleteQuestions(testId);
@@ -166,9 +161,6 @@ export function TestBankSoal({ testId, test }: TestBankSoalProps) {
     sort_by: "sequence",
     sort_order: "asc",
   });
-
-  // Get question statistics
-  const statsQuery = useGetQuestionStats(testId);
 
   // Update sequence mutation
   const updateSequenceMutation = useUpdateQuestionSequence(testId);
@@ -321,73 +313,6 @@ export function TestBankSoal({ testId, test }: TestBankSoalProps) {
             Tambah Soal
           </Button>
         </div>
-      </div>
-
-      {/* Statistics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <FileText className="h-5 w-5 text-blue-600" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Total Soal</p>
-                <p className="text-2xl font-bold">
-                  {statsQuery.data?.data?.total_questions || 0}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-green-100 rounded-lg">
-                <CheckCircle className="h-5 w-5 text-green-600" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Wajib</p>
-                <p className="text-2xl font-bold">
-                  {statsQuery.data?.data?.required_questions || 0}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-orange-100 rounded-lg">
-                <XCircle className="h-5 w-5 text-orange-600" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Opsional</p>
-                <p className="text-2xl font-bold">
-                  {statsQuery.data?.data?.optional_questions || 0}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-purple-100 rounded-lg">
-                <Clock className="h-5 w-5 text-purple-600" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Rata-rata Waktu</p>
-                <p className="text-2xl font-bold">
-                  {Math.round(statsQuery.data?.data?.avg_time_limit || 0)}s
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
       </div>
 
       {/* Filters and Search */}
@@ -573,20 +498,20 @@ export function TestBankSoal({ testId, test }: TestBankSoalProps) {
                                   question.question_type as keyof typeof QUESTION_TYPE_LABELS
                                 }
                               />
-                              
+
                               {/* Trait Badge for Rating Scale Questions */}
-                              {question.question_type === "rating_scale" && 
-                               question.scoring_key && 
-                               typeof question.scoring_key === 'object' && 
-                               (question.scoring_key as any).trait && (
-                                <Badge 
-                                  variant="outline" 
-                                  className="bg-indigo-50 text-indigo-700 border-indigo-200"
-                                >
-                                  <BarChart3 className="w-3 h-3 mr-1" />
-                                  {(question.scoring_key as any).trait}
-                                </Badge>
-                              )}
+                              {question.question_type === "rating_scale" &&
+                                question.scoring_key &&
+                                typeof question.scoring_key === "object" &&
+                                (question.scoring_key as any).trait && (
+                                  <Badge
+                                    variant="outline"
+                                    className="bg-indigo-50 text-indigo-700 border-indigo-200"
+                                  >
+                                    <BarChart3 className="w-3 h-3 mr-1" />
+                                    {(question.scoring_key as any).trait}
+                                  </Badge>
+                                )}
 
                               {question.is_required ? (
                                 <Badge
