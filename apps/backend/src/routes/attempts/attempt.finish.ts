@@ -175,14 +175,16 @@ export async function finishTestAttemptHandler(
         const result = calculationResult.result;
         testResult = {
           id: result.id,
-          raw_score: parseFloat(result.raw_score || "0"),
-          scaled_score: parseFloat(result.scaled_score || "0"),
+          raw_score: result.raw_score ? parseFloat(result.raw_score) : null,
+          scaled_score: result.scaled_score
+            ? parseFloat(result.scaled_score)
+            : null,
           percentile: result.percentile ? parseFloat(result.percentile) : null,
           grade: result.grade,
-          // traits: result.traits,
-          // trait_names: result.trait_names,
-          // description: result.description,
-          // recommendations: result.recommendations,
+          traits: result.traits,
+          trait_names: result.trait_names,
+          description: result.description,
+          recommendations: result.recommendations,
           is_passed: result.is_passed,
           completion_percentage: parseFloat(
             result.completion_percentage || "0"

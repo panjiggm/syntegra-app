@@ -162,13 +162,9 @@ export async function calculateComprehensiveResult(
         }
       }
 
-      // For personality tests, no grade/pass/fail - just completion
-      const totalRatings = Object.values(ratingDistribution).reduce(
-        (sum, count) => sum + count,
-        0
-      );
-      rawScore = totalRatings;
-      scaledScore = completionPercentage;
+      // For personality/rating tests: No raw_score, scaled_score, grade, or pass/fail
+      rawScore = 0; // Will be stored as null in database for personality tests
+      scaledScore = 0; // Will be stored as null in database for personality tests
       percentile = null; // No percentile for personality tests
       grade = null; // No grade for personality tests
       isPassed = null; // No pass/fail for personality tests
@@ -260,8 +256,8 @@ export async function calculateComprehensiveResult(
       const [updatedResult] = await db
         .update(testResults)
         .set({
-          raw_score: rawScore.toString(),
-          scaled_score: scaledScore.toString(),
+          raw_score: (isPersonalityTest || isRatingScaleTest) ? null : rawScore.toString(),
+          scaled_score: (isPersonalityTest || isRatingScaleTest) ? null : scaledScore.toString(),
           percentile: percentile?.toString() || null,
           grade,
           traits,
@@ -286,8 +282,8 @@ export async function calculateComprehensiveResult(
           user_id: user.id,
           test_id: test.id,
           session_result_id: null,
-          raw_score: rawScore.toString(),
-          scaled_score: scaledScore.toString(),
+          raw_score: (isPersonalityTest || isRatingScaleTest) ? null : rawScore.toString(),
+          scaled_score: (isPersonalityTest || isRatingScaleTest) ? null : scaledScore.toString(),
           percentile: percentile?.toString() || null,
           grade,
           traits,
