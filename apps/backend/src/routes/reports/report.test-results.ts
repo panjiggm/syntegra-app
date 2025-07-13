@@ -107,7 +107,43 @@ export async function getTestResultsReportHandler(
     // Get test module summary
     const testModuleSummary = await getTestModuleSummary(db, whereClause);
 
-    const response: GetTestResultsReportResponse = {
+    // Simplified response structure
+    const simplifiedPositionSummary = positionSummary.map((pos: any) => ({
+      target_position: pos.target_position,
+      total_participants: pos.total_participants,
+    }));
+
+    const simplifiedSessions = sessions.map((session: any) => ({
+      session_id: session.session_id,
+      session_code: session.session_code,
+      session_name: session.session_name,
+      date: session.date,
+      total_participants: session.total_participants,
+      average_score: session.average_score,
+      average_duration_minutes: session.average_duration_minutes,
+      test_modules: session.test_modules,
+    }));
+
+    const simplifiedParticipants = participants.map((participant: any) => ({
+      nik: participant.nik,
+      name: participant.name,
+      gender: participant.gender,
+      age: participant.age,
+      total_score: participant.total_score,
+      overall_grade: participant.overall_grade,
+    }));
+
+    const simplifiedTestModuleSummary = testModuleSummary.map((module: any) => ({
+      test_name: module.test_name,
+      module_type: module.category === "personality" ? "personality" : "cognitive",
+      category: module.category,
+      icon: module.icon,
+      total_attempts: module.total_attempts,
+      average_score: module.average_score,
+      completion_rate: module.completion_rate,
+    }));
+
+    const response = {
       success: true,
       message: "Test results report retrieved successfully",
       data: {
@@ -117,12 +153,17 @@ export async function getTestResultsReportHandler(
           end_date: endDate.toISOString().split("T")[0],
           label,
         },
-        summary,
-        sessions,
-        participants,
-        position_summary: positionSummary,
-        test_module_summary: testModuleSummary,
-        generated_at: new Date().toISOString(),
+        summary: {
+          total_sessions: summary.total_sessions,
+          total_participants: summary.total_participants,
+          total_completed: summary.total_completed,
+          completion_rate: summary.completion_rate,
+          average_score: summary.average_score,
+        },
+        position_summary: simplifiedPositionSummary,
+        sessions: simplifiedSessions,
+        participants: simplifiedParticipants,
+        test_module_summary: simplifiedTestModuleSummary,
       },
     };
 
