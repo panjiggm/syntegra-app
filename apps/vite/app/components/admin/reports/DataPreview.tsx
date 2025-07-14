@@ -2,6 +2,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { Badge } from "~/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "~/components/ui/table";
+import {
   Accordion,
   AccordionContent,
   AccordionItem,
@@ -32,6 +40,8 @@ import {
   Clock,
   BarChart3,
 } from "lucide-react";
+import { formatScore } from "~/lib/utils/score";
+import { format } from "date-fns";
 
 interface DataPreviewProps {
   data: any;
@@ -44,11 +54,13 @@ function ParticipantChart({ chart }: { chart: any }) {
       <div className="w-full h-64">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart
-            data={chart.data.datasets[0].data.map((value: number, index: number) => ({
-              name: chart.data.labels[index],
-              correct: chart.data.datasets[0].data[index],
-              incorrect: chart.data.datasets[1].data[index],
-            }))}
+            data={chart.data.datasets[0].data.map(
+              (value: number, index: number) => ({
+                name: chart.data.labels[index],
+                correct: chart.data.datasets[0].data[index],
+                incorrect: chart.data.datasets[1].data[index],
+              })
+            )}
             margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
           >
             <CartesianGrid strokeDasharray="3 3" />
@@ -203,227 +215,225 @@ export function DataPreview({ data }: DataPreviewProps) {
             <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="participants">
                 <Users className="h-4 w-4 mr-1" />
-                Participants ({reportData.participants.length})
+                Participants{" "}
+                <Badge variant="default">
+                  {reportData.participants.length}
+                </Badge>
               </TabsTrigger>
               <TabsTrigger value="sessions">
                 <Calendar className="h-4 w-4 mr-1" />
-                Sessions ({reportData.sessions.length})
+                Sessions{" "}
+                <Badge variant="default">{reportData.sessions.length}</Badge>
               </TabsTrigger>
               <TabsTrigger value="positions">
                 <Target className="h-4 w-4 mr-1" />
-                Positions ({reportData.position_summary.length})
+                Positions{" "}
+                <Badge variant="default">
+                  {reportData.position_summary.length}
+                </Badge>
               </TabsTrigger>
               <TabsTrigger value="modules">
                 <BookOpen className="h-4 w-4 mr-1" />
-                Modules ({reportData.test_module_summary.length})
+                Modules{" "}
+                <Badge variant="default">
+                  {reportData.test_module_summary.length}
+                </Badge>
               </TabsTrigger>
             </TabsList>
 
             <TabsContent value="participants" className="mt-4">
               <div className="space-y-4">
                 <h4 className="font-medium">Participants with Charts:</h4>
-                
+
                 {/* Participants List with Accordion */}
-                <Accordion type="single" collapsible className="w-full">
-                  {reportData.participants.slice(0, 5).map((participant: any, index: number) => (
-                    <AccordionItem key={index} value={`participant-${index}`}>
-                      <AccordionTrigger className="hover:no-underline">
-                        <div className="flex items-center gap-3 w-full">
-                          <div className="text-2xl">
-                            {participant.gender === 'Laki-laki' ? '👨' : participant.gender === 'Perempuan' ? '👩' : '🧑'}
-                          </div>
-                          <div className="flex-1 min-w-0 text-left">
-                            <div className="font-medium truncate">{participant.name}</div>
-                            <div className="text-sm text-muted-foreground">
-                              Score: {participant.total_score} | Grade: {participant.overall_grade} | 
-                              Tests: {participant.tests?.length || 0}
-                            </div>
-                          </div>
-                          <div className="flex gap-1">
-                            {participant.tests?.map((test: any, testIndex: number) => (
-                              <div
-                                key={testIndex}
-                                className="px-2 py-1 text-xs rounded-full bg-indigo-100 text-indigo-800"
-                              >
-                                📝 {test.test_name}
-                              </div>
-                            ))}
-                          </div>
+                {reportData.participants.map(
+                  (participant: any, index: number) => (
+                    <div className="flex items-center gap-3 w-full">
+                      <div className="text-2xl">
+                        {participant.gender === "Laki-laki"
+                          ? "👨"
+                          : participant.gender === "Perempuan"
+                            ? "👩"
+                            : "🧑"}
+                      </div>
+                      <div className="flex-1 min-w-0 text-left">
+                        <div className="font-medium truncate">
+                          {participant.name}
                         </div>
-                      </AccordionTrigger>
-                      <AccordionContent>
-                        <div className="pt-4 space-y-4">
-                          {/* Participant Details */}
-                          <div className="grid grid-cols-2 gap-4 p-4 bg-muted/50 rounded-md">
-                            <div>
-                              <div className="text-sm font-medium">Session</div>
-                              <div className="text-sm text-muted-foreground">
-                                {participant.session_code} - {participant.session_name}
-                              </div>
-                            </div>
-                            <div>
-                              <div className="text-sm font-medium">NIK</div>
-                              <div className="text-sm text-muted-foreground">
-                                {participant.nik}
-                              </div>
-                            </div>
-                            <div>
-                              <div className="text-sm font-medium">Age</div>
-                              <div className="text-sm text-muted-foreground">
-                                {participant.age} years
-                              </div>
-                            </div>
-                            <div>
-                              <div className="text-sm font-medium">Education</div>
-                              <div className="text-sm text-muted-foreground">
-                                {participant.education}
-                              </div>
-                            </div>
-                            <div>
-                              <div className="text-sm font-medium">Duration</div>
-                              <div className="text-sm text-muted-foreground">
-                                {participant.duration_minutes} minutes
-                              </div>
-                            </div>
-                            <div>
-                              <div className="text-sm font-medium">Status</div>
-                              <div className="text-sm text-muted-foreground">
-                                {participant.status}
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* Tests with Charts */}
-                          {participant.tests && participant.tests.length > 0 && (
-                            <div className="space-y-4">
-                              <h5 className="font-medium flex items-center gap-2">
-                                <BarChart3 className="h-4 w-4" />
-                                Tests & Charts
-                              </h5>
-                              <div className="space-y-4">
-                                {participant.tests.map((test: any, testIndex: number) => (
-                                  <Card key={testIndex}>
-                                    <CardHeader className="pb-2">
-                                      <CardTitle className="text-sm">
-                                        📝 {test.test_name}
-                                      </CardTitle>
-                                    </CardHeader>
-                                    <CardContent>
-                                      {test.charts && test.charts.length > 0 ? (
-                                        <div className="grid gap-4">
-                                          {test.charts.map((chart: any, chartIndex: number) => (
-                                            <Card key={chartIndex} className="border-dashed">
-                                              <CardHeader className="pb-2">
-                                                <CardTitle className="text-xs">
-                                                  {chart.type === 'bar' ? '📊' : '🎯'} {chart.question_type.replace('_', ' ').toUpperCase()} Chart
-                                                </CardTitle>
-                                              </CardHeader>
-                                              <CardContent>
-                                                <ParticipantChart chart={chart} />
-                                              </CardContent>
-                                            </Card>
-                                          ))}
-                                        </div>
-                                      ) : (
-                                        <div className="text-sm text-muted-foreground">
-                                          No charts available for this test
-                                        </div>
-                                      )}
-                                    </CardContent>
-                                  </Card>
-                                ))}
-                              </div>
-                            </div>
-                          )}
+                        <div className="text-xs text-muted-foreground">
+                          Score:{" "}
+                          <span className="font-bold text-gray-700">
+                            {formatScore(participant.total_score)}
+                          </span>{" "}
+                          | Grade:{" "}
+                          <span className="font-bold text-gray-700">
+                            {participant.overall_grade}
+                          </span>
                         </div>
-                      </AccordionContent>
-                    </AccordionItem>
-                  ))}
-                </Accordion>
-
-                {reportData.participants.length > 5 && (
-                  <p className="text-xs text-muted-foreground">
-                    ... and {reportData.participants.length - 5} more participants
-                  </p>
+                      </div>
+                      <div className="flex gap-1"></div>
+                    </div>
+                  )
                 )}
-
-                {/* Raw JSON for debugging */}
-                <details className="mt-4">
-                  <summary className="cursor-pointer text-sm font-medium">View Raw Data</summary>
-                  <div className="bg-muted/50 p-3 rounded-md mt-2">
-                    <pre className="text-xs overflow-x-auto">
-                      {JSON.stringify(
-                        reportData.participants.slice(0, 2),
-                        null,
-                        2
-                      )}
-                    </pre>
-                  </div>
-                </details>
               </div>
             </TabsContent>
 
             <TabsContent value="sessions" className="mt-4">
-              <div className="space-y-2">
-                <h4 className="font-medium">Sample Sessions:</h4>
-                <div className="bg-muted/50 p-3 rounded-md">
-                  <pre className="text-xs overflow-x-auto">
-                    {JSON.stringify(reportData.sessions.slice(0, 3), null, 2)}
-                  </pre>
-                </div>
-                {reportData.sessions.length > 3 && (
-                  <p className="text-xs text-muted-foreground">
-                    ... and {reportData.sessions.length - 3} more sessions
-                  </p>
-                )}
+              <div className="space-y-4">
+                <h4 className="font-medium">Sessions Overview:</h4>
+
+                {/* Sessions Table */}
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-[300px]">Sesi Tes</TableHead>
+                      <TableHead>Tanggal</TableHead>
+                      <TableHead className="text-center">
+                        Jumlah Peserta
+                      </TableHead>
+                      <TableHead className="text-center">
+                        Avg Duration
+                      </TableHead>
+                      {/* <TableHead className="text-center">Avg Score</TableHead> */}
+                      <TableHead>Modul Tes</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {reportData.sessions.map((session: any, index: number) => (
+                      <TableRow key={index}>
+                        <TableCell className="font-medium">
+                          {session.session_name}
+                        </TableCell>
+                        <TableCell className="text-xs">
+                          {format(new Date(session.date), "dd MMMM yyyy")}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <Badge variant="secondary" className="text-xs">
+                            {session.total_participants}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <span className="text-xs">
+                            {session.average_duration_minutes?.toFixed(1) ||
+                              "0.0"}
+                            m
+                          </span>
+                        </TableCell>
+                        {/* <TableCell className="text-center">
+                          <span className="text-xs">
+                            {session.average_score}
+                          </span>
+                        </TableCell> */}
+                        <TableCell>
+                          <div className="flex flex-wrap gap-1 max-w-[200px]">
+                            {session.test_modules
+                              .split(", ")
+                              .slice(0, 2)
+                              .map((module: string, moduleIndex: number) => (
+                                <Badge
+                                  key={moduleIndex}
+                                  variant="outline"
+                                  className="text-xs"
+                                >
+                                  {module}
+                                </Badge>
+                              ))}
+                            {session.test_modules.split(", ").length > 2 && (
+                              <Badge variant="outline" className="text-xs">
+                                +{session.test_modules.split(", ").length - 2}{" "}
+                                lainya
+                              </Badge>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
               </div>
             </TabsContent>
 
             <TabsContent value="positions" className="mt-4">
-              <div className="space-y-2">
+              <div className="space-y-4">
                 <h4 className="font-medium">Position Summary:</h4>
-                <div className="bg-muted/50 p-3 rounded-md">
-                  <pre className="text-xs overflow-x-auto">
-                    {JSON.stringify(reportData.position_summary, null, 2)}
-                  </pre>
+
+                {/* Position Cards */}
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                  {reportData.position_summary.map(
+                    (position: any, index: number) => (
+                      <Card key={index}>
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                          <CardTitle className="text-sm font-medium capitalize">
+                            {position.target_position}
+                          </CardTitle>
+                          <Target className="h-4 w-4 text-muted-foreground" />
+                        </CardHeader>
+                        <CardContent>
+                          <div className="text-2xl font-bold text-sky-600">
+                            {position.total_participants}
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            Total peserta
+                          </p>
+                        </CardContent>
+                      </Card>
+                    )
+                  )}
                 </div>
+
+                {/* Empty State */}
+                {reportData.position_summary.length === 0 && (
+                  <div className="text-center py-8">
+                    <Target className="h-12 w-12 mx-auto text-muted-foreground mb-2" />
+                    <p className="text-sm text-muted-foreground">
+                      No position data available
+                    </p>
+                  </div>
+                )}
               </div>
             </TabsContent>
 
             <TabsContent value="modules" className="mt-4">
               <div className="space-y-4">
                 <h4 className="font-medium">Test Module Summary:</h4>
-                
+
                 {/* Module List with Icons */}
                 <div className="space-y-2">
-                  {reportData.test_module_summary.map((module: any, index: number) => (
-                    <div key={index} className="flex items-center gap-3 p-3 border rounded-md bg-card">
-                      <div className="text-2xl">{module.icon}</div>
-                      <div className="flex-1 min-w-0">
-                        <div className="font-medium truncate">{module.test_name}</div>
-                        <div className="text-sm text-muted-foreground">
-                          Category: {module.category} | Attempts: {module.total_attempts} | 
-                          Avg Score: {module.average_score} | Completion: {module.completion_rate}%
+                  {reportData.test_module_summary.map(
+                    (module: any, index: number) => (
+                      <div
+                        key={index}
+                        className="flex items-center gap-3 p-3 border rounded-md bg-card"
+                      >
+                        <div className="text-2xl">{module.icon}</div>
+                        <div className="flex-1 min-w-0">
+                          <div className="font-medium truncate">
+                            {module.test_name}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            Percobaan:{" "}
+                            <span className="font-bold text-gray-700">
+                              {module.total_attempts}
+                            </span>{" "}
+                            | Avg Score:{" "}
+                            <span className="font-bold text-gray-700">
+                              {module.average_score}
+                            </span>{" "}
+                            | Penyelesaian:{" "}
+                            <span className="font-bold text-gray-700">
+                              {module.completion_rate}%
+                            </span>
+                          </div>
+                        </div>
+                        <div className="flex gap-1">
+                          <div className="px-2 py-1 text-xs rounded-full bg-purple-100 text-purple-800">
+                            {module.category}
+                          </div>
                         </div>
                       </div>
-                      <div className="flex gap-1">
-                        <div className="px-2 py-1 text-xs rounded-full bg-purple-100 text-purple-800">
-                          {module.category}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
+                    )
+                  )}
                 </div>
-
-                {/* Raw JSON for debugging */}
-                <details className="mt-4">
-                  <summary className="cursor-pointer text-sm font-medium">View Raw Data</summary>
-                  <div className="bg-muted/50 p-3 rounded-md mt-2">
-                    <pre className="text-xs overflow-x-auto">
-                      {JSON.stringify(reportData.test_module_summary, null, 2)}
-                    </pre>
-                  </div>
-                </details>
               </div>
             </TabsContent>
           </Tabs>
