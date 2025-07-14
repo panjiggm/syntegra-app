@@ -25,6 +25,11 @@ import { getSessionExportDataHandler } from "./report.export-data";
 import { authenticateUser, requireAdmin } from "@/middleware/auth";
 import { generalApiRateLimit } from "@/middleware/rateLimiter";
 import { getTestResultsReportHandler } from "./report.test-results";
+import { getTestResultsSummaryHandler } from "./report.test-results-summary";
+import { getTestResultsSessionsHandler } from "./report.test-results-sessions";
+import { getTestResultsParticipantsHandler } from "./report.test-results-participants";
+import { getTestResultsPositionsHandler } from "./report.test-results-positions";
+import { getTestResultsModulesHandler } from "./report.test-results-modules";
 
 const reportRoutes = new Hono<{ Bindings: CloudflareBindings }>();
 
@@ -240,7 +245,7 @@ reportRoutes.get(
   getBatchReportHandler
 );
 
-// Get Test Results Report (Admin only)
+// Get Test Results Report (Admin only) - Original combined endpoint
 reportRoutes.get(
   "/test-results",
   generalApiRateLimit,
@@ -262,6 +267,128 @@ reportRoutes.get(
     }
   }),
   getTestResultsReportHandler
+);
+
+// ==================== NEW GRANULAR TEST RESULTS ENDPOINTS ====================
+
+// Get Test Results Summary (Admin only)
+reportRoutes.get(
+  "/test-results/summary",
+  generalApiRateLimit,
+  authenticateUser,
+  requireAdmin,
+  zValidator("query", GetTestResultsReportQuerySchema, (result, c) => {
+    if (!result.success) {
+      const errorResponse: ReportErrorResponse = {
+        success: false,
+        message: "Invalid query parameters",
+        errors: result.error.errors.map((err) => ({
+          field: err.path.join("."),
+          message: err.message,
+          code: err.code,
+        })),
+        timestamp: new Date().toISOString(),
+      };
+      return c.json(errorResponse, 400);
+    }
+  }),
+  getTestResultsSummaryHandler
+);
+
+// Get Test Results Sessions (Admin only)
+reportRoutes.get(
+  "/test-results/sessions",
+  generalApiRateLimit,
+  authenticateUser,
+  requireAdmin,
+  zValidator("query", GetTestResultsReportQuerySchema, (result, c) => {
+    if (!result.success) {
+      const errorResponse: ReportErrorResponse = {
+        success: false,
+        message: "Invalid query parameters",
+        errors: result.error.errors.map((err) => ({
+          field: err.path.join("."),
+          message: err.message,
+          code: err.code,
+        })),
+        timestamp: new Date().toISOString(),
+      };
+      return c.json(errorResponse, 400);
+    }
+  }),
+  getTestResultsSessionsHandler
+);
+
+// Get Test Results Participants (Admin only)
+reportRoutes.get(
+  "/test-results/participants",
+  generalApiRateLimit,
+  authenticateUser,
+  requireAdmin,
+  zValidator("query", GetTestResultsReportQuerySchema, (result, c) => {
+    if (!result.success) {
+      const errorResponse: ReportErrorResponse = {
+        success: false,
+        message: "Invalid query parameters",
+        errors: result.error.errors.map((err) => ({
+          field: err.path.join("."),
+          message: err.message,
+          code: err.code,
+        })),
+        timestamp: new Date().toISOString(),
+      };
+      return c.json(errorResponse, 400);
+    }
+  }),
+  getTestResultsParticipantsHandler
+);
+
+// Get Test Results Position Summary (Admin only)
+reportRoutes.get(
+  "/test-results/positions",
+  generalApiRateLimit,
+  authenticateUser,
+  requireAdmin,
+  zValidator("query", GetTestResultsReportQuerySchema, (result, c) => {
+    if (!result.success) {
+      const errorResponse: ReportErrorResponse = {
+        success: false,
+        message: "Invalid query parameters",
+        errors: result.error.errors.map((err) => ({
+          field: err.path.join("."),
+          message: err.message,
+          code: err.code,
+        })),
+        timestamp: new Date().toISOString(),
+      };
+      return c.json(errorResponse, 400);
+    }
+  }),
+  getTestResultsPositionsHandler
+);
+
+// Get Test Results Module Summary (Admin only)
+reportRoutes.get(
+  "/test-results/modules",
+  generalApiRateLimit,
+  authenticateUser,
+  requireAdmin,
+  zValidator("query", GetTestResultsReportQuerySchema, (result, c) => {
+    if (!result.success) {
+      const errorResponse: ReportErrorResponse = {
+        success: false,
+        message: "Invalid query parameters",
+        errors: result.error.errors.map((err) => ({
+          field: err.path.join("."),
+          message: err.message,
+          code: err.code,
+        })),
+        timestamp: new Date().toISOString(),
+      };
+      return c.json(errorResponse, 400);
+    }
+  }),
+  getTestResultsModulesHandler
 );
 
 // ==================== EXPORT DATA ENDPOINTS ====================

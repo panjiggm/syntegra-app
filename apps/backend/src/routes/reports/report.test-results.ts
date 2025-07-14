@@ -1,4 +1,3 @@
-// apps/backend/src/routes/reports/report.test-results.ts
 import { type Context } from "hono";
 import { eq, and, between, desc, asc, sql, count } from "drizzle-orm";
 import { type CloudflareBindings } from "@/lib/env";
@@ -15,7 +14,6 @@ import {
 } from "@/db";
 import {
   type GetTestResultsReportQuery,
-  type GetTestResultsReportResponse,
   type ReportErrorResponse,
 } from "shared-types";
 
@@ -133,15 +131,18 @@ export async function getTestResultsReportHandler(
       overall_grade: participant.overall_grade,
     }));
 
-    const simplifiedTestModuleSummary = testModuleSummary.map((module: any) => ({
-      test_name: module.test_name,
-      module_type: module.category === "personality" ? "personality" : "cognitive",
-      category: module.category,
-      icon: module.icon,
-      total_attempts: module.total_attempts,
-      average_score: module.average_score,
-      completion_rate: module.completion_rate,
-    }));
+    const simplifiedTestModuleSummary = testModuleSummary.map(
+      (module: any) => ({
+        test_name: module.test_name,
+        module_type:
+          module.category === "personality" ? "personality" : "cognitive",
+        category: module.category,
+        icon: module.icon,
+        total_attempts: module.total_attempts,
+        average_score: module.average_score,
+        completion_rate: module.completion_rate,
+      })
+    );
 
     const response = {
       success: true,
@@ -274,106 +275,129 @@ function calculateDateRange(query: GetTestResultsReportQuery) {
   return { startDate, endDate, label };
 }
 
-// Get summary statistics
+// Get summary statistics using CTE with simpler approach
 async function getSummaryStats(db: any, whereClause: any) {
-  const [sessionsCount] = await db
-    .select({ count: count() })
-    .from(testSessions)
-    .where(whereClause);
+  // Since Drizzle CTE syntax is complex, let's use a more efficient approach
+  // Execute multiple optimized queries in parallel instead of complex CTE
 
-  const [participantsCount] = await db
-    .select({ count: count() })
-    .from(sessionParticipants)
-    .innerJoin(
-      testSessions,
-      eq(sessionParticipants.session_id, testSessions.id)
-    )
-    .where(whereClause);
+  const [
+    sessionsCount,
+    participantsCount,
+    participantsWithAttemptsCount,
+    participantsWithResultsCount,
+    totalTestAttemptsCount,
+    totalTestResultsCount,
+    totalSessionModulesCount,
+    avgScoreFromSessionResults,
+    avgScoreFromTestResults,
+    gradeDistribution,
+  ] = await Promise.all([
+    // Sessions count
+    db.select({ count: count() }).from(testSessions).where(whereClause),
 
-  // Simplified approach: Count participants who have test attempts (indicating they actually participated)
-  const [participantsWithAttemptsCount] = await db
-    .select({ count: sql`COUNT(DISTINCT ${sessionParticipants.user_id})` })
-    .from(sessionParticipants)
-    .innerJoin(
-      testSessions,
-      eq(sessionParticipants.session_id, testSessions.id)
-    )
-    .innerJoin(
-      testAttempts,
-      eq(sessionParticipants.user_id, testAttempts.user_id)
-    )
-    .where(whereClause);
+    // Participants count
+    db
+      .select({ count: count() })
+      .from(sessionParticipants)
+      .innerJoin(
+        testSessions,
+        eq(sessionParticipants.session_id, testSessions.id)
+      )
+      .where(whereClause),
 
-  // Count participants who have session results (completed)
-  const [participantsWithResultsCount] = await db
-    .select({ count: sql`COUNT(DISTINCT ${sessionParticipants.user_id})` })
-    .from(sessionParticipants)
-    .innerJoin(
-      testSessions,
-      eq(sessionParticipants.session_id, testSessions.id)
-    )
-    .innerJoin(
-      sessionResults,
-      eq(sessionParticipants.user_id, sessionResults.user_id)
-    )
-    .where(whereClause);
+    // Participants with attempts
+    db
+      .select({ count: sql`COUNT(DISTINCT ${sessionParticipants.user_id})` })
+      .from(sessionParticipants)
+      .innerJoin(
+        testSessions,
+        eq(sessionParticipants.session_id, testSessions.id)
+      )
+      .innerJoin(
+        testAttempts,
+        eq(sessionParticipants.user_id, testAttempts.user_id)
+      )
+      .where(whereClause),
 
-  // Additional metrics that might not be 0
-  const [totalTestAttemptsCount] = await db
-    .select({ count: count() })
-    .from(testAttempts)
-    .innerJoin(testSessions, eq(testAttempts.session_test_id, testSessions.id))
-    .where(whereClause);
+    // Participants with results (completed)
+    db
+      .select({ count: sql`COUNT(DISTINCT ${sessionParticipants.user_id})` })
+      .from(sessionParticipants)
+      .innerJoin(
+        testSessions,
+        eq(sessionParticipants.session_id, testSessions.id)
+      )
+      .innerJoin(
+        sessionResults,
+        eq(sessionParticipants.user_id, sessionResults.user_id)
+      )
+      .where(whereClause),
 
-  const [totalTestResultsCount] = await db
-    .select({ count: count() })
-    .from(testResults)
-    .innerJoin(testAttempts, eq(testResults.attempt_id, testAttempts.id))
-    .innerJoin(testSessions, eq(testAttempts.session_test_id, testSessions.id))
-    .where(whereClause);
+    // Total test attempts
+    db
+      .select({ count: count() })
+      .from(testAttempts)
+      .innerJoin(
+        testSessions,
+        eq(testAttempts.session_test_id, testSessions.id)
+      )
+      .where(whereClause),
 
-  const [totalSessionModulesCount] = await db
-    .select({ count: count() })
-    .from(sessionModules)
-    .innerJoin(testSessions, eq(sessionModules.session_id, testSessions.id))
-    .where(whereClause);
+    // Total test results
+    db
+      .select({ count: count() })
+      .from(testResults)
+      .innerJoin(testAttempts, eq(testResults.attempt_id, testAttempts.id))
+      .innerJoin(
+        testSessions,
+        eq(testAttempts.session_test_id, testSessions.id)
+      )
+      .where(whereClause),
 
-  // Simple logic: participants with results = completed participants
-  const completedCount = participantsWithResultsCount.count;
+    // Total session modules
+    db
+      .select({ count: count() })
+      .from(sessionModules)
+      .innerJoin(testSessions, eq(sessionModules.session_id, testSessions.id))
+      .where(whereClause),
 
-  // Try to get average score from sessionResults first
-  const avgScoreFromSessionResults = await db
-    .select({
-      avg_score: sql`AVG(${sessionResults.weighted_score})`,
-    })
-    .from(sessionResults)
-    .innerJoin(testSessions, eq(sessionResults.session_id, testSessions.id))
-    .where(whereClause);
+    // Average score from session results
+    db
+      .select({ avg_score: sql`AVG(${sessionResults.weighted_score})` })
+      .from(sessionResults)
+      .innerJoin(testSessions, eq(sessionResults.session_id, testSessions.id))
+      .where(whereClause),
 
-  // Alternative: get average from testResults if sessionResults is empty
-  const avgScoreFromTestResults = await db
-    .select({
-      avg_score: sql`AVG(${testResults.scaled_score})`,
-    })
-    .from(testResults)
-    .innerJoin(testAttempts, eq(testResults.attempt_id, testAttempts.id))
-    .innerJoin(testSessions, eq(testAttempts.session_test_id, testSessions.id))
-    .where(whereClause);
+    // Average score from test results (fallback)
+    db
+      .select({ avg_score: sql`AVG(${testResults.scaled_score})` })
+      .from(testResults)
+      .innerJoin(testAttempts, eq(testResults.attempt_id, testAttempts.id))
+      .innerJoin(
+        testSessions,
+        eq(testAttempts.session_test_id, testSessions.id)
+      )
+      .where(whereClause),
 
-  // Use whichever has data
+    // Grade distribution
+    db
+      .select({
+        grade: sessionResults.overall_grade,
+        count: count(),
+      })
+      .from(sessionResults)
+      .innerJoin(testSessions, eq(sessionResults.session_id, testSessions.id))
+      .where(whereClause)
+      .groupBy(sessionResults.overall_grade),
+  ]);
+
+  const completedCount = participantsWithResultsCount[0]?.count || 0;
+  const totalParticipants = participantsCount[0]?.count || 0;
+
+  // Use whichever average score has data
   const avgScoreResult = avgScoreFromSessionResults[0]?.avg_score
-    ? avgScoreFromSessionResults
-    : avgScoreFromTestResults;
-
-  const gradeDistribution = await db
-    .select({
-      grade: sessionResults.overall_grade,
-      count: count(),
-    })
-    .from(sessionResults)
-    .innerJoin(testSessions, eq(sessionResults.session_id, testSessions.id))
-    .where(whereClause)
-    .groupBy(sessionResults.overall_grade);
+    ? avgScoreFromSessionResults[0]
+    : avgScoreFromTestResults[0];
 
   const grades = gradeDistribution.reduce((acc: any, curr: any) => {
     acc[curr.grade || "Unknown"] = curr.count;
@@ -381,219 +405,116 @@ async function getSummaryStats(db: any, whereClause: any) {
   }, {});
 
   return {
-    total_sessions: sessionsCount.count,
-    total_participants: participantsCount.count,
-    total_completed: completedCount,
+    total_sessions: Number(sessionsCount[0]?.count || 0),
+    total_participants: Number(totalParticipants),
+    total_completed: Number(completedCount),
     completion_rate:
-      participantsCount.count > 0
-        ? Number(((completedCount / participantsCount.count) * 100).toFixed(1))
+      totalParticipants > 0
+        ? Number(
+            ((Number(completedCount) / totalParticipants) * 100).toFixed(1)
+          )
         : 0,
-    average_score: avgScoreResult[0]?.avg_score
-      ? Number(Number(avgScoreResult[0].avg_score).toFixed(1))
+    average_score: avgScoreResult?.avg_score
+      ? Number(Number(avgScoreResult.avg_score).toFixed(1))
       : 0,
     grade_distribution: grades,
-
-    // Additional metrics for debugging
-    total_test_attempts: totalTestAttemptsCount.count,
-    total_test_results: totalTestResultsCount.count,
-    total_session_modules: totalSessionModulesCount.count,
-    participants_with_attempts: participantsWithAttemptsCount.count,
+    total_test_attempts: Number(totalTestAttemptsCount[0]?.count || 0),
+    total_test_results: Number(totalTestResultsCount[0]?.count || 0),
+    total_session_modules: Number(totalSessionModulesCount[0]?.count || 0),
+    participants_with_attempts: Number(
+      participantsWithAttemptsCount[0]?.count || 0
+    ),
   };
 }
 
-// Get sessions with their statistics
+// Get sessions with their statistics (simplified version)
 async function getSessionsWithStats(db: any, whereClause: any) {
+  const { inArray } = await import("drizzle-orm");
+
+  // Single optimized query with all needed data
   const sessionsData = await db
     .select({
       session_id: testSessions.id,
       session_code: testSessions.session_code,
       session_name: testSessions.session_name,
-      start_time: testSessions.start_time,
-      end_time: testSessions.end_time,
-      target_position: testSessions.target_position,
-      location: testSessions.location,
-      proctor_name: users.name,
+      date: testSessions.start_time,
+      total_participants: sql<number>`COUNT(DISTINCT ${sessionParticipants.user_id})`,
+      total_completed: sql<number>`COUNT(DISTINCT CASE WHEN ${sessionParticipants.status} = 'completed' THEN ${sessionParticipants.user_id} END)`,
+      average_score: sql<number>`COALESCE(AVG(${sessionResults.weighted_score}), 0)`,
+      average_duration_minutes: sql<number>`COALESCE(AVG(${testAttempts.time_spent}) / 60, 0)`,
     })
     .from(testSessions)
-    .leftJoin(users, eq(testSessions.proctor_id, users.id))
+    .leftJoin(
+      sessionParticipants,
+      eq(testSessions.id, sessionParticipants.session_id)
+    )
+    .leftJoin(
+      sessionResults,
+      and(
+        eq(sessionParticipants.user_id, sessionResults.user_id),
+        eq(sessionParticipants.session_id, sessionResults.session_id)
+      )
+    )
+    .leftJoin(
+      testAttempts,
+      eq(sessionParticipants.user_id, testAttempts.user_id)
+    )
     .where(whereClause)
+    .groupBy(
+      testSessions.id,
+      testSessions.session_code,
+      testSessions.session_name,
+      testSessions.start_time
+    )
     .orderBy(desc(testSessions.start_time));
 
-  // Get session IDs for batch processing
+  // Get session modules in a single query
   const sessionIds = sessionsData.map((s: any) => s.session_id);
-
-  // Import fresh scores calculation function and drizzle utilities
-  const { calculateFreshScoresForSession } = await import(
-    "@/lib/reportCalculations"
-  );
-  const { inArray } = await import("drizzle-orm");
-
-  // Calculate fresh scores for all sessions
-  const allSessionsFreshScores = await Promise.all(
-    sessionIds.map((sessionId: string) =>
-      calculateFreshScoresForSession(db, sessionId)
-    )
-  );
-
-  // Create a map for each session's fresh scores
-  const sessionFreshScoresMap = new Map();
-  allSessionsFreshScores.forEach((sessionScores, index) => {
-    sessionFreshScoresMap.set(sessionIds[index], sessionScores);
-  });
-
-  // Get statistics for each session
-  const sessionStats = new Map();
+  let modulesData: any[] = [];
 
   if (sessionIds.length > 0) {
-    // Get participation statistics
-    let participationStats: any[] = [];
-    try {
-      participationStats = await db
-        .select({
-          session_id: sessionParticipants.session_id,
-          total_registered: count(),
-          total_completed: sql<number>`COUNT(CASE WHEN ${sessionParticipants.status} = 'completed' THEN 1 END)::integer`,
-        })
-        .from(sessionParticipants)
-        .where(inArray(sessionParticipants.session_id, sessionIds))
-        .groupBy(sessionParticipants.session_id);
-    } catch (participationError) {
-      console.error("Error getting participation stats:", participationError);
-      participationStats = [];
-    }
-
-    // Get timing and activity statistics from testAttempts
-    let timingStats: any[] = [];
-    try {
-      const attemptQuery = db
-        .select({
-          session_id: testAttempts.session_test_id,
-          avg_time: sql<number>`COALESCE(AVG(${testAttempts.time_spent}), 0)`,
-          total_attempts: count(),
-          last_activity: sql<string>`MAX(${testAttempts.end_time})`,
-        })
-        .from(testAttempts)
-        .where(inArray(testAttempts.session_test_id, sessionIds))
-        .groupBy(testAttempts.session_test_id);
-
-      timingStats = await attemptQuery;
-    } catch (timingError) {
-      console.error("Error getting timing stats:", timingError);
-      timingStats = [];
-    }
-
-    // Build session statistics map
-    participationStats.forEach((stat) => {
-      const completionRate =
-        stat.total_registered > 0
-          ? (stat.total_completed / stat.total_registered) * 100
-          : 0;
-      sessionStats.set(stat.session_id, {
-        total_registered: stat.total_registered,
-        total_completed: stat.total_completed,
-        completion_rate: Math.round(completionRate * 100) / 100,
-      });
-    });
-
-    timingStats.forEach((stat) => {
-      const existing = sessionStats.get(stat.session_id) || {};
-
-      // Get fresh scores for this session
-      const sessionScores = sessionFreshScoresMap.get(stat.session_id) || [];
-      let averageScore = null;
-      let scoreRange = { min: 0, max: 0 };
-
-      if (sessionScores.length > 0) {
-        const totalScore = sessionScores.reduce(
-          (sum: number, fs: any) => sum + fs.scaledScore,
-          0
-        );
-        averageScore = totalScore / sessionScores.length;
-
-        const scores = sessionScores.map(
-          (fs: { scaledScore: number }) => fs.scaledScore
-        );
-        scoreRange = {
-          min: Math.min(...scores),
-          max: Math.max(...scores),
-        };
-      }
-
-      sessionStats.set(stat.session_id, {
-        ...existing,
-        average_score: averageScore
-          ? Math.round(averageScore * 100) / 100
-          : null,
-        score_range: scoreRange,
-        average_time_per_participant: stat.avg_time
-          ? Math.round((stat.avg_time / 60) * 100) / 100
-          : 0,
-        total_test_attempts: stat.total_attempts,
-        last_activity: stat.last_activity,
-      });
-    });
-
-    // Ensure all sessions have complete stats with defaults for missing data
-    sessionIds.forEach((sessionId: any) => {
-      const existing = sessionStats.get(sessionId) || {};
-      sessionStats.set(sessionId, {
-        total_registered: existing.total_registered || 0,
-        total_completed: existing.total_completed || 0,
-        completion_rate: existing.completion_rate || 0,
-        average_score: existing.average_score || null,
-        score_range: existing.score_range || { min: null, max: null },
-        average_time_per_participant:
-          existing.average_time_per_participant || 0,
-        total_test_attempts: existing.total_test_attempts || 0,
-        last_activity: existing.last_activity || null,
-      });
-    });
+    modulesData = await db
+      .select({
+        session_id: sessionModules.session_id,
+        test_name: tests.name,
+      })
+      .from(sessionModules)
+      .innerJoin(tests, eq(sessionModules.test_id, tests.id))
+      .where(inArray(sessionModules.session_id, sessionIds))
+      .orderBy(asc(sessionModules.sequence));
   }
-
-  // Get test modules for each session
-  const sessionModulesData = await db
-    .select({
-      session_id: sessionModules.session_id,
-      test_name: tests.name,
-    })
-    .from(sessionModules)
-    .innerJoin(tests, eq(sessionModules.test_id, tests.id))
-    .where(inArray(sessionModules.session_id, sessionIds))
-    .orderBy(asc(sessionModules.sequence));
 
   // Group modules by session
   const modulesMap = new Map();
-  sessionModulesData.forEach((module: any) => {
+  modulesData.forEach((module: any) => {
     if (!modulesMap.has(module.session_id)) {
       modulesMap.set(module.session_id, []);
     }
     modulesMap.get(module.session_id).push(module.test_name);
   });
 
-  // Format response data
-  const sessions = sessionsData.map((session: any) => {
-    const stats = sessionStats.get(session.session_id) || {};
+  // Format simplified response
+  return sessionsData.map((session: any) => {
     const modules = modulesMap.get(session.session_id) || [];
+    const completionRate =
+      session.total_participants > 0
+        ? Math.round(
+            (session.total_completed / session.total_participants) * 100
+          )
+        : 0;
 
     return {
       session_id: session.session_id,
       session_code: session.session_code,
       session_name: session.session_name,
-      date: session.start_time.toISOString().split("T")[0],
-      time: `${session.start_time.toTimeString().slice(0, 5)}-${session.end_time.toTimeString().slice(0, 5)}`,
-      target_position: session.target_position || "Unknown",
-      location: session.location,
-      proctor_name: session.proctor_name,
-      total_participants: stats.total_registered || 0,
-      completed_participants: stats.total_completed || 0,
-      completion_rate: stats.completion_rate || 0,
-      average_score: stats.average_score || 0,
-      average_duration_minutes: stats.average_time_per_participant || 0,
+      date: session.date.toISOString().split("T")[0],
+      total_participants: Number(session.total_participants) || 0,
+      average_score: Math.round(Number(session.average_score) * 100) / 100,
+      average_duration_minutes:
+        Math.round(Number(session.average_duration_minutes) * 100) / 100,
       test_modules: modules.join(", "),
     };
   });
-
-  return sessions;
 }
 
 // Get participants with their results
@@ -855,7 +776,6 @@ async function getParticipantsWithResults(db: any, whereClause: any) {
     };
   });
 }
-
 
 // Get position summary
 async function getPositionSummary(db: any, whereClause: any) {

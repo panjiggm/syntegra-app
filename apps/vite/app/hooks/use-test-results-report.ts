@@ -117,6 +117,16 @@ export const testResultsReportKeys = {
   reports: () => [...testResultsReportKeys.all, "reports"] as const,
   report: (params: TestResultsReportParams) =>
     [...testResultsReportKeys.reports(), params] as const,
+  summary: (params: TestResultsReportParams) =>
+    [...testResultsReportKeys.reports(), "summary", params] as const,
+  sessions: (params: TestResultsReportParams) =>
+    [...testResultsReportKeys.reports(), "sessions", params] as const,
+  participants: (params: TestResultsReportParams) =>
+    [...testResultsReportKeys.reports(), "participants", params] as const,
+  positions: (params: TestResultsReportParams) =>
+    [...testResultsReportKeys.reports(), "positions", params] as const,
+  modules: (params: TestResultsReportParams) =>
+    [...testResultsReportKeys.reports(), "modules", params] as const,
   period: (periodType: string) =>
     [...testResultsReportKeys.reports(), "period", periodType] as const,
   position: (position: string) =>
@@ -156,6 +166,173 @@ async function fetchTestResultsReport(
 
   if (!response.success) {
     throw new Error(response.message || "Failed to fetch test results report");
+  }
+
+  return response;
+}
+
+// ==================== GRANULAR API FUNCTIONS ====================
+
+async function fetchTestResultsSummary(
+  params: TestResultsReportParams
+): Promise<any> {
+  const searchParams = new URLSearchParams();
+
+  if (params.period_type) {
+    searchParams.append("period_type", params.period_type);
+  }
+  if (params.start_date) {
+    searchParams.append("start_date", params.start_date);
+  }
+  if (params.end_date) {
+    searchParams.append("end_date", params.end_date);
+  }
+  if (params.position) {
+    searchParams.append("position", params.position);
+  }
+  if (params.session_id) {
+    searchParams.append("session_id", params.session_id);
+  }
+
+  const queryString = searchParams.toString();
+  const url = `/reports/test-results/summary${queryString ? `?${queryString}` : ""}`;
+
+  const response = await apiClient.get<any>(url);
+
+  if (!response.success) {
+    throw new Error(response.message || "Failed to fetch test results summary");
+  }
+
+  return response;
+}
+
+async function fetchTestResultsSessions(
+  params: TestResultsReportParams
+): Promise<any> {
+  const searchParams = new URLSearchParams();
+
+  if (params.period_type) {
+    searchParams.append("period_type", params.period_type);
+  }
+  if (params.start_date) {
+    searchParams.append("start_date", params.start_date);
+  }
+  if (params.end_date) {
+    searchParams.append("end_date", params.end_date);
+  }
+  if (params.position) {
+    searchParams.append("position", params.position);
+  }
+  if (params.session_id) {
+    searchParams.append("session_id", params.session_id);
+  }
+
+  const queryString = searchParams.toString();
+  const url = `/reports/test-results/sessions${queryString ? `?${queryString}` : ""}`;
+
+  const response = await apiClient.get<any>(url);
+
+  if (!response.success) {
+    throw new Error(response.message || "Failed to fetch test results sessions");
+  }
+
+  return response;
+}
+
+async function fetchTestResultsParticipants(
+  params: TestResultsReportParams
+): Promise<any> {
+  const searchParams = new URLSearchParams();
+
+  if (params.period_type) {
+    searchParams.append("period_type", params.period_type);
+  }
+  if (params.start_date) {
+    searchParams.append("start_date", params.start_date);
+  }
+  if (params.end_date) {
+    searchParams.append("end_date", params.end_date);
+  }
+  if (params.position) {
+    searchParams.append("position", params.position);
+  }
+  if (params.session_id) {
+    searchParams.append("session_id", params.session_id);
+  }
+
+  const queryString = searchParams.toString();
+  const url = `/reports/test-results/participants${queryString ? `?${queryString}` : ""}`;
+
+  const response = await apiClient.get<any>(url);
+
+  if (!response.success) {
+    throw new Error(response.message || "Failed to fetch test results participants");
+  }
+
+  return response;
+}
+
+async function fetchTestResultsPositions(
+  params: TestResultsReportParams
+): Promise<any> {
+  const searchParams = new URLSearchParams();
+
+  if (params.period_type) {
+    searchParams.append("period_type", params.period_type);
+  }
+  if (params.start_date) {
+    searchParams.append("start_date", params.start_date);
+  }
+  if (params.end_date) {
+    searchParams.append("end_date", params.end_date);
+  }
+  if (params.position) {
+    searchParams.append("position", params.position);
+  }
+  if (params.session_id) {
+    searchParams.append("session_id", params.session_id);
+  }
+
+  const queryString = searchParams.toString();
+  const url = `/reports/test-results/positions${queryString ? `?${queryString}` : ""}`;
+
+  const response = await apiClient.get<any>(url);
+
+  if (!response.success) {
+    throw new Error(response.message || "Failed to fetch test results positions");
+  }
+
+  return response;
+}
+
+async function fetchTestResultsModules(
+  params: TestResultsReportParams
+): Promise<any> {
+  const searchParams = new URLSearchParams();
+
+  if (params.period_type) {
+    searchParams.append("period_type", params.period_type);
+  }
+  if (params.start_date) {
+    searchParams.append("start_date", params.start_date);
+  }
+  if (params.end_date) {
+    searchParams.append("end_date", params.end_date);
+  }
+  if (params.position) {
+    searchParams.append("position", params.position);
+  }
+  if (params.session_id) {
+    searchParams.append("session_id", params.session_id);
+  }
+
+  const queryString = searchParams.toString();
+  const url = `/reports/test-results/modules${queryString ? `?${queryString}` : ""}`;
+
+  const response = await apiClient.get<any>(url);
+
+  if (!response.success) {
+    throw new Error(response.message || "Failed to fetch test results modules");
   }
 
   return response;
@@ -338,6 +515,280 @@ export function useSessionTestResults(
   );
 }
 
+// ==================== GRANULAR HOOKS ====================
+
+/**
+ * Hook to fetch test results summary only
+ */
+export function useTestResultsSummary(
+  params: TestResultsReportParams = { period_type: "this_month" },
+  options: UseTestResultsReportOptions = {}
+) {
+  const {
+    enabled = true,
+    refetchOnWindowFocus = false,
+    refetchOnMount = true,
+    staleTime = 5 * 60 * 1000, // 5 minutes
+    gcTime = 30 * 60 * 1000, // 30 minutes
+  } = options;
+
+  return useQuery({
+    queryKey: testResultsReportKeys.summary(params),
+    queryFn: () => fetchTestResultsSummary(params),
+    enabled,
+    refetchOnWindowFocus,
+    refetchOnMount,
+    staleTime,
+    gcTime,
+    retry: (failureCount, error: any) => {
+      if (error?.response?.status && [400, 403, 404].includes(error.response.status)) {
+        return false;
+      }
+      return failureCount < 3;
+    },
+  });
+}
+
+/**
+ * Hook to fetch test results sessions only
+ */
+export function useTestResultsSessions(
+  params: TestResultsReportParams = { period_type: "this_month" },
+  options: UseTestResultsReportOptions = {}
+) {
+  const {
+    enabled = true,
+    refetchOnWindowFocus = false,
+    refetchOnMount = true,
+    staleTime = 5 * 60 * 1000,
+    gcTime = 30 * 60 * 1000,
+  } = options;
+
+  return useQuery({
+    queryKey: testResultsReportKeys.sessions(params),
+    queryFn: () => fetchTestResultsSessions(params),
+    enabled,
+    refetchOnWindowFocus,
+    refetchOnMount,
+    staleTime,
+    gcTime,
+    retry: (failureCount, error: any) => {
+      if (error?.response?.status && [400, 403, 404].includes(error.response.status)) {
+        return false;
+      }
+      return failureCount < 3;
+    },
+  });
+}
+
+/**
+ * Hook to fetch test results participants only
+ */
+export function useTestResultsParticipants(
+  params: TestResultsReportParams = { period_type: "this_month" },
+  options: UseTestResultsReportOptions = {}
+) {
+  const {
+    enabled = true,
+    refetchOnWindowFocus = false,
+    refetchOnMount = true,
+    staleTime = 5 * 60 * 1000,
+    gcTime = 30 * 60 * 1000,
+  } = options;
+
+  return useQuery({
+    queryKey: testResultsReportKeys.participants(params),
+    queryFn: () => fetchTestResultsParticipants(params),
+    enabled,
+    refetchOnWindowFocus,
+    refetchOnMount,
+    staleTime,
+    gcTime,
+    retry: (failureCount, error: any) => {
+      if (error?.response?.status && [400, 403, 404].includes(error.response.status)) {
+        return false;
+      }
+      return failureCount < 3;
+    },
+  });
+}
+
+/**
+ * Hook to fetch test results positions only
+ */
+export function useTestResultsPositions(
+  params: TestResultsReportParams = { period_type: "this_month" },
+  options: UseTestResultsReportOptions = {}
+) {
+  const {
+    enabled = true,
+    refetchOnWindowFocus = false,
+    refetchOnMount = true,
+    staleTime = 5 * 60 * 1000,
+    gcTime = 30 * 60 * 1000,
+  } = options;
+
+  return useQuery({
+    queryKey: testResultsReportKeys.positions(params),
+    queryFn: () => fetchTestResultsPositions(params),
+    enabled,
+    refetchOnWindowFocus,
+    refetchOnMount,
+    staleTime,
+    gcTime,
+    retry: (failureCount, error: any) => {
+      if (error?.response?.status && [400, 403, 404].includes(error.response.status)) {
+        return false;
+      }
+      return failureCount < 3;
+    },
+  });
+}
+
+/**
+ * Hook to fetch test results modules only
+ */
+export function useTestResultsModules(
+  params: TestResultsReportParams = { period_type: "this_month" },
+  options: UseTestResultsReportOptions = {}
+) {
+  const {
+    enabled = true,
+    refetchOnWindowFocus = false,
+    refetchOnMount = true,
+    staleTime = 5 * 60 * 1000,
+    gcTime = 30 * 60 * 1000,
+  } = options;
+
+  return useQuery({
+    queryKey: testResultsReportKeys.modules(params),
+    queryFn: () => fetchTestResultsModules(params),
+    enabled,
+    refetchOnWindowFocus,
+    refetchOnMount,
+    staleTime,
+    gcTime,
+    retry: (failureCount, error: any) => {
+      if (error?.response?.status && [400, 403, 404].includes(error.response.status)) {
+        return false;
+      }
+      return failureCount < 3;
+    },
+  });
+}
+
+// ==================== PARALLEL FETCHING HOOKS ====================
+
+/**
+ * Hook to fetch all test results data in parallel for faster loading
+ * Returns all endpoints data separately for granular UI updates
+ */
+export function useTestResultsReportParallel(
+  params: TestResultsReportParams = { period_type: "this_month" },
+  options: UseTestResultsReportOptions = {}
+) {
+  const summary = useTestResultsSummary(params, options);
+  const sessions = useTestResultsSessions(params, options);
+  const participants = useTestResultsParticipants(params, options);
+  const positions = useTestResultsPositions(params, options);
+  const modules = useTestResultsModules(params, options);
+
+  return {
+    summary,
+    sessions,
+    participants,
+    positions,
+    modules,
+    // Combined loading state
+    isLoading: summary.isLoading || sessions.isLoading || participants.isLoading || positions.isLoading || modules.isLoading,
+    // Combined error state
+    hasError: summary.isError || sessions.isError || participants.isError || positions.isError || modules.isError,
+    // All data loaded
+    isAllLoaded: summary.isSuccess && sessions.isSuccess && participants.isSuccess && positions.isSuccess && modules.isSuccess,
+    // Refetch all
+    refetchAll: () => {
+      summary.refetch();
+      sessions.refetch();
+      participants.refetch();
+      positions.refetch();
+      modules.refetch();
+    },
+  };
+}
+
+/**
+ * Hook to fetch specific parts of test results report
+ * Useful when you only need certain sections
+ */
+export function useTestResultsReportSelective(
+  params: TestResultsReportParams = { period_type: "this_month" },
+  sections: {
+    includeSummary?: boolean;
+    includeSessions?: boolean;
+    includeParticipants?: boolean;
+    includePositions?: boolean;
+    includeModules?: boolean;
+  } = {},
+  options: UseTestResultsReportOptions = {}
+) {
+  const {
+    includeSummary = true,
+    includeSessions = true,
+    includeParticipants = true,
+    includePositions = true,
+    includeModules = true,
+  } = sections;
+
+  const summary = useTestResultsSummary(params, { 
+    ...options, 
+    enabled: includeSummary && (options.enabled ?? true) 
+  });
+  
+  const sessions = useTestResultsSessions(params, { 
+    ...options, 
+    enabled: includeSessions && (options.enabled ?? true) 
+  });
+  
+  const participants = useTestResultsParticipants(params, { 
+    ...options, 
+    enabled: includeParticipants && (options.enabled ?? true) 
+  });
+  
+  const positions = useTestResultsPositions(params, { 
+    ...options, 
+    enabled: includePositions && (options.enabled ?? true) 
+  });
+  
+  const modules = useTestResultsModules(params, { 
+    ...options, 
+    enabled: includeModules && (options.enabled ?? true) 
+  });
+
+  const activeQueries = [
+    includeSummary && summary,
+    includeSessions && sessions,
+    includeParticipants && participants,
+    includePositions && positions,
+    includeModules && modules,
+  ].filter(Boolean);
+
+  return {
+    summary: includeSummary ? summary : null,
+    sessions: includeSessions ? sessions : null,
+    participants: includeParticipants ? participants : null,
+    positions: includePositions ? positions : null,
+    modules: includeModules ? modules : null,
+    // Combined states based on active queries
+    isLoading: activeQueries.some(q => q && q.isLoading),
+    hasError: activeQueries.some(q => q && q.isError),
+    isAllLoaded: activeQueries.every(q => q && q.isSuccess),
+    // Refetch only active sections
+    refetchActive: () => {
+      activeQueries.forEach(q => q && q.refetch());
+    },
+  };
+}
+
 /**
  * Mutation hook for refreshing test results report
  * Useful for manual refresh or when data changes
@@ -441,6 +892,7 @@ export function useCachedTestResultsReports() {
 // ==================== EXPORT ALL ====================
 
 export default {
+  // Original hooks
   useTestResultsReport,
   useCurrentMonthTestResults,
   useLastMonthTestResults,
@@ -449,8 +901,23 @@ export default {
   useCustomDateRangeTestResults,
   usePositionTestResults,
   useSessionTestResults,
+  
+  // New granular hooks
+  useTestResultsSummary,
+  useTestResultsSessions,
+  useTestResultsParticipants,
+  useTestResultsPositions,
+  useTestResultsModules,
+  
+  // Parallel fetching hooks
+  useTestResultsReportParallel,
+  useTestResultsReportSelective,
+  
+  // Utility hooks
   useRefreshTestResultsReport,
   usePrefetchTestResultsReport,
   useCachedTestResultsReports,
+  
+  // Query keys
   testResultsReportKeys,
 };

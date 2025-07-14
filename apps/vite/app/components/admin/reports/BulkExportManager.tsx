@@ -30,7 +30,7 @@ import SessionReportPDF from "./pdf/SessionReportPDF";
 import { cn } from "~/lib/utils";
 import { toast } from "sonner";
 import { useSessions } from "~/hooks/use-sessions";
-import { useTestResultsReport } from "~/hooks/use-test-results-report";
+import { useTestResultsReportParallel } from "~/hooks/use-test-results-report";
 import { DataPreview } from "./DataPreview";
 
 // Define filter interface for test results report
@@ -68,8 +68,15 @@ export function BulkExportManager() {
   const { useGetSessions } = useSessions();
   const sessionsQuery = useGetSessions({ limit: 100 });
 
-  // Dynamic test results report hook that updates based on filter
-  const testResultsReport = useTestResultsReport(
+  // Use parallel fetching hooks for better performance
+  const {
+    summary,
+    sessions,
+    participants,
+    positions,
+    modules,
+    isLoading: testResultsLoading,
+  } = useTestResultsReportParallel(
     {
       period_type: filter.period_type,
       start_date: filter.start_date,
@@ -82,7 +89,15 @@ export function BulkExportManager() {
   // Reset generated data when filter changes
   React.useEffect(() => {
     setGeneratedData(null);
-  }, [filter.period_type, filter.start_date, filter.end_date, filter.session_id]);
+  }, [
+    filter.period_type,
+    filter.start_date,
+    filter.end_date,
+    filter.session_id,
+  ]);
+
+  // Combined loading state for all parallel requests
+  const isLoading = isGenerating || testResultsLoading;
 
   // Helper function to format date to local YYYY-MM-DD without timezone issues
   const formatDateToLocal = (date: Date): string => {
@@ -108,15 +123,82 @@ export function BulkExportManager() {
     try {
       toast.info("Mengambil data test results...");
 
-      // Fetch test results data
-      const result = await testResultsReport.refetch();
+      // Fetch all test results data in parallel and wait for promises
+      const results = await Promise.allSettled([
+        summary.refetch(),
+        sessions.refetch(),
+        participants.refetch(),
+        positions.refetch(),
+        modules.refetch(),
+      ]);
 
-      if (!result.data) {
-        toast.error("Tidak ada data yang ditemukan");
+      console.log("✅ Refetch Results:", results);
+
+      // Extract successful results
+      const [
+        summaryResult,
+        sessionsResult,
+        participantsResult,
+        positionsResult,
+        modulesResult,
+      ] = results;
+
+      // Check if core endpoints succeeded
+      if (
+        summaryResult.status === "rejected" ||
+        sessionsResult.status === "rejected" ||
+        participantsResult.status === "rejected"
+      ) {
+        const missingData = [];
+        if (summaryResult.status === "rejected") missingData.push("summary");
+        if (sessionsResult.status === "rejected") missingData.push("sessions");
+        if (participantsResult.status === "rejected")
+          missingData.push("participants");
+
+        toast.error(`Gagal mengambil data untuk: ${missingData.join(", ")}`);
         return;
       }
 
-      const reportData = result.data;
+      // Get the actual data from successful results
+      const summaryData =
+        summaryResult.status === "fulfilled" ? summaryResult.value.data : null;
+      const sessionsData =
+        sessionsResult.status === "fulfilled"
+          ? sessionsResult.value.data
+          : null;
+      const participantsData =
+        participantsResult.status === "fulfilled"
+          ? participantsResult.value.data
+          : null;
+      const positionsData =
+        positionsResult.status === "fulfilled"
+          ? positionsResult.value.data
+          : null;
+      const modulesData =
+        modulesResult.status === "fulfilled" ? modulesResult.value.data : null;
+
+      // Validate that we have actual data
+      if (!summaryData || !sessionsData || !participantsData) {
+        toast.error("Tidak ada data yang ditemukan untuk periode yang dipilih");
+        return;
+      }
+
+      // Combine data from all endpoints into the expected format
+      const reportData = {
+        success: true,
+        message: "Test results report retrieved successfully",
+        data: {
+          period: summaryData.data.period,
+          summary: summaryData.data.summary,
+          sessions: sessionsData.data.sessions,
+          participants: participantsData.data.participants,
+          position_summary: positionsData?.data.position_summary || [],
+          test_module_summary: modulesData?.data.test_module_summary || [],
+          generated_at: new Date().toISOString(),
+        },
+        timestamp: new Date().toISOString(),
+      };
+
       console.log("✅ Generated Data:", reportData);
 
       // Simpan data yang sudah di-generate
@@ -153,7 +235,9 @@ export function BulkExportManager() {
     setIsExporting(true);
 
     try {
-      toast.info(`Mengexport data dalam format ${filter.format.toUpperCase()}...`);
+      toast.info(
+        `Mengexport data dalam format ${filter.format.toUpperCase()}...`
+      );
 
       // Process the data based on format
       switch (filter.format) {
@@ -251,10 +335,12 @@ export function BulkExportManager() {
   };
 
   const handleExcelExport = async (reportData: any) => {
-    const fileName = `test-results-report-${filter.period_type}-${new Date().toISOString().split('T')[0]}.xlsx`;
+    const fileName = `test-results-report-${filter.period_type}-${new Date().toISOString().split("T")[0]}.xlsx`;
 
     // Import the Excel generator
-    const { generateSessionReportExcel } = await import("~/lib/excel/SessionReportExcel");
+    const { generateSessionReportExcel } = await import(
+      "~/lib/excel/SessionReportExcel"
+    );
 
     // Transform test results data to Excel format (same as PDF)
     const excelData = {
@@ -310,8 +396,8 @@ export function BulkExportManager() {
     });
 
     // Download the file
-    const blob = new Blob([buffer], { 
-      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
+    const blob = new Blob([buffer], {
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     });
 
     const url = URL.createObjectURL(blob);
@@ -398,7 +484,7 @@ export function BulkExportManager() {
         s.location || "",
         s.proctor_name || "",
         s.total_participants || 0,
-        s.test_modules ? s.test_modules.split(',').length : 0,
+        s.test_modules ? s.test_modules.split(",").length : 0,
         `${(s.completion_rate || 0).toFixed(1)}%`,
         (s.average_score || 0).toFixed(1),
         s.average_duration_minutes || 0,
@@ -718,25 +804,64 @@ export function BulkExportManager() {
         </div>
       )}
 
+      {/* Loading Progress Indicator */}
+      {isLoading && (
+        <div className="space-y-3 p-4 border rounded-lg bg-muted/50">
+          <div className="text-sm font-medium">
+            📊 Loading data in parallel...
+          </div>
+          <div className="grid grid-cols-5 gap-2 text-xs">
+            <div
+              className={`p-2 rounded ${summary.isSuccess ? "bg-green-100 text-green-800" : summary.isLoading ? "bg-blue-100 text-blue-800" : "bg-gray-100"}`}
+            >
+              Summary{" "}
+              {summary.isSuccess ? "✓" : summary.isLoading ? "⏳" : "⏸"}
+            </div>
+            <div
+              className={`p-2 rounded ${sessions.isSuccess ? "bg-green-100 text-green-800" : sessions.isLoading ? "bg-blue-100 text-blue-800" : "bg-gray-100"}`}
+            >
+              Sessions{" "}
+              {sessions.isSuccess ? "✓" : sessions.isLoading ? "⏳" : "⏸"}
+            </div>
+            <div
+              className={`p-2 rounded ${participants.isSuccess ? "bg-green-100 text-green-800" : participants.isLoading ? "bg-blue-100 text-blue-800" : "bg-gray-100"}`}
+            >
+              Participants{" "}
+              {participants.isSuccess
+                ? "✓"
+                : participants.isLoading
+                  ? "⏳"
+                  : "⏸"}
+            </div>
+            <div
+              className={`p-2 rounded ${positions.isSuccess ? "bg-green-100 text-green-800" : positions.isLoading ? "bg-blue-100 text-blue-800" : "bg-gray-100"}`}
+            >
+              Positions{" "}
+              {positions.isSuccess ? "✓" : positions.isLoading ? "⏳" : "⏸"}
+            </div>
+            <div
+              className={`p-2 rounded ${modules.isSuccess ? "bg-green-100 text-green-800" : modules.isLoading ? "bg-blue-100 text-blue-800" : "bg-gray-100"}`}
+            >
+              Modules{" "}
+              {modules.isSuccess ? "✓" : modules.isLoading ? "⏳" : "⏸"}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Action Buttons */}
       <div className="flex justify-end gap-3">
         {/* Phase 1: Generate Data Button */}
         <Button
           onClick={handleGenerateData}
-          disabled={
-            isGenerating ||
-            testResultsReport.isLoading ||
-            testResultsReport.isFetching
-          }
+          disabled={isGenerating || testResultsLoading}
           size="lg"
           variant="outline"
         >
-          {isGenerating ||
-          testResultsReport.isLoading ||
-          testResultsReport.isFetching ? (
+          {isGenerating || testResultsLoading ? (
             <>
               <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current"></div>
-              Generating...
+              {testResultsLoading ? "Loading data..." : "Generating..."}
             </>
           ) : (
             <>
@@ -749,11 +874,7 @@ export function BulkExportManager() {
         {/* Phase 2: Export Button (only enabled when data is generated) */}
         <Button
           onClick={handleExport}
-          disabled={
-            !generatedData || 
-            isExporting ||
-            isGenerating
-          }
+          disabled={!generatedData || isExporting || isGenerating}
           size="lg"
         >
           {isExporting ? (
@@ -776,7 +897,8 @@ export function BulkExportManager() {
           <div className="mb-4">
             <h3 className="text-lg font-semibold">Data Preview</h3>
             <p className="text-sm text-muted-foreground">
-              Review the generated data below. If everything looks correct, click Export to download.
+              Review the generated data below. If everything looks correct,
+              click Export to download.
             </p>
           </div>
           <DataPreview data={generatedData} />
