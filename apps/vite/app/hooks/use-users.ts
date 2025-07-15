@@ -354,19 +354,59 @@ export function useUsers() {
         // Show success toast
         toast.success("Admin berhasil dibuat!");
       },
-      onError: (error: Error) => {
-        // Handle specific error cases
-        const errorMessage = error.message.toLowerCase();
+      onError: (error: any) => {
+        // Parse error response to get field-specific errors
+        let errorResponse = error;
 
-        if (errorMessage.includes("email") && errorMessage.includes("exist")) {
-          toast.error("Email sudah terdaftar");
-        } else if (
-          errorMessage.includes("admin") &&
-          errorMessage.includes("limit")
+        // Check if we have structured errors array
+        if (
+          errorResponse?.response?.data?.errors &&
+          Array.isArray(errorResponse?.response?.data?.errors)
         ) {
-          toast.error("Batas admin tercapai");
+          const fieldErrors = errorResponse?.response?.data?.errors;
+
+          // Show specific field errors
+          fieldErrors.forEach((fieldError: any) => {
+            if (fieldError.field === "email") {
+              toast.error("Email sudah terdaftar", {
+                description: "Silakan gunakan email yang berbeda",
+              });
+            } else if (fieldError.field === "nik") {
+              toast.error("NIK sudah terdaftar", {
+                description: "NIK yang dimasukkan telah digunakan",
+              });
+            } else if (fieldError.field === "phone") {
+              toast.error("Nomor telepon sudah terdaftar", {
+                description: "Silakan gunakan nomor telepon yang berbeda",
+              });
+            } else if (fieldError.field === "rate_limit") {
+              toast.error("Batas pendaftaran terlampaui", {
+                description:
+                  "Terlalu banyak pendaftaran pengguna dari IP ini. Silakan coba lagi setelah 1 jam.",
+              });
+            } else {
+              toast.error(`Error pada field ${fieldError.field}`, {
+                description: fieldError.message,
+              });
+            }
+          });
         } else {
-          toast.error("Gagal membuat admin");
+          // Fallback to original error message parsing
+          const errorMessage = (
+            errorResponse.message || error.message
+          ).toLowerCase();
+
+          if (errorMessage.includes("email")) {
+            toast.error("Email sudah terdaftar");
+          } else if (errorMessage.includes("nik")) {
+            toast.error("NIK sudah terdaftar");
+          } else if (errorMessage.includes("phone")) {
+            toast.error("Nomor telepon sudah terdaftar");
+          } else {
+            toast.error("Gagal mendaftarkan Admin", {
+              description: errorResponse.message || error.message,
+            });
+          }
         }
       },
     });
@@ -396,17 +436,59 @@ export function useUsers() {
 
         toast.success("Peserta berhasil didaftarkan!");
       },
-      onError: (error: Error) => {
-        const errorMessage = error.message.toLowerCase();
+      onError: (error: any) => {
+        // Parse error response to get field-specific errors
+        let errorResponse = error;
 
-        if (errorMessage.includes("email")) {
-          toast.error("Email sudah terdaftar");
-        } else if (errorMessage.includes("nik")) {
-          toast.error("NIK sudah terdaftar");
-        } else if (errorMessage.includes("phone")) {
-          toast.error("Nomor telepon sudah terdaftar");
+        // Check if we have structured errors array
+        if (
+          errorResponse?.response?.data?.errors &&
+          Array.isArray(errorResponse?.response?.data?.errors)
+        ) {
+          const fieldErrors = errorResponse?.response?.data?.errors;
+
+          // Show specific field errors
+          fieldErrors.forEach((fieldError: any) => {
+            if (fieldError.field === "email") {
+              toast.error("Email sudah terdaftar", {
+                description: "Silakan gunakan email yang berbeda",
+              });
+            } else if (fieldError.field === "nik") {
+              toast.error("NIK sudah terdaftar", {
+                description: "NIK yang dimasukkan telah digunakan",
+              });
+            } else if (fieldError.field === "phone") {
+              toast.error("Nomor telepon sudah terdaftar", {
+                description: "Silakan gunakan nomor telepon yang berbeda",
+              });
+            } else if (fieldError.field === "rate_limit") {
+              toast.error("Batas pendaftaran terlampaui", {
+                description:
+                  "Terlalu banyak pendaftaran pengguna dari IP ini. Silakan coba lagi setelah 1 jam.",
+              });
+            } else {
+              toast.error(`Error pada field ${fieldError.field}`, {
+                description: fieldError.message,
+              });
+            }
+          });
         } else {
-          toast.error("Gagal mendaftarkan peserta");
+          // Fallback to original error message parsing
+          const errorMessage = (
+            errorResponse.message || error.message
+          ).toLowerCase();
+
+          if (errorMessage.includes("email")) {
+            toast.error("Email sudah terdaftar");
+          } else if (errorMessage.includes("nik")) {
+            toast.error("NIK sudah terdaftar");
+          } else if (errorMessage.includes("phone")) {
+            toast.error("Nomor telepon sudah terdaftar");
+          } else {
+            toast.error("Gagal mendaftarkan peserta", {
+              description: errorResponse.message || error.message,
+            });
+          }
         }
       },
     });
@@ -437,8 +519,60 @@ export function useUsers() {
 
         toast.success("User berhasil diupdate!");
       },
-      onError: (error: Error) => {
-        toast.error("Gagal update user: " + error.message);
+      onError: (error: any) => {
+        // Parse error response to get field-specific errors
+        let errorResponse = error;
+
+        // Check if we have structured errors array
+        if (
+          errorResponse?.response?.data?.errors &&
+          Array.isArray(errorResponse?.response?.data?.errors)
+        ) {
+          const fieldErrors = errorResponse?.response?.data?.errors;
+
+          // Show specific field errors
+          fieldErrors.forEach((fieldError: any) => {
+            if (fieldError.field === "email") {
+              toast.error("Email sudah terdaftar", {
+                description: "Silakan gunakan email yang berbeda",
+              });
+            } else if (fieldError.field === "nik") {
+              toast.error("NIK sudah terdaftar", {
+                description: "NIK yang dimasukkan telah digunakan",
+              });
+            } else if (fieldError.field === "phone") {
+              toast.error("Nomor telepon sudah terdaftar", {
+                description: "Silakan gunakan nomor telepon yang berbeda",
+              });
+            } else if (fieldError.field === "rate_limit") {
+              toast.error("Batas pendaftaran terlampaui", {
+                description:
+                  "Terlalu banyak pendaftaran pengguna dari IP ini. Silakan coba lagi setelah 1 jam.",
+              });
+            } else {
+              toast.error(`Error pada field ${fieldError.field}`, {
+                description: fieldError.message,
+              });
+            }
+          });
+        } else {
+          // Fallback to original error message parsing
+          const errorMessage = (
+            errorResponse.message || error.message
+          ).toLowerCase();
+
+          if (errorMessage.includes("email")) {
+            toast.error("Email sudah terdaftar");
+          } else if (errorMessage.includes("nik")) {
+            toast.error("NIK sudah terdaftar");
+          } else if (errorMessage.includes("phone")) {
+            toast.error("Nomor telepon sudah terdaftar");
+          } else {
+            toast.error("Gagal update user", {
+              description: errorResponse.message || error.message,
+            });
+          }
+        }
       },
     });
   };

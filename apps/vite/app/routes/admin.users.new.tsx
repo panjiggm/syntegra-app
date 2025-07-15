@@ -770,7 +770,7 @@ export default function AdminUsersNewPage() {
                         disabled={provincesQuery.isLoading}
                       >
                         <FormControl>
-                          <SelectTrigger>
+                          <SelectTrigger className="w-full">
                             <SelectValue
                               placeholder={
                                 provincesQuery.isLoading
@@ -810,7 +810,7 @@ export default function AdminUsersNewPage() {
                         }
                       >
                         <FormControl>
-                          <SelectTrigger>
+                          <SelectTrigger className="w-full">
                             <SelectValue
                               placeholder={
                                 !watchedProvinceCode
@@ -851,7 +851,7 @@ export default function AdminUsersNewPage() {
                         }
                       >
                         <FormControl>
-                          <SelectTrigger>
+                          <SelectTrigger className="w-full">
                             <SelectValue
                               placeholder={
                                 !watchedRegencyCode
@@ -893,7 +893,7 @@ export default function AdminUsersNewPage() {
                         }
                       >
                         <FormControl>
-                          <SelectTrigger>
+                          <SelectTrigger className="w-full">
                             <SelectValue
                               placeholder={
                                 !watchedDistrictCode
