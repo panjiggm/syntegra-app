@@ -11,6 +11,8 @@ import { getAdminDashboardHandler } from "./dashboard.admin";
 import { getParticipantDashboardHandler } from "./dashboard.participant";
 import { getTrendLineHandler } from "./dashboard.admin.trend-line";
 import { getSessionAreaHandler } from "./dashboard.admin.session-area";
+import { getTestCategoryPieHandler } from "./dashboard.admin.test-category-pie";
+import { getTestModuleDonutHandler } from "./dashboard.admin.test-module-donut";
 import {
   authenticateUser,
   requireAdmin,
@@ -80,6 +82,24 @@ dashboardRoutes.get(
   authenticateUser,
   requireAdmin,
   getSessionAreaHandler
+);
+
+// Get Admin Dashboard Test Category Pie Chart Data
+dashboardRoutes.get(
+  "/admin/test-category-pie",
+  generalApiRateLimit,
+  authenticateUser,
+  requireAdmin,
+  getTestCategoryPieHandler
+);
+
+// Get Admin Dashboard Test Module Type Donut Chart Data
+dashboardRoutes.get(
+  "/admin/test-module-donut",
+  generalApiRateLimit,
+  authenticateUser,
+  requireAdmin,
+  getTestModuleDonutHandler
 );
 
 // ==================== PARTICIPANT DASHBOARD ROUTES ====================
