@@ -215,19 +215,24 @@ export default function AdminUserDetailPage() {
       {/* Profile Header Card */}
       <ProfileHeaderCard profile={profile} personalInfo={personal_info} />
 
-      {/* Tab Navigation */}
-      <TabNavigation
-        activeTab={activeTab}
-        onTabChange={setActiveTab}
-        psychotestHistory={psychotest_history}
-      />
+      {/* Main Content with Sidebar Layout */}
+      <div className="flex flex-1 gap-6">
+        {/* Tab Navigation - Sidebar */}
+        <TabNavigation
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+          psychotestHistory={psychotest_history}
+        />
 
-      {/* Tab Content */}
-      <TabContent
-        activeTab={activeTab}
-        personalInfo={personal_info}
-        psychotestHistory={psychotest_history}
-      />
+        {/* Tab Content - Main Content */}
+        <div className="flex-1 min-w-0">
+          <TabContent
+            activeTab={activeTab}
+            personalInfo={personal_info}
+            psychotestHistory={psychotest_history}
+          />
+        </div>
+      </div>
 
       {/* Delete User Dialog */}
       <DialogDeleteUser />

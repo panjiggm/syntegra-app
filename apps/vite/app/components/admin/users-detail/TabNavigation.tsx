@@ -20,41 +20,41 @@ export function TabNavigation({
   psychotestHistory,
 }: TabNavigationProps) {
   return (
-    <div className="border-b">
-      <nav className="flex space-x-8">
+    <div className="w-64 border-r bg-muted/50 p-4">
+      <nav className="space-y-2">
         <button
           onClick={() => onTabChange("profile")}
-          className={`pb-4 px-1 border-b-2 font-medium text-sm ${
+          className={`w-full flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors ${
             activeTab === "profile"
-              ? "border-primary text-primary"
-              : "border-transparent text-muted-foreground hover:text-gray-700 hover:border-gray-300"
+              ? "bg-primary text-primary-foreground"
+              : "text-muted-foreground hover:text-foreground hover:bg-muted"
           }`}
         >
-          <User className="size-4 inline mr-2" />
+          <User className="size-4 mr-3" />
           Informasi Pribadi
         </button>
         {psychotestHistory && (
           <>
             <button
               onClick={() => onTabChange("tests")}
-              className={`pb-4 px-1 border-b-2 font-medium text-sm ${
+              className={`w-full flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors ${
                 activeTab === "tests"
-                  ? "border-primary text-primary"
-                  : "border-transparent text-muted-foreground hover:text-gray-700 hover:border-gray-300"
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted"
               }`}
             >
-              <Target className="size-4 inline mr-2" />
+              <Target className="size-4 mr-3" />
               Riwayat Tes
             </button>
             <button
               onClick={() => onTabChange("analysis")}
-              className={`pb-4 px-1 border-b-2 font-medium text-sm ${
+              className={`w-full flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors ${
                 activeTab === "analysis"
-                  ? "border-primary text-primary"
-                  : "border-transparent text-muted-foreground hover:text-gray-700 hover:border-gray-300"
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted"
               }`}
             >
-              <TrendingUp className="size-4 inline mr-2" />
+              <TrendingUp className="size-4 mr-3" />
               Analisis & Statistik
             </button>
           </>
