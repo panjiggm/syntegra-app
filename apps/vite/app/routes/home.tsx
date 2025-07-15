@@ -120,7 +120,7 @@ export default function HomePage() {
                 className="h-16 w-16 mx-auto mb-4"
               />
               <h1 className="text-5xl font-black text-gray-900 mb-4">
-                Sistem Pengelolaan Calon Pekerja
+                Sistem Pengelolaan Kandidat Pekerja
               </h1>
               <p className="text-gray-600 max-w-2xl mx-auto">
                 Platform Tes Psikologi, Administrasi dan Tes Fisik online untuk
