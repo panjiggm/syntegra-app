@@ -10,6 +10,19 @@ export const DashboardPeriodEnum = z.enum([
   "all_time",
 ]);
 
+export const TrendPeriodEnum = z.enum([
+  "daily",
+  "weekly", 
+  "monthly",
+]);
+
+export const TrendRangeEnum = z.enum([
+  "7d",
+  "30d",
+  "90d",
+  "1y",
+]);
+
 export const ActivityTypeEnum = z.enum([
   "login",
   "test_started",
@@ -30,6 +43,17 @@ export const GetAdminDashboardQuerySchema = z.object({
   date_to: z.string().datetime().optional(),
 });
 
+// Trend Line Query Schema
+export const GetTrendLineQuerySchema = z.object({
+  period: TrendPeriodEnum.default("daily"),
+  range: TrendRangeEnum.default("30d"),
+  test_id: z.string().uuid().optional(),
+  category: z.string().optional(),
+  module_type: z.string().optional(),
+  date_from: z.string().date().optional(),
+  date_to: z.string().date().optional(),
+});
+
 // Participant Dashboard Query Schema
 export const GetParticipantDashboardQuerySchema = z.object({
   include_upcoming_sessions: z.coerce.boolean().default(true),
@@ -38,6 +62,42 @@ export const GetParticipantDashboardQuerySchema = z.object({
 });
 
 // ==================== RESPONSE SCHEMAS ====================
+
+// Trend Line Data Point Schema
+export const TrendDataPointSchema = z.object({
+  date: z.string().date(),
+  value: z.number(),
+  label: z.string(),
+  metadata: z.record(z.any()).optional(),
+});
+
+// Trend Line Response Schema
+export const GetTrendLineResponseSchema = z.object({
+  success: z.literal(true),
+  message: z.string(),
+  data: z.object({
+    period: TrendPeriodEnum,
+    range: TrendRangeEnum,
+    total_count: z.number(),
+    data_points: z.array(TrendDataPointSchema),
+    summary: z.object({
+      average_per_period: z.number(),
+      total_change: z.number(),
+      percentage_change: z.number(),
+      trend_direction: z.enum(["up", "down", "stable"]),
+      peak_date: z.string().date(),
+      peak_value: z.number(),
+    }),
+    filters_applied: z.object({
+      test_id: z.string().uuid().optional(),
+      category: z.string().optional(),
+      module_type: z.string().optional(),
+      date_from: z.string().date().optional(),
+      date_to: z.string().date().optional(),
+    }),
+  }),
+  timestamp: z.string().datetime(),
+});
 
 // Profile Completion Schema
 export const ProfileCompletionSchema = z.object({
@@ -300,6 +360,8 @@ export const DashboardErrorResponseSchema = z.object({
 
 // ==================== TYPE EXPORTS ====================
 export type DashboardPeriod = z.infer<typeof DashboardPeriodEnum>;
+export type TrendPeriod = z.infer<typeof TrendPeriodEnum>;
+export type TrendRange = z.infer<typeof TrendRangeEnum>;
 export type ActivityType = z.infer<typeof ActivityTypeEnum>;
 
 export type GetAdminDashboardQuery = z.infer<
@@ -308,6 +370,9 @@ export type GetAdminDashboardQuery = z.infer<
 export type GetParticipantDashboardQuery = z.infer<
   typeof GetParticipantDashboardQuerySchema
 >;
+export type GetTrendLineQuery = z.infer<typeof GetTrendLineQuerySchema>;
+export type GetTrendLineResponse = z.infer<typeof GetTrendLineResponseSchema>;
+export type TrendDataPoint = z.infer<typeof TrendDataPointSchema>;
 
 export type ProfileCompletion = z.infer<typeof ProfileCompletionSchema>;
 export type ParticipantTestSummary = z.infer<

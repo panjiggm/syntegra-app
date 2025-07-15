@@ -9,12 +9,14 @@ Syntegra is a full-stack psychological testing platform built as a monorepo usin
 ## Architecture
 
 **Monorepo Structure:**
+
 - `apps/backend` - Hono.js API running on Cloudflare Workers with Neon PostgreSQL
 - `apps/vite` - **Primary frontend** using React Router v7, React 19, Vite, TailwindCSS v4
 - `apps/frontend` - Secondary Next.js implementation (legacy)
 - `packages/shared-types` - Shared TypeScript types and Zod schemas
 
 **Key Technologies:**
+
 - Backend: Hono.js, Drizzle ORM, Cloudflare Workers, JWT auth
 - Frontend: React 19, React Router v7, Vite, TailwindCSS v4, shadcn/ui, Zustand, TanStack Query
 - Database: Neon PostgreSQL with comprehensive psychological testing schema
@@ -23,21 +25,24 @@ Syntegra is a full-stack psychological testing platform built as a monorepo usin
 ## Essential Commands
 
 **Development:**
+
 ```bash
 pnpm dev                 # Start all apps
-pnpm dev:backend         # Backend only  
+pnpm dev:backend         # Backend only
 pnpm dev:vite           # Vite frontend only
 ```
 
 **Database Operations:**
+
 ```bash
 pnpm db:generate        # Generate Drizzle migrations
-pnpm db:migrate         # Run migrations  
+pnpm db:migrate         # Run migrations
 pnpm db:push           # Push schema changes
 pnpm db:studio         # Open Drizzle Studio
 ```
 
 **Build & Deploy:**
+
 ```bash
 pnpm build             # Build all apps
 pnpm deploy            # Deploy all apps
@@ -46,6 +51,7 @@ pnpm type-check        # TypeScript checking
 ```
 
 **Backend-specific:**
+
 ```bash
 cd apps/backend
 pnpm deploy:staging    # Deploy to staging
@@ -55,18 +61,21 @@ pnpm deploy:production # Deploy to production
 ## Code Architecture Patterns
 
 **Backend Route Organization:**
+
 - Modular route structure: `/routes/users/`, `/routes/tests/`, `/routes/sessions/`
 - Each route group has index file, handlers, and operation-specific files
 - Authentication middleware, rate limiting, and CORS configured
 - Background job scheduling with Cloudflare Cron Triggers
 
 **Frontend Architecture (Vite - Primary):**
+
 - File-based routing with layout components (`_admin.tsx`, `_participant.tsx`, `_psikotes.tsx`)
 - Co-located components in feature directories
 - Zustand for client state, TanStack Query for server state
 - React Hook Form + Zod for form validation
 
 **Database Schema:**
+
 - Core entities: Users, Tests, Questions, Sessions, Attempts, Results
 - Flexible question types: multiple choice, true/false, text, rating scale, drawing, sequence, matrix
 - Support for psychological test categories: WAIS, MBTI, Wartegg, RIASEC, Kraepelin, Pauli
@@ -74,20 +83,24 @@ pnpm deploy:production # Deploy to production
 ## Development Guidelines
 
 **File Naming:**
+
 - Components: PascalCase
-- Routes: kebab-case  
+- Routes: kebab-case
 - Hooks: camelCase with `use` prefix
 
 **Import Patterns:**
+
 - Use import aliases: `~/components/ui/button`
 - Shared types from `@syntegra/shared-types`
 
 **Component Structure:**
+
 - Props interfaces defined inline or exported
 - Error boundaries for route components
 - Loading states and error handling
 
 **API Integration:**
+
 - TanStack Query for data fetching
 - Centralized API client in `lib/api-client.ts`
 - Zod schemas for request/response validation
@@ -95,10 +108,12 @@ pnpm deploy:production # Deploy to production
 ## Environment Setup
 
 **Required Environment Variables:**
+
 - Backend: Database URL, JWT secrets (in `wrangler.jsonc`)
 - Frontend: API endpoints, auth configuration
 
 **Development Workflow:**
+
 1. Install dependencies: `pnpm install`
 2. Set up database connection in backend
 3. Run migrations: `pnpm db:migrate`
@@ -107,6 +122,7 @@ pnpm deploy:production # Deploy to production
 ## Special Features
 
 **Psychological Testing Platform:**
+
 - Multi-module test support (intelligence, personality, aptitude, etc.)
 - Session-based test administration with timing controls
 - Bulk participant management via CSV import
@@ -114,6 +130,7 @@ pnpm deploy:production # Deploy to production
 - Role-based access control (admin/participant)
 
 **Deployment:**
+
 - Backend: Cloudflare Workers with environment-specific configurations
 - Frontend: Cloudflare Pages (Vite app is primary deployment target)
 - Database: Neon PostgreSQL with connection pooling
@@ -123,6 +140,7 @@ pnpm deploy:production # Deploy to production
 **Question Creation Payloads for Postman:**
 
 ### 1. Multiple Choice Question
+
 ```json
 POST /tests/{testId}/questions
 {
@@ -137,7 +155,7 @@ POST /tests/{testId}/questions
       "label": "Jakarta"
     },
     {
-      "value": "B", 
+      "value": "B",
       "label": "Surabaya"
     },
     {
@@ -155,6 +173,7 @@ POST /tests/{testId}/questions
 ```
 
 ### 2. True/False Question
+
 ```json
 POST /tests/{testId}/questions
 {
@@ -169,6 +188,7 @@ POST /tests/{testId}/questions
 ```
 
 ### 3. Rating Scale Question
+
 ```json
 POST /tests/{testId}/questions
 {
@@ -190,7 +210,7 @@ POST /tests/{testId}/questions
     },
     {
       "value": "3",
-      "label": "3", 
+      "label": "3",
       "score": 3
     },
     {
@@ -206,7 +226,7 @@ POST /tests/{testId}/questions
   ],
   "scoring_key": {
     "1": 1,
-    "2": 2, 
+    "2": 2,
     "3": 3,
     "4": 4,
     "5": 5
@@ -215,12 +235,14 @@ POST /tests/{testId}/questions
 ```
 
 **Required Headers:**
+
 ```
 Content-Type: application/json
 Authorization: Bearer {JWT_TOKEN}
 ```
 
 **Notes:**
+
 - Replace `{testId}` with valid test UUID
 - `sequence` auto-calculated if not provided
 - `time_limit` in seconds (optional, uses defaults)
@@ -228,3 +250,32 @@ Authorization: Bearer {JWT_TOKEN}
 - `image_url`/`audio_url` optional, supported by specific question types
 - For `true_false`, backend auto-generates options
 - `scoring_key` required for `rating_scale` questions
+
+**Data Charts Tambahan yang Bisa Ditampilkan di Dashboard Admin**
+
+1. Analisis Waktu & Tren
+
+- Percobaan tes harian/mingguan/bulanan (line chart)
+- Sesi dibuat per bulan (area chart)
+- Waktu rata-rata penyelesaian tes (bar chart)
+
+2. Distribusi Kategori & Modul
+
+- Distribusi tes berdasarkan category (wais, mbti, wartegg, dll) - pie chart
+- Distribusi tes berdasarkan module_type (intelligence, personality, dll) - donut chart
+
+3. Performance Metrics
+
+- Average completion rate per test
+- Top performing tests (highest completion rates)
+- Most challenging tests (lowest completion rates)
+- Time efficiency per test category
+
+4. Geographic & Demographic
+
+- Distribusi peserta berdasarkan provinsi/wilayah
+- Distribusi gender, pendidikan, agama
+- Age distribution (dari birth_date)
+
+Data ini semua tersedia dari tabel yang ada: users, tests, testSessions, testAttempts, sessionParticipants, participantTestProgress,
+userAnswers, dll.

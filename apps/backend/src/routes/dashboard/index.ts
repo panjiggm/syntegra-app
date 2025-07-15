@@ -4,10 +4,12 @@ import { type CloudflareBindings } from "@/lib/env";
 import {
   GetAdminDashboardQuerySchema,
   GetParticipantDashboardQuerySchema,
+  GetTrendLineQuerySchema,
   type DashboardErrorResponse,
 } from "shared-types";
 import { getAdminDashboardHandler } from "./dashboard.admin";
 import { getParticipantDashboardHandler } from "./dashboard.participant";
+import { getTrendLineHandler } from "./dashboard.admin.trend-line";
 import {
   authenticateUser,
   requireAdmin,
@@ -44,6 +46,30 @@ dashboardRoutes.get(
     }
   }),
   getAdminDashboardHandler
+);
+
+// Get Admin Dashboard Trend Line Data
+dashboardRoutes.get(
+  "/admin/trend-line",
+  generalApiRateLimit,
+  authenticateUser,
+  requireAdmin,
+  zValidator("query", GetTrendLineQuerySchema, (result, c) => {
+    if (!result.success) {
+      const errorResponse: DashboardErrorResponse = {
+        success: false,
+        message: "Invalid query parameters",
+        errors: result.error.errors.map((err) => ({
+          field: err.path.join("."),
+          message: err.message,
+          code: err.code,
+        })),
+        timestamp: new Date().toISOString(),
+      };
+      return c.json(errorResponse, 400);
+    }
+  }),
+  getTrendLineHandler
 );
 
 // ==================== PARTICIPANT DASHBOARD ROUTES ====================
