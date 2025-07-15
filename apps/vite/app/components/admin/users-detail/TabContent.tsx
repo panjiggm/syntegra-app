@@ -7,6 +7,7 @@ import {
 } from "~/components/ui/card";
 import { Badge } from "~/components/ui/badge";
 import { Progress } from "~/components/ui/progress";
+import { SimpleRadarChart, SimpleBarChart } from "~/components/ui/chart";
 import { Target, Award, TrendingUp, Clock } from "lucide-react";
 
 interface PersonalInfo {
@@ -112,7 +113,7 @@ export function TabContent({
   };
 
   const getReligionLabel = (religion: string | null) => {
-    if (!religion) return "Tidak diketahui";
+    if (!religion) return "-";
     const labels = {
       islam: "Islam",
       kristen: "Kristen",
@@ -126,7 +127,7 @@ export function TabContent({
   };
 
   const getEducationLabel = (education: string | null) => {
-    if (!education) return "Tidak diketahui";
+    if (!education) return "-";
     const labels = {
       sd: "SD",
       smp: "SMP",
@@ -141,7 +142,7 @@ export function TabContent({
   };
 
   const formatDate = (dateStr: string | null) => {
-    if (!dateStr) return "Tidak diketahui";
+    if (!dateStr) return "-";
     return new Date(dateStr).toLocaleDateString("id-ID", {
       year: "numeric",
       month: "long",
@@ -217,16 +218,14 @@ export function TabContent({
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <p className="text-sm text-muted-foreground">Tempat Lahir</p>
-                <p className="font-medium">
-                  {personalInfo.birth_place || "Tidak diketahui"}
-                </p>
+                <p className="font-medium">{personalInfo.birth_place || "-"}</p>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Tanggal Lahir</p>
                 <p className="font-medium">
                   {personalInfo.birth_date
                     ? formatDate(personalInfo.birth_date)
-                    : "Tidak diketahui"}
+                    : "-"}
                   {personalInfo.age && (
                     <span className="text-muted-foreground ml-2">
                       ({personalInfo.age} tahun)
@@ -265,13 +264,13 @@ export function TabContent({
               <div>
                 <p className="text-sm text-muted-foreground">Provinsi</p>
                 <p className="font-medium">
-                  {personalInfo.address.province || "Tidak diketahui"}
+                  {personalInfo.address.province || "-"}
                 </p>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Kabupaten/Kota</p>
                 <p className="font-medium">
-                  {personalInfo.address.regency || "Tidak diketahui"}
+                  {personalInfo.address.regency || "-"}
                 </p>
               </div>
             </div>
@@ -280,13 +279,13 @@ export function TabContent({
               <div>
                 <p className="text-sm text-muted-foreground">Kecamatan</p>
                 <p className="font-medium">
-                  {personalInfo.address.district || "Tidak diketahui"}
+                  {personalInfo.address.district || "-"}
                 </p>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Kelurahan/Desa</p>
                 <p className="font-medium">
-                  {personalInfo.address.village || "Tidak diketahui"}
+                  {personalInfo.address.village || "-"}
                 </p>
               </div>
             </div>
@@ -294,7 +293,7 @@ export function TabContent({
             <div>
               <p className="text-sm text-muted-foreground">Kode Pos</p>
               <p className="font-medium">
-                {personalInfo.address.postal_code || "Tidak diketahui"}
+                {personalInfo.address.postal_code || "-"}
               </p>
             </div>
           </CardContent>
@@ -499,137 +498,238 @@ export function TabContent({
           </Card>
         </div>
 
-        {/* Completion Rate */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Tingkat Penyelesaian</CardTitle>
-            <CardDescription>
-              Persentase tes yang berhasil diselesaikan
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm">
-                <span>Tingkat Penyelesaian</span>
-                <span>{psychotestHistory.statistics.completion_rate}%</span>
-              </div>
-              <Progress
-                value={psychotestHistory.statistics.completion_rate}
-                className="h-2"
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-4 mt-4 text-sm">
-              <div>
-                <p className="text-muted-foreground">Tes Diselesaikan</p>
-                <p className="font-medium">
-                  {psychotestHistory.statistics.completed_attempts}
-                </p>
-              </div>
-              <div>
-                <p className="text-muted-foreground">Total Percobaan</p>
-                <p className="font-medium">
-                  {psychotestHistory.statistics.total_attempts}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Performance by Category */}
-        {psychotestHistory.performance_by_category.length > 0 && (
+        {/* Consolidated Test Results & Performance Analysis */}
+        {(psychotestHistory.results_analysis.length > 0 ||
+          psychotestHistory.performance_by_category.length > 0) && (
           <Card>
             <CardHeader>
-              <CardTitle>Performa per Kategori</CardTitle>
+              <CardTitle>Analisis Hasil Tes & Performa</CardTitle>
               <CardDescription>
-                Analisis performa berdasarkan kategori tes
+                Visualisasi hasil tes berdasarkan kategori dengan chart dan
+                rekomendasi
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                {psychotestHistory.performance_by_category.map((perf) => (
-                  <div key={perf.category} className="border rounded-lg p-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <h4 className="font-medium capitalize">
-                        {perf.category}
-                      </h4>
-                      <Badge variant="outline">{perf.attempts} percobaan</Badge>
-                    </div>
-                    <div className="grid grid-cols-3 gap-4 text-sm">
-                      <div>
-                        <p className="text-muted-foreground">Rata-rata Skor</p>
-                        <p className="font-medium">
-                          {perf.average_score.toFixed(1)}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-muted-foreground">Skor Terbaik</p>
-                        <p className="font-medium">
-                          {perf.best_score.toFixed(1)}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-muted-foreground">Tingkat Selesai</p>
-                        <p className="font-medium">
-                          {perf.completion_rate.toFixed(1)}%
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
+              <div className="space-y-8">
+                {/* Create combined data structure */}
+                {(() => {
+                  // Group results by category
+                  const groupedData = new Map();
 
-        {/* Test Results Analysis */}
-        {psychotestHistory.results_analysis.length > 0 && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Analisis Hasil Tes</CardTitle>
-              <CardDescription>
-                Traits dan rekomendasi dari hasil tes
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-6">
-                {psychotestHistory.results_analysis.map((result, index) => (
-                  <div key={index} className="border rounded-lg p-4">
-                    <div className="flex items-center justify-between mb-4">
-                      <h4 className="font-medium">{result.test_name}</h4>
-                      <Badge variant="outline">{result.category}</Badge>
-                    </div>
+                  // Add results analysis data
+                  psychotestHistory.results_analysis.forEach((result) => {
+                    groupedData.set(result.category, {
+                      ...groupedData.get(result.category),
+                      result,
+                      category: result.category,
+                      test_name: result.test_name,
+                      traits: result.traits,
+                      recommendations: result.recommendations,
+                    });
+                  });
 
-                    {result.traits.length > 0 && (
-                      <div className="mb-4">
-                        <h5 className="text-sm font-medium mb-2">Traits</h5>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                          {result.traits.map((trait, traitIndex) => (
-                            <div
-                              key={traitIndex}
-                              className="flex items-center justify-between p-2 bg-gray-50 rounded"
-                            >
-                              <span className="text-sm">{trait.name}</span>
-                              <Badge variant="secondary">{trait.score}</Badge>
-                            </div>
-                          ))}
+                  // Add performance data
+                  psychotestHistory.performance_by_category.forEach((perf) => {
+                    groupedData.set(perf.category, {
+                      ...groupedData.get(perf.category),
+                      performance: perf,
+                      category: perf.category,
+                    });
+                  });
+
+                  // Separate personality and non-personality tests
+                  const personalityTests: Array<{
+                    result?: TestResult;
+                    performance?: PerformanceByCategory;
+                    category: string;
+                    test_name?: string;
+                    traits?: TestResult["traits"];
+                    recommendations?: string[];
+                  }> = [];
+                  const nonPersonalityTests: Array<{
+                    result?: TestResult;
+                    performance?: PerformanceByCategory;
+                    category: string;
+                    test_name?: string;
+                    traits?: TestResult["traits"];
+                    recommendations?: string[];
+                  }> = [];
+
+                  Array.from(groupedData.values()).forEach((data) => {
+                    if (
+                      data.traits &&
+                      data.traits.length > 0 &&
+                      ["mbti", "big_five", "disc", "epps"].includes(
+                        data.category
+                      )
+                    ) {
+                      personalityTests.push(data);
+                    } else if (data.performance) {
+                      nonPersonalityTests.push(data);
+                    }
+                  });
+
+                  return (
+                    <>
+                      {/* Non-personality tests - single bar chart */}
+                      {nonPersonalityTests.length > 0 && (
+                        <div className="border rounded-lg p-6">
+                          <div className="flex items-center justify-between mb-4">
+                            <h4 className="font-medium">
+                              Performa Tes Kognitif & Kemampuan
+                            </h4>
+                            <Badge variant="outline">
+                              {nonPersonalityTests.length} kategori
+                            </Badge>
+                          </div>
+
+                          {/* Combined Bar Chart */}
+                          <div className="mb-4">
+                            <SimpleBarChart
+                              data={nonPersonalityTests.map((data) => ({
+                                test: data.test_name || data.category,
+                                score: data.performance?.average_score,
+                              }))}
+                              title="Perbandingan Skor Tes"
+                              description="Rata-rata skor untuk setiap kategori tes"
+                              origin="individual"
+                            />
+                          </div>
+
+                          {/* Performance Stats Summary */}
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {nonPersonalityTests.map((data, index) => (
+                              <div
+                                key={index}
+                                className="border rounded-lg p-4"
+                              >
+                                <div className="flex items-center justify-between mb-2">
+                                  <h5 className="font-medium text-sm capitalize">
+                                    {data.test_name || data.category}
+                                  </h5>
+                                  <Badge
+                                    variant="secondary"
+                                    className="text-xs"
+                                  >
+                                    {data.performance?.attempts} percobaan
+                                  </Badge>
+                                </div>
+                                <div className="space-y-2 text-xs">
+                                  <div className="flex justify-between">
+                                    <span className="text-muted-foreground">
+                                      Rata-rata
+                                    </span>
+                                    <span className="font-medium">
+                                      {data.performance?.average_score.toFixed(
+                                        1
+                                      )}
+                                    </span>
+                                  </div>
+                                  <div className="flex justify-between">
+                                    <span className="text-muted-foreground">
+                                      Terbaik
+                                    </span>
+                                    <span className="font-medium">
+                                      {data.performance?.best_score.toFixed(1)}
+                                    </span>
+                                  </div>
+                                  <div className="flex justify-between">
+                                    <span className="text-muted-foreground">
+                                      Selesai
+                                    </span>
+                                    <span className="font-medium">
+                                      {data.performance?.completion_rate.toFixed(
+                                        1
+                                      )}
+                                      %
+                                    </span>
+                                  </div>
+                                </div>
+
+                                {/* Recommendations for this test */}
+                                {data.recommendations &&
+                                  data.recommendations.length > 0 && (
+                                    <div className="mt-3 pt-3 border-t">
+                                      <h6 className="text-xs font-medium mb-1">
+                                        Rekomendasi
+                                      </h6>
+                                      <ul className="list-disc list-inside space-y-1 text-xs text-muted-foreground">
+                                        {data.recommendations.map(
+                                          (rec, recIndex) => (
+                                            <li key={recIndex}>{rec}</li>
+                                          )
+                                        )}
+                                      </ul>
+                                    </div>
+                                  )}
+                              </div>
+                            ))}
+                          </div>
                         </div>
-                      </div>
-                    )}
+                      )}
 
-                    {result.recommendations.length > 0 && (
-                      <div>
-                        <h5 className="text-sm font-medium mb-2">
-                          Rekomendasi
-                        </h5>
-                        <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground">
-                          {result.recommendations.map((rec, recIndex) => (
-                            <li key={recIndex}>{rec}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-                  </div>
-                ))}
+                      {/* Personality tests - individual display */}
+                      {personalityTests.map((data, index) => (
+                        <div key={index} className="border rounded-lg p-6">
+                          <div className="flex items-center justify-between mb-4">
+                            <h4 className="font-medium">{data.test_name}</h4>
+                            <div className="flex gap-2">
+                              <Badge variant="outline">{data.category}</Badge>
+                              {data.performance && (
+                                <Badge variant="secondary">
+                                  {data.performance.attempts} percobaan
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Traditional trait display */}
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-4">
+                            {data.traits?.map((trait, traitIndex) => (
+                              <div
+                                key={traitIndex}
+                                className="flex items-center justify-between p-2 bg-gray-50 rounded"
+                              >
+                                <span className="text-sm">{trait.name}</span>
+                                <Badge variant="outline">{trait.score}</Badge>
+                              </div>
+                            ))}
+                          </div>
+
+                          {/* Radar Chart for personality tests */}
+                          <div className="my-4">
+                            <SimpleRadarChart
+                              data={
+                                data.traits?.map((trait) => ({
+                                  trait: trait.name,
+                                  score: trait.score,
+                                })) ?? []
+                              }
+                              title={`${data.test_name} - Profil Kepribadian`}
+                              description="Visualisasi traits dalam bentuk radar chart"
+                              origin="individual"
+                            />
+                          </div>
+
+                          {/* Recommendations */}
+                          {data.recommendations &&
+                            data.recommendations.length > 0 && (
+                              <div>
+                                <h5 className="text-sm font-medium mb-2">
+                                  Rekomendasi
+                                </h5>
+                                <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground">
+                                  {data.recommendations.map((rec, recIndex) => (
+                                    <li key={recIndex}>{rec}</li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+                        </div>
+                      ))}
+                    </>
+                  );
+                })()}
               </div>
             </CardContent>
           </Card>

@@ -59,12 +59,11 @@ export function HeaderUserDetail({
             variant="destructive"
             size="sm"
             onClick={() => {
-              console.log("Test delete button clicked");
               onDelete(userId, userName);
             }}
           >
             <Trash2 className="size-4 mr-2" />
-            Test Delete
+            Delete
           </Button>
         )}
         <Button variant="outline" asChild>
