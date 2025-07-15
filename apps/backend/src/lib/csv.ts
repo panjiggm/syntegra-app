@@ -354,6 +354,24 @@ function normalizeSyntegraDate(value: any): string | undefined {
   try {
     const strValue = String(value).trim();
 
+    // Check for Excel serial number patterns (like +032878-12-31)
+    if (strValue.match(/^\+?\d{5,6}-\d{2}-\d{2}$/)) {
+      return undefined;
+    }
+
+    // Check if it's a pure number (Excel serial number)
+    const numValue = Number(strValue);
+    if (!isNaN(numValue) && numValue > 0 && numValue < 100000) {
+      // Convert Excel serial number to date (Excel epoch is 1900-01-01, but has a leap year bug)
+      const excelEpoch = new Date(1900, 0, 1); // January 1, 1900
+      const days = numValue - 2; // Excel has a leap year bug for 1900
+      const date = new Date(excelEpoch.getTime() + days * 24 * 60 * 60 * 1000);
+      
+      if (!isNaN(date.getTime()) && date.getFullYear() > 1900 && date.getFullYear() < 2100) {
+        return date.toISOString();
+      }
+    }
+
     // Common Indonesian date formats: DD/MM/YYYY
     if (strValue.includes("/")) {
       const parts = strValue.split("/");
@@ -362,21 +380,31 @@ function normalizeSyntegraDate(value: any): string | undefined {
         const month = parts[1].padStart(2, "0");
         const year = parts[2];
 
-        const date = new Date(`${year}-${month}-${day}`);
-        if (!isNaN(date.getTime())) {
-          return date.toISOString();
+        // Validate parts
+        const dayNum = parseInt(day);
+        const monthNum = parseInt(month);
+        const yearNum = parseInt(year);
+
+        if (dayNum >= 1 && dayNum <= 31 && monthNum >= 1 && monthNum <= 12 && yearNum >= 1900 && yearNum <= 2100) {
+          const isoDateString = `${year}-${month}-${day}T00:00:00.000Z`;
+          const date = new Date(isoDateString);
+          if (!isNaN(date.getTime())) {
+            return date.toISOString();
+          }
         }
       }
     }
 
-    // Try direct date parsing
-    const date = new Date(strValue);
-    if (!isNaN(date.getTime())) {
-      return date.toISOString();
+    // Try direct date parsing for ISO format
+    if (strValue.match(/^\d{4}-\d{2}-\d{2}$/)) {
+      const date = new Date(strValue + "T00:00:00.000Z");
+      if (!isNaN(date.getTime())) {
+        return date.toISOString();
+      }
     }
 
     return undefined;
-  } catch {
+  } catch (error) {
     return undefined;
   }
 }

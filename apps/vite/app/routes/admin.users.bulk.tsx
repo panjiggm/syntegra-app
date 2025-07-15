@@ -142,20 +142,26 @@ export default function AdminUsersBulkPage() {
       error: null,
     }));
 
-    // Parse Excel file
     const reader = new FileReader();
     reader.onload = (e) => {
       try {
         const data = new Uint8Array(e.target?.result as ArrayBuffer);
         const workbook = XLSX.read(data, { type: "array" });
+        console.log("Available sheets:", workbook.SheetNames);
         const firstSheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[firstSheetName];
+        console.log("Using sheet:", firstSheetName);
+        console.log("Sheet range:", worksheet["!ref"]);
 
-        // Convert to JSON with headers
         const jsonData = XLSX.utils.sheet_to_json(worksheet, {
           header: 1,
           defval: "",
+          raw: false, // This will format dates as strings instead of keeping them as numbers
+          dateNF: "dd/mm/yyyy", // Format dates as DD/MM/YYYY
         }) as string[][];
+
+        console.log("Raw Excel data rows:", jsonData.length);
+        console.log("First 5 rows:", jsonData.slice(0, 5));
 
         if (jsonData.length < 6) {
           throw new Error(
@@ -163,13 +169,13 @@ export default function AdminUsersBulkPage() {
           );
         }
 
-        // Smart header detection for Syntegra format
         let headerRowIndex = -1;
         let headers: string[] = [];
 
-        // Look for header row in first 10 rows
         for (let i = 0; i < Math.min(10, jsonData.length); i++) {
-          const row = jsonData[i];
+          const row = jsonData[i] || [];
+          console.log(`Row ${i + 1}:`, row);
+
           const hasRequiredColumns = Object.values(DEFAULT_COLUMN_MAPPING).some(
             (expectedHeader) =>
               row.some(
@@ -177,14 +183,25 @@ export default function AdminUsersBulkPage() {
                   cell &&
                   cell
                     .toString()
+                    .replace(/\u00A0/g, " ")
                     .toUpperCase()
                     .includes(expectedHeader.toUpperCase())
               )
           );
 
+          console.log(`Row ${i + 1} has required columns:`, hasRequiredColumns);
+
           if (hasRequiredColumns) {
             headerRowIndex = i;
-            headers = row.map((cell) => (cell ? cell.toString().trim() : ""));
+            headers = row.map((cell) =>
+              cell
+                ? cell
+                    .toString()
+                    .replace(/\u00A0/g, " ")
+                    .trim()
+                : ""
+            );
+            console.log(`Selected header row ${i + 1}:`, headers);
             break;
           }
         }
@@ -195,56 +212,69 @@ export default function AdminUsersBulkPage() {
           );
         }
 
-        // Get data rows after header
-        const rows = jsonData.slice(headerRowIndex + 1);
-
+        console.log(
+          "Detected headers at row",
+          headerRowIndex + 1,
+          ":",
+          headers
+        );
+        console.log("Column mapping check:");
         Object.entries(DEFAULT_COLUMN_MAPPING).forEach(
           ([key, expectedHeader]) => {
-            const columnIndex = headers.findIndex((h) => {
+            const found = headers.find((h) => {
               const headerStr = h.toString().toUpperCase().trim();
               const expectedStr = expectedHeader.toUpperCase().trim();
+              return (
+                headerStr === expectedStr ||
+                headerStr.includes(expectedStr) ||
+                expectedStr.includes(headerStr)
+              );
+            });
+            console.log(
+              `  ${key} (${expectedHeader}):`,
+              found ? `✓ Found: "${found}"` : "✗ Missing"
+            );
+          }
+        );
 
-              // Exact match first
+        // Validasi kolom wajib ditemukan semua
+        const missingColumns: string[] = [];
+        Object.entries(DEFAULT_COLUMN_MAPPING).forEach(
+          ([key, expectedHeader]) => {
+            const found = headers.some((h) => {
+              const headerStr = h.toString().toUpperCase().trim();
+              const expectedStr = expectedHeader.toUpperCase().trim();
               if (headerStr === expectedStr) return true;
-
-              // For phone specifically, be more precise
-              if (key === "phone") {
-                return (
-                  headerStr === "NOMOR HP" || headerStr.includes("NOMOR HP")
-                );
-              }
-
-              // For other fields, check if header contains expected or vice versa
+              if (key === "phone") return headerStr.includes("NOMOR HP");
               return (
                 headerStr.includes(expectedStr) ||
                 expectedStr.includes(headerStr)
               );
             });
+            if (!found) missingColumns.push(expectedHeader);
           }
         );
 
+        if (missingColumns.length > 0) {
+          throw new Error(
+            `Kolom berikut tidak ditemukan: ${missingColumns.join(", ")}`
+          );
+        }
+
+        const rows = jsonData.slice(headerRowIndex + 1);
+        console.log(`Data rows after header (${rows.length} rows):`, rows);
+
         const parsedUsers: ParsedUser[] = rows
           .map((row, index) => {
-            const user: any = { row_number: headerRowIndex + index + 2 }; // Actual row number in Excel
+            const user: any = { row_number: headerRowIndex + index + 2 };
 
-            // Map columns based on default mapping
             Object.entries(DEFAULT_COLUMN_MAPPING).forEach(
               ([key, expectedHeader]) => {
                 const columnIndex = headers.findIndex((h) => {
-                  const headerStr = h.toString().toUpperCase().trim();
+                  const headerStr = h.toUpperCase().trim();
                   const expectedStr = expectedHeader.toUpperCase().trim();
-
-                  // Exact match first
                   if (headerStr === expectedStr) return true;
-
-                  // For phone specifically, be more precise
-                  if (key === "phone") {
-                    return (
-                      headerStr === "NOMOR HP" || headerStr.includes("NOMOR HP")
-                    );
-                  }
-
-                  // For other fields, check if header contains expected or vice versa
+                  if (key === "phone") return headerStr.includes("NOMOR HP");
                   return (
                     headerStr.includes(expectedStr) ||
                     expectedStr.includes(headerStr)
@@ -254,18 +284,12 @@ export default function AdminUsersBulkPage() {
                 if (columnIndex !== -1 && row[columnIndex]) {
                   let value = row[columnIndex].toString().trim();
 
-                  // Handle specific field transformations
                   if (key === "nik" && value) {
-                    // Clean NIK: remove non-numeric characters and ensure 16 digits
-                    value = value.replace(/\D/g, ""); // Remove all non-digits
-                    if (value.length > 16) {
-                      value = value.substring(0, 16); // Truncate if too long
-                    }
-                    // NIK validation will be done by backend, just clean here
+                    value = value.replace(/\D/g, "");
+                    if (value.length > 16) value = value.substring(0, 16);
                   }
 
                   if (key === "gender" && value) {
-                    // Convert gender format (L/P to male/female)
                     value =
                       value.toUpperCase() === "L"
                         ? "male"
@@ -275,14 +299,13 @@ export default function AdminUsersBulkPage() {
                   }
 
                   if (key === "birth_date" && value) {
-                    // Handle various date formats
                     try {
                       const date = new Date(value);
                       if (!isNaN(date.getTime())) {
-                        value = date.toISOString().split("T")[0]; // YYYY-MM-DD format
+                        value = date.toISOString().split("T")[0];
                       }
-                    } catch (e) {
-                      // Keep original value if date parsing fails
+                    } catch {
+                      // Do nothing, keep original value
                     }
                   }
 
@@ -291,7 +314,6 @@ export default function AdminUsersBulkPage() {
               }
             );
 
-            // Generate email if missing but name exists
             if (!user.email && user.name) {
               const cleanName = user.name
                 .toLowerCase()
@@ -300,10 +322,7 @@ export default function AdminUsersBulkPage() {
               user.email = `${cleanName}@syntegra.com`;
             }
 
-            // Generate 16-digit numeric NIK if missing
             if (!user.nik && user.name) {
-              // Generate a 16-digit NIK starting with "99" (indicating generated)
-              // Format: 99YYYYMMDDHHMMSS where YYYY is year, MM is month, DD is day, HH is hour, MM is minute, SS is second
               const now = new Date();
               const year = now.getFullYear().toString();
               const month = (now.getMonth() + 1).toString().padStart(2, "0");
@@ -317,25 +336,30 @@ export default function AdminUsersBulkPage() {
 
             return user;
           })
-          .filter((user) => user.name); // Filter rows that have at least a name
+          .filter((user) => user.name);
 
-        // Convert to CSV using original Syntegra headers for backend compatibility
+        if (parsedUsers.length === 0) {
+          throw new Error(
+            "Tidak ada data karyawan yang valid ditemukan. Pastikan file memiliki data di bawah header."
+          );
+        }
+
+        console.log(
+          `Parsed ${parsedUsers.length} valid users:`,
+          parsedUsers.slice(0, 2)
+        );
+
         const csvData = parsedUsers.map((user) => {
           const csvRow: any = {};
-
-          // Map back to original Syntegra column names for backend processing
           Object.entries(DEFAULT_COLUMN_MAPPING).forEach(
             ([field, originalHeader]) => {
               csvRow[originalHeader] = user[field as keyof ParsedUser] || "";
             }
           );
-
           return csvRow;
         });
 
-        const csvContent = Papa.unparse(csvData, {
-          header: true,
-        });
+        const csvContent = Papa.unparse(csvData, { header: true });
 
         setState((prev) => ({
           ...prev,
@@ -348,26 +372,8 @@ export default function AdminUsersBulkPage() {
         toast.success(
           `File berhasil diparse: ${parsedUsers.length} karyawan ditemukan dari ${firstSheetName} sheet`
         );
-
-        // Show warning if many emails were generated
-        const generatedEmails = parsedUsers.filter(
-          (u) => u.email && u.email.includes("@syntegra.com")
-        ).length;
-        if (generatedEmails > 0) {
-          toast.info(
-            `${generatedEmails} email otomatis di-generate untuk karyawan yang tidak memiliki email`
-          );
-        }
       } catch (error) {
         console.error("Error parsing file:", error);
-
-        // Enhanced error logging for debugging
-        if (error instanceof Error) {
-          console.error("Error details:", {
-            message: error.message,
-            stack: error.stack,
-          });
-        }
 
         setState((prev) => ({
           ...prev,
@@ -378,12 +384,12 @@ export default function AdminUsersBulkPage() {
           isLoading: false,
         }));
 
-        // Enhanced error notification with actionable guidance
-        const errorMsg =
-          error instanceof Error ? error.message : "Unknown error";
         toast.error("Gagal memparse file Excel", {
-          description: `${errorMsg}. Periksa apakah file memiliki header NAMA, NIK KTP, EMAIL, dan kolom lainnya di salah satu baris 1-10.`,
-          duration: 10000, // Show longer for user to read
+          description:
+            error instanceof Error
+              ? error.message
+              : "Periksa apakah file memiliki header yang benar",
+          duration: 10000,
         });
       }
     };
@@ -507,14 +513,47 @@ export default function AdminUsersBulkPage() {
       toast.success(
         `Import berhasil! ${result.data.successful} users berhasil ditambahkan`
       );
-    } catch (error) {
+    } catch (error: any) {
       console.error("Submit error:", error);
+
+      // Extract detailed error information from response
+      const responseData = error?.response?.data?.data;
+      const results = responseData?.results || [];
+      const summary = responseData?.summary || {};
+
+      // Map errors to show detailed information
+      const mapErrors = results
+        .filter((r: any) => r.status === "error")
+        .map((r: any) => ({
+          row: r.row_number,
+          user: r.name || r.nik,
+          message: r.error?.message || "Unknown error",
+          code: r.error?.code || "UNKNOWN",
+        }));
+
+      // Create comprehensive error message
+      let errorMessage =
+        error?.response?.data?.message || "Gagal mengimport data";
+
+      if (mapErrors.length > 0) {
+        const errorDetails = mapErrors
+          .slice(0, 3)
+          .map((err: any) => `Row ${err.row} (${err.user}): ${err.message}`)
+          .join("; ");
+
+        errorMessage = `Import gagal. ${errorDetails}${mapErrors.length > 3 ? ` dan ${mapErrors.length - 3} error lainnya` : ""}`;
+      }
+
       setState((prev) => ({
         ...prev,
-        error: error instanceof Error ? error.message : "Gagal mengimport data",
+        error: errorMessage,
         isLoading: false,
       }));
-      toast.error("Gagal mengimport data");
+
+      toast.error("Import gagal", {
+        description: `${summary.database_errors || 0} database errors, ${summary.validation_errors || 0} validation errors`,
+        duration: 8000,
+      });
     }
   };
 
@@ -532,98 +571,18 @@ export default function AdminUsersBulkPage() {
     });
   };
 
-  // Download template - updated to match actual Excel structure
+  // Download template from static file
   const handleDownloadTemplate = () => {
-    const templateData = [
-      // Row 1-4: Title and company info (optional, for formatting)
-      {},
-      {},
-      { "": "", "DATA KARYAWAN": "DATA KARYAWAN" },
-      { "": "", "PT. SYNTEGRA WIRA SRIWIJAYA": "PT. SYNTEGRA WIRA SRIWIJAYA" },
-      // Row 5: Headers (actual header row)
-      {
-        "": "",
-        NO: "NO",
-        "ID KARYAWAN": "ID KARYAWAN",
-        NAMA: "NAMA",
-        JABATAN: "JABATAN",
-        DIVISI: "DIVISI",
-        CABANG: "CABANG",
-        "KODE CABANG": "KODE CABANG",
-        "JENIS KARYAWAN": "JENIS KARYAWAN",
-        TMK: "TMK",
-        SEX: "SEX",
-        "NIK KTP": "NIK KTP",
-        "TEMPAT LAHIR": "TEMPAT LAHIR",
-        "TANGGAL LAHIR": "TANGGAL LAHIR",
-        "ALAMAT KTP": "ALAMAT KTP",
-        "STATUS PERNIKAHAN": "STATUS PERNIKAHAN",
-        AGAMA: "AGAMA",
-        "PENDIDIKAN TERAKHIR": "PENDIDIKAN TERAKHIR",
-        "NOMOR HP": "NOMOR HP",
-        "NAMA IBU KANDUNG": "NAMA IBU KANDUNG",
-        NPWP: "NPWP",
-        "E-MAIL": "E-MAIL",
-      },
-      // Row 6: Sample data
-      {
-        "": "",
-        NO: "1",
-        "ID KARYAWAN": "O-31-010724-00001",
-        NAMA: "John Doe",
-        JABATAN: "Staff",
-        DIVISI: "IT",
-        CABANG: "HEAD OFFICE",
-        "KODE CABANG": "31",
-        "JENIS KARYAWAN": "ORGANIK",
-        TMK: "45474",
-        SEX: "L",
-        "NIK KTP": "1234567890123456",
-        "TEMPAT LAHIR": "Jakarta",
-        "TANGGAL LAHIR": "1990-01-01",
-        "ALAMAT KTP": "Jl. Example No. 123",
-        "STATUS PERNIKAHAN": "BELUM KAWIN",
-        AGAMA: "ISLAM",
-        "PENDIDIKAN TERAKHIR": "S1",
-        "NOMOR HP": "081234567890",
-        "NAMA IBU KANDUNG": "Jane Doe",
-        NPWP: "123456789012345",
-        "E-MAIL": "john.doe@syntegra.com",
-      },
-    ];
+    const templatePath = "/template/TEMPLATE PESERTA SYNTEGRA.xlsx";
+    const link = document.createElement("a");
+    link.href = templatePath;
+    link.download = "TEMPLATE PESERTA SYNTEGRA.xlsx";
+    link.style.display = "none";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
 
-    // Create workbook with proper structure
-    const wb = XLSX.utils.book_new();
-    const ws = XLSX.utils.json_to_sheet(templateData, { skipHeader: true });
-
-    // Set column widths for better visibility
-    ws["!cols"] = [
-      { width: 5 }, // Empty column
-      { width: 5 }, // NO
-      { width: 20 }, // ID KARYAWAN
-      { width: 25 }, // NAMA
-      { width: 20 }, // JABATAN
-      { width: 15 }, // DIVISI
-      { width: 15 }, // CABANG
-      { width: 12 }, // KODE CABANG
-      { width: 15 }, // JENIS KARYAWAN
-      { width: 10 }, // TMK
-      { width: 8 }, // SEX
-      { width: 18 }, // NIK KTP
-      { width: 15 }, // TEMPAT LAHIR
-      { width: 15 }, // TANGGAL LAHIR
-      { width: 30 }, // ALAMAT KTP
-      { width: 18 }, // STATUS PERNIKAHAN
-      { width: 12 }, // AGAMA
-      { width: 20 }, // PENDIDIKAN TERAKHIR
-      { width: 15 }, // NOMOR HP
-      { width: 20 }, // NAMA IBU KANDUNG
-      { width: 18 }, // NPWP
-      { width: 25 }, // E-MAIL
-    ];
-
-    XLSX.utils.book_append_sheet(wb, ws, "DB");
-    XLSX.writeFile(wb, "template_syntegra_karyawan.xlsx");
+    toast.success("Template Excel berhasil didownload");
   };
 
   // Stats calculation
@@ -680,7 +639,7 @@ export default function AdminUsersBulkPage() {
         <div className="flex gap-2">
           <Button variant="outline" size="sm" onClick={handleDownloadTemplate}>
             <Download className="h-4 w-4 mr-2" />
-            Download Template Excel
+            Download Template Peserta
           </Button>
           {state.step !== "upload" && (
             <Button variant="outline" onClick={handleReset}>
@@ -783,9 +742,23 @@ export default function AdminUsersBulkPage() {
 
       {/* Error Alert */}
       {state.error && (
-        <Alert variant="destructive">
+        <Alert
+          variant="destructive"
+          className="bg-red-50 border border-red-400"
+        >
           <AlertTriangle className="h-4 w-4" />
-          <AlertDescription>{state.error}</AlertDescription>
+          <AlertDescription>
+            <div className="space-y-2">
+              <div className="font-medium">Import Error</div>
+              <div className="text-sm">{state.error}</div>
+              {state.error.includes("Row") && (
+                <div className="text-xs text-muted-foreground">
+                  Silakan periksa data di row yang bermasalah dan coba upload
+                  ulang. Cek apakah Nama/Email/No Hp/NIK ada yang sama.
+                </div>
+              )}
+            </div>
+          </AlertDescription>
         </Alert>
       )}
 

@@ -25,8 +25,6 @@ export async function validateSyntegraCSVHandler(
   c: Context<{ Bindings: CloudflareBindings }>
 ) {
   try {
-    console.log("Validate Syntegra CSV Handler");
-
     // Check database configuration
     if (!isDatabaseConfigured(c.env)) {
       const errorResponse: ErrorResponse = {
@@ -102,10 +100,7 @@ export async function validateSyntegraCSVHandler(
 
     // Get headers and detect columns
     const headers = Object.keys(parseResult.data[0] || {});
-    console.log("Detected headers:", headers);
-
     const columnMapping = detectSyntegraCSVColumns(headers);
-    console.log("Column mapping result:", columnMapping);
 
     if (columnMapping.missingColumns.length > 0) {
       const errorResponse: ErrorResponse = {
@@ -211,7 +206,6 @@ export async function validateSyntegraCSVHandler(
 
     return c.json(response, 200);
   } catch (error) {
-    console.error("Syntegra CSV validation error:", error);
 
     const env = getEnv(c);
     const errorResponse: ErrorResponse = {
@@ -575,7 +569,6 @@ export async function createUsersFromCSVHandler(
           }
         }
       } catch (dbError) {
-        console.error("Database batch insert error:", dbError);
 
         // Mark all intended users as failed
         for (const user of usersToCreate) {
@@ -633,7 +626,6 @@ export async function createUsersFromCSVHandler(
 
     return c.json(response, finalCounts.successful > 0 ? 201 : 400);
   } catch (error) {
-    console.error("Bulk user creation from CSV error:", error);
 
     const env = getEnv(c);
     const errorResponse: ErrorResponse = {
