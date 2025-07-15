@@ -10,6 +10,7 @@ import {
 import { getAdminDashboardHandler } from "./dashboard.admin";
 import { getParticipantDashboardHandler } from "./dashboard.participant";
 import { getTrendLineHandler } from "./dashboard.admin.trend-line";
+import { getSessionAreaHandler } from "./dashboard.admin.session-area";
 import {
   authenticateUser,
   requireAdmin,
@@ -70,6 +71,15 @@ dashboardRoutes.get(
     }
   }),
   getTrendLineHandler
+);
+
+// Get Admin Dashboard Session Area Chart Data
+dashboardRoutes.get(
+  "/admin/session-area",
+  generalApiRateLimit,
+  authenticateUser,
+  requireAdmin,
+  getSessionAreaHandler
 );
 
 // ==================== PARTICIPANT DASHBOARD ROUTES ====================
