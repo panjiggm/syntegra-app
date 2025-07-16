@@ -1,6 +1,6 @@
 import { Context } from "hono";
-import { sql } from "drizzle-orm";
-import { getDbFromEnv, tests } from "@/db";
+import { sql, eq } from "drizzle-orm";
+import { getDbFromEnv, tests, testAttempts } from "@/db";
 import { type CloudflareBindings } from "@/lib/env";
 
 // Test Category Pie Data Point Interface
@@ -63,22 +63,24 @@ export async function getTestCategoryPieHandler(
   try {
     const db = getDbFromEnv(c.env);
 
-    // Get test distribution by category
+    // Get test distribution by category from completed test attempts
     const categoryDistribution = await db
       .select({
         category: tests.category,
-        count: sql<number>`COUNT(*)::int`,
+        count: sql<number>`COUNT(DISTINCT ${testAttempts.id})::int`,
       })
-      .from(tests)
+      .from(testAttempts)
+      .innerJoin(tests, eq(testAttempts.test_id, tests.id))
+      .where(eq(testAttempts.status, "completed"))
       .groupBy(tests.category)
-      .orderBy(sql`COUNT(*) DESC`);
+      .orderBy(sql`COUNT(DISTINCT ${testAttempts.id}) DESC`);
 
-    // Calculate total tests
-    const totalTests = categoryDistribution.reduce((sum, item) => sum + item.count, 0);
+    // Calculate total completed test attempts
+    const totalCompletedAttempts = categoryDistribution.reduce((sum, item) => sum + item.count, 0);
 
     // Convert to pie chart data points
     const dataPoints: TestCategoryPieDataPoint[] = categoryDistribution.map((item) => {
-      const percentage = totalTests > 0 ? (item.count / totalTests) * 100 : 0;
+      const percentage = totalCompletedAttempts > 0 ? (item.count / totalCompletedAttempts) * 100 : 0;
       
       return {
         category: item.category,
@@ -95,9 +97,9 @@ export async function getTestCategoryPieHandler(
     
     // Calculate diversity score (Shannon diversity index normalized)
     let diversityScore = 0;
-    if (totalTests > 0) {
+    if (totalCompletedAttempts > 0) {
       const entropy = dataPoints.reduce((sum, point) => {
-        const proportion = point.value / totalTests;
+        const proportion = point.value / totalCompletedAttempts;
         return sum - (proportion * Math.log2(proportion));
       }, 0);
       
@@ -110,7 +112,7 @@ export async function getTestCategoryPieHandler(
       success: true,
       message: "Test category pie chart data retrieved successfully",
       data: {
-        total_tests: totalTests,
+        total_tests: totalCompletedAttempts,
         categories_count: dataPoints.length,
         data_points: dataPoints,
         summary: {
