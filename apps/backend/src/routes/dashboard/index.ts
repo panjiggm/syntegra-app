@@ -13,6 +13,7 @@ import { getTrendLineHandler } from "./dashboard.admin.trend-line";
 import { getSessionAreaHandler } from "./dashboard.admin.session-area";
 import { getTestCategoryPieHandler } from "./dashboard.admin.test-category-pie";
 import { getTestModuleDonutHandler } from "./dashboard.admin.test-module-donut";
+import { getProvinceChartHandler } from "./dashboard.admin.province-chart";
 import { getTopPerformersHandler } from "./dashboard.admin.top-performers";
 import { getChallengingPerformersHandler } from "./dashboard.admin.challenging-performers";
 import {
@@ -120,6 +121,15 @@ dashboardRoutes.get(
   authenticateUser,
   requireAdmin,
   getChallengingPerformersHandler
+);
+
+// Get Admin Dashboard Province Chart Data
+dashboardRoutes.get(
+  "/admin/province-chart",
+  generalApiRateLimit,
+  authenticateUser,
+  requireAdmin,
+  getProvinceChartHandler
 );
 
 // ==================== PARTICIPANT DASHBOARD ROUTES ====================
