@@ -38,6 +38,7 @@ import { bulkExportUsersHandler } from "./user.bulk.export";
 import {
   userRegistrationRateLimit,
   generalApiRateLimit,
+  conditionalUserRegistrationRateLimit,
 } from "@/middleware/rateLimiter";
 
 const userRoutes = new Hono<{ Bindings: CloudflareBindings }>();
@@ -61,8 +62,8 @@ userRoutes.get(
 // Create User Endpoint (PUBLIC - untuk self-registration participant & admin creation)
 userRoutes.post(
   "/",
-  userRegistrationRateLimit, // 5 registrations per hour per IP
   optionalAuth, // Optional auth to detect if admin is creating user
+  conditionalUserRegistrationRateLimit, // Skip rate limit for admin, apply for participants
   validateCreateUser, // Custom validation middleware
   createUserHandler
 );

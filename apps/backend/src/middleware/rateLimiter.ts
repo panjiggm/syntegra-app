@@ -174,3 +174,29 @@ export const passwordChangeRateLimit = rateLimit({
   skipSuccessfulRequests: false,
   message: "Too many password change attempts. Please try again after 1 hour.",
 });
+
+/**
+ * Conditional rate limiter for user registration
+ * Skips rate limiting when an authenticated admin is creating users
+ * Uses standard rate limiting for participant self-registration
+ */
+export function conditionalUserRegistrationRateLimit(
+  c: Context<{ Bindings: CloudflareBindings; Variables: { user?: any } }>,
+  next: Next
+) {
+  // Check if user is authenticated and is an admin
+  const user = c.get("user");
+  const isAdmin = user && user.role === "admin";
+
+  // Skip rate limiting if admin is creating user
+  if (isAdmin) {
+    return next();
+  }
+
+  // Apply rate limiting for non-admin users (participant self-registration)
+  // Cast context to match the expected type for userRegistrationRateLimit
+  const rateLimitContext = c as unknown as Context<{
+    Bindings: CloudflareBindings;
+  }>;
+  return userRegistrationRateLimit(rateLimitContext, next);
+}
