@@ -16,6 +16,7 @@ import { getTestModuleDonutHandler } from "./dashboard.admin.test-module-donut";
 import { getProvinceChartHandler } from "./dashboard.admin.province-chart";
 import { getTopPerformersHandler } from "./dashboard.admin.top-performers";
 import { getChallengingPerformersHandler } from "./dashboard.admin.challenging-performers";
+import { getUserProfileChartHandler } from "./dashboard.admin.user-profile-chart";
 import {
   authenticateUser,
   requireAdmin,
@@ -130,6 +131,15 @@ dashboardRoutes.get(
   authenticateUser,
   requireAdmin,
   getProvinceChartHandler
+);
+
+// Get Admin Dashboard User Profile Chart Data
+dashboardRoutes.get(
+  "/admin/user-profile-chart",
+  generalApiRateLimit,
+  authenticateUser,
+  requireAdmin,
+  getUserProfileChartHandler
 );
 
 // ==================== PARTICIPANT DASHBOARD ROUTES ====================
