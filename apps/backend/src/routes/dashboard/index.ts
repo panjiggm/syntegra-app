@@ -13,6 +13,8 @@ import { getTrendLineHandler } from "./dashboard.admin.trend-line";
 import { getSessionAreaHandler } from "./dashboard.admin.session-area";
 import { getTestCategoryPieHandler } from "./dashboard.admin.test-category-pie";
 import { getTestModuleDonutHandler } from "./dashboard.admin.test-module-donut";
+import { getTopPerformersHandler } from "./dashboard.admin.top-performers";
+import { getChallengingPerformersHandler } from "./dashboard.admin.challenging-performers";
 import {
   authenticateUser,
   requireAdmin,
@@ -100,6 +102,24 @@ dashboardRoutes.get(
   authenticateUser,
   requireAdmin,
   getTestModuleDonutHandler
+);
+
+// Get Admin Dashboard Top Performers Data
+dashboardRoutes.get(
+  "/admin/top-performers",
+  generalApiRateLimit,
+  authenticateUser,
+  requireAdmin,
+  getTopPerformersHandler
+);
+
+// Get Admin Dashboard Challenging Performers Data
+dashboardRoutes.get(
+  "/admin/challenging-performers", 
+  generalApiRateLimit,
+  authenticateUser,
+  requireAdmin,
+  getChallengingPerformersHandler
 );
 
 // ==================== PARTICIPANT DASHBOARD ROUTES ====================
