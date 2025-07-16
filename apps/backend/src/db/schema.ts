@@ -518,6 +518,43 @@ export const sessionResults = pgTable(
 
 // ==================== AUDIT & ADDITIONAL TABLES ====================
 
+// User Performance Stats Table (cached performance metrics)
+export const userPerformanceStats = pgTable(
+  "user_performance_stats",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    user_id: uuid("user_id")
+      .notNull()
+      .references(() => users.id),
+    total_tests_taken: integer("total_tests_taken").default(0),
+    total_tests_completed: integer("total_tests_completed").default(0),
+    average_raw_score: numeric("average_raw_score", { precision: 8, scale: 2 }),
+    average_scaled_score: numeric("average_scaled_score", { precision: 8, scale: 2 }),
+    highest_raw_score: numeric("highest_raw_score", { precision: 8, scale: 2 }),
+    lowest_raw_score: numeric("lowest_raw_score", { precision: 8, scale: 2 }),
+    highest_scaled_score: numeric("highest_scaled_score", { precision: 8, scale: 2 }),
+    lowest_scaled_score: numeric("lowest_scaled_score", { precision: 8, scale: 2 }),
+    total_time_spent: integer("total_time_spent").default(0), // in seconds
+    average_time_per_test: integer("average_time_per_test").default(0), // in seconds
+    completion_rate: numeric("completion_rate", { precision: 5, scale: 2 }), // percentage
+    consistency_score: numeric("consistency_score", { precision: 5, scale: 2 }),
+    performance_rank: integer("performance_rank"), // rank among all users
+    performance_percentile: numeric("performance_percentile", { precision: 5, scale: 2 }),
+    last_test_date: timestamp("last_test_date"),
+    calculation_date: timestamp("calculation_date").defaultNow().notNull(),
+    created_at: timestamp("created_at").defaultNow().notNull(),
+    updated_at: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    userIdUnique: uniqueIndex("user_performance_unique").on(table.user_id),
+    userIdIdx: index("user_performance_user_idx").on(table.user_id),
+    averageRawScoreIdx: index("user_performance_avg_raw_score_idx").on(table.average_raw_score),
+    averageScaledScoreIdx: index("user_performance_avg_scaled_score_idx").on(table.average_scaled_score),
+    performanceRankIdx: index("user_performance_rank_idx").on(table.performance_rank),
+    calculationDateIdx: index("user_performance_calculation_date_idx").on(table.calculation_date),
+  })
+);
+
 // Session Participants Table (for tracking who's invited/registered)
 export const sessionParticipants = pgTable(
   "session_participants",
@@ -635,6 +672,7 @@ export const usersRelations = relations(users, ({ many, one }) => ({
   createdSessions: many(testSessions, { relationName: "createdBy" }),
   proctorSessions: many(testSessions, { relationName: "proctor" }),
   auditLogs: many(auditLogs),
+  performanceStats: one(userPerformanceStats),
 }));
 
 export const authSessionsRelations = relations(authSessions, ({ one }) => ({
@@ -801,6 +839,13 @@ export const sessionParticipantsRelations = relations(
   })
 );
 
+export const userPerformanceStatsRelations = relations(userPerformanceStats, ({ one }) => ({
+  user: one(users, {
+    fields: [userPerformanceStats.user_id],
+    references: [users.id],
+  }),
+}));
+
 // ==================== TYPES ====================
 
 export type User = typeof users.$inferSelect;
@@ -831,3 +876,5 @@ export type NewParticipantTestProgress =
   typeof participantTestProgress.$inferInsert;
 export type AuditLog = typeof auditLogs.$inferSelect;
 export type NewAuditLog = typeof auditLogs.$inferInsert;
+export type UserPerformanceStats = typeof userPerformanceStats.$inferSelect;
+export type NewUserPerformanceStats = typeof userPerformanceStats.$inferInsert;
