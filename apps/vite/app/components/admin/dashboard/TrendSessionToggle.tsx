@@ -28,7 +28,12 @@ import {
 
 type ViewType = "trend" | "session";
 
-export function TrendSessionToggle() {
+interface TrendSessionToggleProps {
+  onViewChange?: (view: ViewType) => void;
+  onPeriodChange?: (period: TrendPeriod) => void;
+}
+
+export function TrendSessionToggle({ onViewChange, onPeriodChange }: TrendSessionToggleProps) {
   const [activeView, setActiveView] = useState<ViewType>("trend");
   const [trendPeriod, setTrendPeriod] = useState<TrendPeriod>("daily");
 
@@ -42,6 +47,7 @@ export function TrendSessionToggle() {
 
   const handleViewChange = (view: ViewType) => {
     setActiveView(view);
+    onViewChange?.(view);
   };
 
   const handleRefresh = () => {
@@ -54,6 +60,7 @@ export function TrendSessionToggle() {
 
   const handlePeriodChange = (period: TrendPeriod) => {
     setTrendPeriod(period);
+    onPeriodChange?.(period);
   };
 
   // Get current view state

@@ -15,7 +15,11 @@ import {
 
 type ViewType = "category" | "module";
 
-export function CategoryModuleToggle() {
+interface CategoryModuleToggleProps {
+  onViewChange?: (view: ViewType) => void;
+}
+
+export function CategoryModuleToggle({ onViewChange }: CategoryModuleToggleProps) {
   const [activeView, setActiveView] = useState<ViewType>("category");
 
   // Fetch data based on active view
@@ -27,6 +31,7 @@ export function CategoryModuleToggle() {
 
   const handleViewChange = (view: ViewType) => {
     setActiveView(view);
+    onViewChange?.(view);
   };
 
   const handleRefresh = () => {
@@ -42,8 +47,6 @@ export function CategoryModuleToggle() {
     activeView === "category" ? categoryQuery.isLoading : moduleQuery.isLoading;
   const currentError =
     activeView === "category" ? categoryQuery.error : moduleQuery.error;
-  const currentData =
-    activeView === "category" ? categoryQuery.data : moduleQuery.data;
 
   return (
     <div className="space-y-4">
