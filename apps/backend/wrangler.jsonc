@@ -15,7 +15,8 @@
   // Cron triggers for background jobs
   "triggers": {
     "crons": [
-      "*/3 * * * *", // Every 3 minutes
+      "*/3 * * * *", // Every 3 minutes - session management
+      "0 2 * * *",   // Daily at 2:00 AM UTC - user performance stats
     ],
   },
 

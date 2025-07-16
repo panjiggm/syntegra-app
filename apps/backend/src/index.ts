@@ -71,8 +71,16 @@ app.get("/", (c) => {
     timestamp: new Date().toISOString(),
     scheduler: {
       enabled: true,
-      interval: "3 minutes (development) / 1 minute (production)",
-      jobs: ["session_status_updater", "session_auto_activator"],
+      development_interval: "3 minutes",
+      production_schedules: {
+        session_management: "*/3 * * * * (every 3 minutes)",
+        performance_stats: "0 2 * * * (daily at 2:00 AM UTC)",
+      },
+      jobs: [
+        "session_status_updater", 
+        "session_auto_activator", 
+        "user_performance_stats_calculator"
+      ],
     },
     endpoints: {
       health: "/health",
@@ -263,12 +271,39 @@ export default {
     console.log("⏰ Cron trigger fired:", new Date().toISOString());
     console.log("📅 Cron schedule:", event.cron);
 
-    // Import and run scheduled jobs
-    const { runScheduledJobs } = await import("./lib/scheduler");
+    // Import scheduled job functions
+    const { 
+      updateExpiredSessionsJob, 
+      autoActivateSessionsJob, 
+      updateUserPerformanceStatsJob 
+    } = await import("./lib/scheduler");
 
-    // Use waitUntil to ensure the job completes before the worker terminates
+    // Determine which jobs to run based on cron schedule
+    let jobsToRun: Promise<any>[] = [];
+
+    if (event.cron === "*/3 * * * *") {
+      // Every 3 minutes - session management jobs
+      console.log("🔄 Running session management jobs...");
+      jobsToRun = [
+        updateExpiredSessionsJob(env),
+        autoActivateSessionsJob(env),
+      ];
+    } else if (event.cron === "0 2 * * *") {
+      // Daily at 2 AM - user performance stats
+      console.log("📊 Running daily user performance stats job...");
+      jobsToRun = [
+        updateUserPerformanceStatsJob(env),
+      ];
+    } else {
+      // Fallback - run all jobs
+      console.log("🔄 Running all scheduled jobs (fallback)...");
+      const { runScheduledJobs } = await import("./lib/scheduler");
+      jobsToRun = [runScheduledJobs(env)];
+    }
+
+    // Use waitUntil to ensure jobs complete before worker terminates
     ctx.waitUntil(
-      runScheduledJobs(env)
+      Promise.all(jobsToRun)
         .then((results) => {
           console.log("✅ Scheduled jobs completed successfully:", results);
         })
