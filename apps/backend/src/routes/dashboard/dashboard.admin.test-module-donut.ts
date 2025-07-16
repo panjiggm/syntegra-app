@@ -1,6 +1,6 @@
 import { Context } from "hono";
-import { sql } from "drizzle-orm";
-import { getDbFromEnv, tests } from "@/db";
+import { sql, eq } from "drizzle-orm";
+import { getDbFromEnv, tests, testAttempts } from "@/db";
 import { type CloudflareBindings } from "@/lib/env";
 
 // Test Module Donut Data Point Interface
@@ -59,22 +59,24 @@ export async function getTestModuleDonutHandler(
   try {
     const db = getDbFromEnv(c.env);
 
-    // Get test distribution by module_type
+    // Get test distribution by module_type from completed test attempts
     const moduleDistribution = await db
       .select({
         module_type: tests.module_type,
-        count: sql<number>`COUNT(*)::int`,
+        count: sql<number>`COUNT(DISTINCT ${testAttempts.id})::int`,
       })
-      .from(tests)
+      .from(testAttempts)
+      .innerJoin(tests, eq(testAttempts.test_id, tests.id))
+      .where(eq(testAttempts.status, "completed"))
       .groupBy(tests.module_type)
-      .orderBy(sql`COUNT(*) DESC`);
+      .orderBy(sql`COUNT(DISTINCT ${testAttempts.id}) DESC`);
 
-    // Calculate total tests
-    const totalTests = moduleDistribution.reduce((sum, item) => sum + item.count, 0);
+    // Calculate total completed test attempts
+    const totalCompletedAttempts = moduleDistribution.reduce((sum, item) => sum + item.count, 0);
 
     // Convert to donut chart data points
     const dataPoints: TestModuleDonutDataPoint[] = moduleDistribution.map((item) => {
-      const percentage = totalTests > 0 ? (item.count / totalTests) * 100 : 0;
+      const percentage = totalCompletedAttempts > 0 ? (item.count / totalCompletedAttempts) * 100 : 0;
       
       return {
         module_type: item.module_type,
@@ -91,9 +93,9 @@ export async function getTestModuleDonutHandler(
     
     // Calculate diversity score (Shannon diversity index normalized)
     let diversityScore = 0;
-    if (totalTests > 0) {
+    if (totalCompletedAttempts > 0) {
       const entropy = dataPoints.reduce((sum, point) => {
-        const proportion = point.value / totalTests;
+        const proportion = point.value / totalCompletedAttempts;
         return sum - (proportion * Math.log2(proportion));
       }, 0);
       
@@ -106,7 +108,7 @@ export async function getTestModuleDonutHandler(
       success: true,
       message: "Test module donut chart data retrieved successfully",
       data: {
-        total_tests: totalTests,
+        total_tests: totalCompletedAttempts,
         module_types_count: dataPoints.length,
         data_points: dataPoints,
         summary: {
