@@ -160,16 +160,16 @@ export function useTrendLine(
           Math.round(data.summary.percentage_change * 100) / 100,
         trend_direction_icon:
           data.summary.trend_direction === "up"
-            ? "=�"
+            ? "Naik"
             : data.summary.trend_direction === "down"
-              ? "=�"
-              : "=�",
+              ? "Turun"
+              : "Stabil",
         trend_direction_color:
           data.summary.trend_direction === "up"
             ? "text-green-600"
             : data.summary.trend_direction === "down"
               ? "text-red-600"
-              : "text-gray-600",
+              : "text-sky-600",
       },
     }),
     // Meta information for debugging
