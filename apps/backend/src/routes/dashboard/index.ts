@@ -17,6 +17,7 @@ import { getProvinceChartHandler } from "./dashboard.admin.province-chart";
 import { getTopPerformersHandler } from "./dashboard.admin.top-performers";
 import { getChallengingPerformersHandler } from "./dashboard.admin.challenging-performers";
 import { getUserProfileChartHandler } from "./dashboard.admin.user-profile-chart";
+import { getAgeBarHandler } from "./dashboard.admin.age-bar";
 import {
   authenticateUser,
   requireAdmin,
@@ -140,6 +141,15 @@ dashboardRoutes.get(
   authenticateUser,
   requireAdmin,
   getUserProfileChartHandler
+);
+
+// Get Admin Dashboard Age Distribution Bar Chart Data
+dashboardRoutes.get(
+  "/admin/age-bar",
+  generalApiRateLimit,
+  authenticateUser,
+  requireAdmin,
+  getAgeBarHandler
 );
 
 // ==================== PARTICIPANT DASHBOARD ROUTES ====================
