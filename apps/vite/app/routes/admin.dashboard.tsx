@@ -13,7 +13,10 @@ import { useDashboard } from "~/hooks/use-dashboard";
 import { ArrowUpRight, RefreshCw } from "lucide-react";
 import type { Route } from "./+types/admin.dashboard";
 import { Link } from "react-router";
-import { DashboardChartSection } from "~/components/admin/dashboard";
+import {
+  DashboardChartSection,
+  DemographicsChartSection,
+} from "~/components/admin/dashboard";
 
 export function meta({}: Route.MetaArgs) {
   return [
@@ -168,6 +171,11 @@ function DashboardContent() {
 
       {/* Dashboard Charts Section */}
       <DashboardChartSection />
+
+      {/* Demographics Charts Section */}
+      <div className="mb-4">
+        <DemographicsChartSection />
+      </div>
 
       {/* Recent Sessions */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
