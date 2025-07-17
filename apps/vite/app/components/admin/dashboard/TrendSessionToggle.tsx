@@ -33,7 +33,10 @@ interface TrendSessionToggleProps {
   onPeriodChange?: (period: TrendPeriod) => void;
 }
 
-export function TrendSessionToggle({ onViewChange, onPeriodChange }: TrendSessionToggleProps) {
+export function TrendSessionToggle({
+  onViewChange,
+  onPeriodChange,
+}: TrendSessionToggleProps) {
   const [activeView, setActiveView] = useState<ViewType>("trend");
   const [trendPeriod, setTrendPeriod] = useState<TrendPeriod>("daily");
 
@@ -282,6 +285,7 @@ function TrendLineChart({ data }: { data: any }) {
             boxShadow:
               "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)",
           }}
+          formatter={(value: any, name: any) => [`${value} Tes`, name]}
         />
         <Line
           type="monotone"
@@ -323,6 +327,7 @@ function SessionAreaChart({ data }: { data: any }) {
             boxShadow:
               "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)",
           }}
+          formatter={(value: any, name: any) => [`${value} Sesi Tes`, name]}
         />
         <Area
           type="monotone"
