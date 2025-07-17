@@ -19,7 +19,9 @@ interface CategoryModuleToggleProps {
   onViewChange?: (view: ViewType) => void;
 }
 
-export function CategoryModuleToggle({ onViewChange }: CategoryModuleToggleProps) {
+export function CategoryModuleToggle({
+  onViewChange,
+}: CategoryModuleToggleProps) {
   const [activeView, setActiveView] = useState<ViewType>("category");
 
   // Fetch data based on active view
@@ -157,16 +159,6 @@ export function CategoryModuleToggle({ onViewChange }: CategoryModuleToggleProps
                     {categoryQuery.data.formattedSummary?.most_popular_category}
                   </span>
                 </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-xs text-muted-foreground">
-                    Keragaman:
-                  </span>
-                  <span
-                    className={`text-xs font-medium ${categoryQuery.data.formattedSummary?.diversity_color}`}
-                  >
-                    {categoryQuery.data.formattedSummary?.diversity_level}
-                  </span>
-                </div>
               </div>
             </>
           )}
@@ -259,7 +251,7 @@ function ChartDisplay({
               "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)",
           }}
           formatter={(value: any, name: any) => [
-            `${value} tes (${((value / data.total_tests) * 100).toFixed(1)}%)`,
+            `${value} Tes (${((value / data.total_tests) * 100).toFixed(1)}%)`,
             name,
           ]}
         />
