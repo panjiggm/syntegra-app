@@ -395,6 +395,34 @@ export async function lockUserAccount(
 }
 
 /**
+ * Auto-reset account lock jika periode expired
+ */
+export async function resetExpiredAccountLock(
+  db: Database,
+  userId: string
+): Promise<void> {
+  try {
+    const now = new Date();
+    await db
+      .update(users)
+      .set({
+        login_attempts: 0,
+        account_locked_until: null,
+        updated_at: new Date(),
+      })
+      .where(
+        and(
+          eq(users.id, userId),
+          lt(users.account_locked_until, now) // Only reset if lock period has expired
+        )
+      );
+  } catch (error) {
+    console.error("Error resetting expired account lock:", error);
+    // Non-critical error, don't throw
+  }
+}
+
+/**
  * Check apakah account ter-lock
  */
 export function isAccountLocked(user: {
@@ -406,14 +434,8 @@ export function isAccountLocked(user: {
   const now = new Date();
   const isLocked = user.account_locked_until > now;
 
-  // If lock period has expired but login attempts still high, account is still locked
-  if (
-    !isLocked &&
-    (user.login_attempts || 0) >= AUTH_CONSTANTS.MAX_LOGIN_ATTEMPTS
-  ) {
-    return true;
-  }
-
+  // If lock period has expired, account is automatically unlocked
+  // The caller should handle resetting login_attempts and account_locked_until in database
   return isLocked;
 }
 

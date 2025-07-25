@@ -20,6 +20,7 @@ import {
   resetLoginAttempts,
   lockUserAccount,
   isAccountLocked,
+  resetExpiredAccountLock,
   toAuthUserData,
   parseIdentifier,
 } from "../../lib/auth";
@@ -118,8 +119,34 @@ export async function adminLoginHandler(
       return c.json(errorResponse, 401);
     }
 
-    // Check if account is locked
-    if (isAccountLocked(user)) {
+    // Auto-reset account lock if expired
+    await resetExpiredAccountLock(db, user.id);
+
+    // Re-fetch user data after potential reset
+    const [updatedUser] = await db
+      .select()
+      .from(users)
+      .where(and(identifierCondition, eq(users.role, "admin")))
+      .limit(1);
+
+    if (!updatedUser) {
+      const errorResponse: ErrorResponse = {
+        success: false,
+        message: "Invalid credentials",
+        errors: [
+          {
+            field: "credentials",
+            message: "Invalid identifier or user is not an admin",
+            code: AUTH_ERROR_CODES.INVALID_CREDENTIALS,
+          },
+        ],
+        timestamp: new Date().toISOString(),
+      };
+      return c.json(errorResponse, 401);
+    }
+
+    // Check if account is locked (after potential reset)
+    if (isAccountLocked(updatedUser)) {
       const errorResponse: ErrorResponse = {
         success: false,
         message: "Account is locked",
@@ -135,8 +162,11 @@ export async function adminLoginHandler(
       return c.json(errorResponse, 423);
     }
 
+    // Use updated user data for subsequent operations
+    const currentUser = updatedUser;
+
     // Check if user is active
-    if (!user.is_active) {
+    if (!currentUser.is_active) {
       const errorResponse: ErrorResponse = {
         success: false,
         message: "Account is inactive",
@@ -153,7 +183,7 @@ export async function adminLoginHandler(
     }
 
     // Admin must have password
-    if (!user.password) {
+    if (!currentUser.password) {
       const errorResponse: ErrorResponse = {
         success: false,
         message: "Admin account not properly configured",
@@ -170,15 +200,15 @@ export async function adminLoginHandler(
     }
 
     // Verify password
-    const isPasswordValid = await verifyPassword(user.password, data.password);
+    const isPasswordValid = await verifyPassword(currentUser.password, data.password);
     if (!isPasswordValid) {
       // Increment login attempts
-      await incrementLoginAttempts(db, user.id);
+      await incrementLoginAttempts(db, currentUser.id);
 
       // Check if we should lock the account
-      const currentAttempts = (user.login_attempts || 0) + 1;
+      const currentAttempts = (currentUser.login_attempts || 0) + 1;
       if (currentAttempts >= AUTH_CONSTANTS.MAX_LOGIN_ATTEMPTS) {
-        await lockUserAccount(db, user.id);
+        await lockUserAccount(db, currentUser.id);
       }
 
       const errorResponse: ErrorResponse = {
@@ -201,17 +231,17 @@ export async function adminLoginHandler(
 
     const accessToken = generateAccessToken(
       {
-        sub: user.id,
-        role: user.role,
-        nik: user.nik || "",
-        email: user.email,
+        sub: currentUser.id,
+        role: currentUser.role,
+        nik: currentUser.nik || "",
+        email: currentUser.email,
         session_id: sessionId, // Use the same session ID
       },
       env.JWT_SECRET
     );
 
     const refreshToken = generateRefreshToken(
-      user.id,
+      currentUser.id,
       sessionId, // Use the same session ID
       env.JWT_SECRET
     );
@@ -219,7 +249,7 @@ export async function adminLoginHandler(
     // Create session in database with explicit session ID
     const sessionData = {
       id: sessionId, // FIXED: Explicitly set session ID
-      user_id: user.id,
+      user_id: currentUser.id,
       token: accessToken,
       refresh_token: refreshToken,
       expires_at: new Date(
@@ -237,7 +267,7 @@ export async function adminLoginHandler(
     await createAuthSession(db, sessionData);
 
     // Reset login attempts and update last login
-    await resetLoginAttempts(db, user.id);
+    await resetLoginAttempts(db, currentUser.id);
 
     // Prepare tokens response
     const tokens: AuthTokens = {
@@ -254,7 +284,7 @@ export async function adminLoginHandler(
       success: true,
       message: "Admin login successful",
       data: {
-        user: toAuthUserData(user),
+        user: toAuthUserData(currentUser),
         tokens,
       },
       timestamp: new Date().toISOString(),
@@ -346,8 +376,36 @@ export async function participantLoginHandler(
       return c.json(errorResponse, 401);
     }
 
-    // Check if account is locked
-    if (isAccountLocked(user)) {
+    // Auto-reset account lock if expired for participant
+    await resetExpiredAccountLock(db, user.id);
+
+    // Re-fetch user data after potential reset
+    const [updatedUser] = await db
+      .select()
+      .from(users)
+      .where(
+        and(eq(users.phone, data.phone.trim()), eq(users.role, "participant"))
+      )
+      .limit(1);
+
+    if (!updatedUser) {
+      const errorResponse: ErrorResponse = {
+        success: false,
+        message: "Invalid credentials",
+        errors: [
+          {
+            field: "credentials",
+            message: "No participant found with provided phone number",
+            code: AUTH_ERROR_CODES.INVALID_CREDENTIALS,
+          },
+        ],
+        timestamp: new Date().toISOString(),
+      };
+      return c.json(errorResponse, 401);
+    }
+
+    // Check if account is locked (after potential reset)
+    if (isAccountLocked(updatedUser)) {
       const errorResponse: ErrorResponse = {
         success: false,
         message: "Account is locked",
@@ -364,8 +422,11 @@ export async function participantLoginHandler(
       return c.json(errorResponse, 423);
     }
 
+    // Use updated user data for subsequent operations
+    const currentUser = updatedUser;
+
     // Check if user is active
-    if (!user.is_active) {
+    if (!currentUser.is_active) {
       const errorResponse: ErrorResponse = {
         success: false,
         message: "Account is inactive",
@@ -386,17 +447,17 @@ export async function participantLoginHandler(
 
     const accessToken = generateAccessToken(
       {
-        sub: user.id,
-        role: user.role,
-        nik: user.nik || "",
-        email: user.email,
+        sub: currentUser.id,
+        role: currentUser.role,
+        nik: currentUser.nik || "",
+        email: currentUser.email,
         session_id: sessionId, // Use the same session ID
       },
       env.JWT_SECRET
     );
 
     const refreshToken = generateRefreshToken(
-      user.id,
+      currentUser.id,
       sessionId, // Use the same session ID
       env.JWT_SECRET
     );
@@ -404,7 +465,7 @@ export async function participantLoginHandler(
     // Create session in database with explicit session ID
     const sessionData = {
       id: sessionId, // FIXED: Explicitly set session ID
-      user_id: user.id,
+      user_id: currentUser.id,
       token: accessToken,
       refresh_token: refreshToken,
       expires_at: new Date(
@@ -422,7 +483,7 @@ export async function participantLoginHandler(
     await createAuthSession(db, sessionData);
 
     // Reset login attempts and update last login
-    await resetLoginAttempts(db, user.id);
+    await resetLoginAttempts(db, currentUser.id);
 
     // Prepare tokens response
     const tokens: AuthTokens = {
@@ -439,7 +500,7 @@ export async function participantLoginHandler(
       success: true,
       message: "Participant login successful",
       data: {
-        user: toAuthUserData(user),
+        user: toAuthUserData(currentUser),
         tokens,
       },
       timestamp: new Date().toISOString(),
