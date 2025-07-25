@@ -43,45 +43,11 @@ export function LoginFormParticipant({
       onSuccess?.();
       navigate("/participant/dashboard");
     },
-    onError: (err) => {
+    onError: (error: any) => {
       // Error handling is done in form submission
-    },
-  });
 
-  const {
-    register,
-    handleSubmit,
-    formState: { errors, isSubmitting },
-    setError,
-    clearErrors,
-    watch,
-  } = useForm<ParticipantLoginData>({
-    resolver: zodResolver(participantLoginSchema),
-    mode: "onChange",
-    defaultValues: {
-      phone: "",
-      rememberMe: true,
-    },
-  });
-
-  // Watch form values for real-time validation feedback
-  const watchedValues = watch();
-  const isFormValid = Object.keys(errors).length === 0 && watchedValues.phone;
-
-  const onSubmit = async (data: ParticipantLoginData) => {
-    try {
-      clearErrors();
-
-      await handleParticipantLogin({
-        phone: data.phone.trim(),
-        rememberMe: data.rememberMe,
-      });
-    } catch (error: any) {
-      console.error("Login error:", error);
-
-      // Handle specific error cases based on the error message
-      if (error.message) {
-        const errorMsg = error.message.toLowerCase();
+      if (error.response) {
+        const errorMsg = error.response?.data?.message.toLowerCase();
 
         if (
           errorMsg.includes("user not found") ||
@@ -125,6 +91,41 @@ export function LoginFormParticipant({
           message: "Terjadi kesalahan saat login",
         });
       }
+    },
+  });
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+    setError,
+    clearErrors,
+    watch,
+  } = useForm<ParticipantLoginData>({
+    resolver: zodResolver(participantLoginSchema),
+    mode: "onChange",
+    defaultValues: {
+      phone: "",
+      rememberMe: true,
+    },
+  });
+
+  // Watch form values for real-time validation feedback
+  const watchedValues = watch();
+  const isFormValid = Object.keys(errors).length === 0 && watchedValues.phone;
+
+  const onSubmit = async (data: ParticipantLoginData) => {
+    try {
+      clearErrors();
+
+      await handleParticipantLogin({
+        phone: data.phone.trim(),
+        rememberMe: data.rememberMe,
+      });
+    } catch (error: any) {
+      console.error("Login error:", error);
+
+      // Handle specific error cases based on the error message
     }
   };
 

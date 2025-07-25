@@ -61,42 +61,12 @@ export function LoginFormAdmin({ className, onSuccess }: LoginFormAdminProps) {
       toast.success("Login berhasil!");
       onSuccess?.();
     },
-    onError: (error) => {
-      console.error("Admin login error:", error);
-    },
-  });
+    onError: (error: any) => {
+      // console.error("Admin login error:", error);
 
-  // Watch form values for real-time validation feedback
-  const watchedValues = watch();
-  const isFormValid =
-    Object.keys(errors).length === 0 &&
-    watchedValues.identifier?.includes("@") &&
-    watchedValues.password?.length >= 8;
-
-  const onSubmit = async (data: AdminLoginFormData) => {
-    try {
-      clearErrors();
-      clearError();
-
-      // Show loading toast
-      const loadingToast = toast.loading("Memproses login...");
-
-      // Call admin login
-      await handleAdminLogin({
-        identifier: data.identifier.toLowerCase().trim(),
-        password: data.password,
-      });
-
-      toast.dismiss(loadingToast);
-    } catch (error: any) {
-      console.error("Admin login error:", error);
-
-      // Dismiss any loading toast
-      toast.dismiss();
-
-      // Handle specific error cases
-      if (error?.message) {
-        const errorMsg = error.message.toLowerCase();
+      if (error.response) {
+        const errorMsg = error.response?.data?.message.toLowerCase();
+        // const errors = error.response?.data?.errors;
 
         if (
           errorMsg.includes("invalid credentials") ||
@@ -157,6 +127,36 @@ export function LoginFormAdmin({ className, onSuccess }: LoginFormAdminProps) {
           message: "Terjadi kesalahan saat login. Silakan coba lagi.",
         });
       }
+    },
+  });
+
+  // Watch form values for real-time validation feedback
+  const watchedValues = watch();
+  const isFormValid =
+    Object.keys(errors).length === 0 &&
+    watchedValues.identifier?.includes("@") &&
+    watchedValues.password?.length >= 8;
+
+  const onSubmit = async (data: AdminLoginFormData) => {
+    try {
+      clearErrors();
+      clearError();
+
+      // Show loading toast
+      const loadingToast = toast.loading("Memproses login...");
+
+      // Call admin login
+      await handleAdminLogin({
+        identifier: data.identifier.toLowerCase().trim(),
+        password: data.password,
+      });
+
+      toast.dismiss(loadingToast);
+    } catch (error: any) {
+      console.error("Admin login error:", error);
+
+      // Dismiss any loading toast
+      toast.dismiss();
     }
   };
 
