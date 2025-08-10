@@ -222,6 +222,14 @@ app.get("/", (c) => {
         districts: "GET /api/v1/wilayah/districts/:regencyCode",
         villages: "GET /api/v1/wilayah/villages/:districtCode",
       },
+      documents: {
+        types: {
+          list: "GET /api/v1/documents/types",
+          create: "POST /api/v1/documents/types",
+          update: "PUT /api/v1/documents/types/:typeId",
+          delete: "DELETE /api/v1/documents/types/:typeId",
+        },
+      },
     },
   });
 });
