@@ -1,5 +1,5 @@
 import * as React from "react";
-import { BarChart3, Brain } from "lucide-react";
+import { BarChart3, Brain, BookCheck } from "lucide-react";
 
 import { NavMain } from "./nav-main";
 import { NavUser } from "./nav-user";
@@ -29,6 +29,11 @@ const data = {
       title: "Psikotes",
       url: "/participant/tests",
       icon: Brain,
+    },
+    {
+      title: "Administration",
+      url: "/participant/administration",
+      icon: BookCheck,
     },
   ],
 };

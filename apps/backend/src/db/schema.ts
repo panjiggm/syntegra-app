@@ -636,6 +636,45 @@ export const participantTestProgress = pgTable(
 );
 
 // Audit Logs Table
+export const documentTypes = pgTable(
+  "document_types",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    key: varchar("key", { length: 100 }).notNull(),
+    name: varchar("name", { length: 255 }).notNull(),
+    weight: numeric("weight", { precision: 5, scale: 2 }).default("1.00"),
+    max_score: numeric("max_score", { precision: 8, scale: 2 }),
+    created_at: timestamp("created_at").defaultNow().notNull(),
+    updated_at: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    keyIdx: uniqueIndex("document_types_key_idx").on(table.key),
+  })
+);
+
+export const administrationDocuments = pgTable(
+  "administration_documents",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    user_id: uuid("user_id")
+      .notNull()
+      .references(() => users.id),
+    document_type_id: uuid("document_type_id")
+      .notNull()
+      .references(() => documentTypes.id),
+    score: numeric("score", { precision: 8, scale: 2 }),
+    file_url: varchar("file_url", { length: 500 }).notNull(),
+    uploaded_at: timestamp("uploaded_at").defaultNow().notNull(),
+    created_at: timestamp("created_at").defaultNow().notNull(),
+    updated_at: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    userIdx: index("admin_docs_user_idx").on(table.user_id),
+    documentTypeIdx: index("admin_docs_type_idx").on(table.document_type_id),
+    uploadedAtIdx: index("admin_docs_uploaded_idx").on(table.uploaded_at),
+  })
+);
+
 export const auditLogs = pgTable(
   "audit_logs",
   {
@@ -673,6 +712,7 @@ export const usersRelations = relations(users, ({ many, one }) => ({
   proctorSessions: many(testSessions, { relationName: "proctor" }),
   auditLogs: many(auditLogs),
   performanceStats: one(userPerformanceStats),
+  administrationDocuments: many(administrationDocuments),
 }));
 
 export const authSessionsRelations = relations(authSessions, ({ one }) => ({
@@ -846,6 +886,21 @@ export const userPerformanceStatsRelations = relations(userPerformanceStats, ({ 
   }),
 }));
 
+export const documentTypesRelations = relations(documentTypes, ({ many }) => ({
+  administrationDocuments: many(administrationDocuments),
+}));
+
+export const administrationDocumentsRelations = relations(administrationDocuments, ({ one }) => ({
+  user: one(users, {
+    fields: [administrationDocuments.user_id],
+    references: [users.id],
+  }),
+  documentType: one(documentTypes, {
+    fields: [administrationDocuments.document_type_id],
+    references: [documentTypes.id],
+  }),
+}));
+
 // ==================== TYPES ====================
 
 export type User = typeof users.$inferSelect;
@@ -878,3 +933,7 @@ export type AuditLog = typeof auditLogs.$inferSelect;
 export type NewAuditLog = typeof auditLogs.$inferInsert;
 export type UserPerformanceStats = typeof userPerformanceStats.$inferSelect;
 export type NewUserPerformanceStats = typeof userPerformanceStats.$inferInsert;
+export type DocumentType = typeof documentTypes.$inferSelect;
+export type NewDocumentType = typeof documentTypes.$inferInsert;
+export type AdministrationDocument = typeof administrationDocuments.$inferSelect;
+export type NewAdministrationDocument = typeof administrationDocuments.$inferInsert;
