@@ -45,6 +45,12 @@ export default [
       "routes/admin.sessions.$sessionId.edit.tsx"
     ),
 
+    // documents
+    route(
+      "/admin/participant-documents",
+      "routes/admin.participant-documents.tsx"
+    ),
+
     // Live Test Monitoring
     route("/admin/live-test", "routes/admin.live-test.tsx"),
 

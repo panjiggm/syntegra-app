@@ -19,6 +19,7 @@ import {
   testResults,
   testAttempts,
   userPerformanceStats,
+  authSessions,
 } from "../db";
 import { validateEnv, type CloudflareBindings } from "./env";
 
@@ -338,6 +339,54 @@ export async function updateUserPerformanceStatsJob(env: CloudflareBindings) {
   }
 }
 
+// Auth sessions cleanup job
+export async function cleanupExpiredAuthSessionsJob(env: CloudflareBindings) {
+  console.log("🧹 Running expired auth sessions cleanup job...");
+
+  try {
+    const validatedEnv = validateEnv(env);
+    const db = createDatabase(validatedEnv.DATABASE_URL || "");
+
+    const now = new Date();
+
+    // Find expired auth sessions
+    const expiredSessions = await db
+      .select({
+        id: authSessions.id,
+        user_id: authSessions.user_id,
+        expires_at: authSessions.expires_at,
+      })
+      .from(authSessions)
+      .where(lt(authSessions.expires_at, now));
+
+    if (expiredSessions.length === 0) {
+      console.log("✅ No expired auth sessions to clean up");
+      return { success: true, cleaned_count: 0 };
+    }
+
+    console.log(`🗑️ Found ${expiredSessions.length} expired auth sessions to clean up`);
+
+    // Delete expired sessions
+    const deleteResult = await db
+      .delete(authSessions)
+      .where(lt(authSessions.expires_at, now))
+      .returning({ id: authSessions.id });
+
+    console.log(`✅ Successfully cleaned up ${deleteResult.length} expired auth sessions`);
+
+    return {
+      success: true,
+      cleaned_count: deleteResult.length,
+    };
+  } catch (error) {
+    console.error("❌ Error in auth sessions cleanup job:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error",
+    };
+  }
+}
+
 // Main scheduled jobs runner
 export async function runScheduledJobs(env: CloudflareBindings) {
   console.log("⏰ Starting scheduled jobs execution...");
@@ -345,6 +394,7 @@ export async function runScheduledJobs(env: CloudflareBindings) {
   const results = {
     session_expiry: await updateExpiredSessionsJob(env),
     session_activation: await autoActivateSessionsJob(env),
+    auth_session_cleanup: await cleanupExpiredAuthSessionsJob(env),
     user_performance_stats: await updateUserPerformanceStatsJob(env),
     timestamp: new Date().toISOString(),
   };

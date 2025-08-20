@@ -124,15 +124,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (apiClient.isTokenExpired(tokens)) {
         // Try to refresh token
         try {
-          await refreshTokens();
+          console.log("Token expired, attempting refresh...");
+          const newTokens = await refreshTokens();
           const refreshedUser = apiClient.getUser();
-          const refreshedTokens = apiClient.getTokens();
 
-          if (refreshedUser && refreshedTokens) {
+          if (refreshedUser && newTokens) {
             dispatch({
               type: "RESTORE_SESSION",
-              payload: { user: refreshedUser, tokens: refreshedTokens },
+              payload: { user: refreshedUser, tokens: newTokens },
             });
+            console.log("Session restored successfully after token refresh");
           } else {
             throw new Error("Failed to restore session after refresh");
           }
@@ -153,6 +154,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           await refreshProfile();
         } catch (error) {
           console.warn("Profile refresh failed during session restore:", error);
+          // Don't logout on profile refresh failure, session is still valid
         }
       }
     } catch (error) {
@@ -188,8 +190,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         type: "LOGIN_SUCCESS",
         payload: { user, tokens },
       });
-    } catch (error) {
+    } catch (error: any) {
       dispatch({ type: "LOGIN_FAILURE" });
+      
+      // Preserve the original axios error structure for proper error handling
+      if (error.response) {
+        // Create a new error that preserves the response data
+        const preservedError = new Error(error.response.data?.message || error.message || "Login failed");
+        (preservedError as any).response = error.response;
+        throw preservedError;
+      }
+      
       throw error;
     }
   }, []);
@@ -219,8 +230,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           type: "LOGIN_SUCCESS",
           payload: { user, tokens },
         });
-      } catch (error) {
+      } catch (error: any) {
         dispatch({ type: "LOGIN_FAILURE" });
+        
+        // Preserve the original axios error structure for proper error handling
+        if (error.response) {
+          // Create a new error that preserves the response data
+          const preservedError = new Error(error.response.data?.message || error.message || "Login failed");
+          (preservedError as any).response = error.response;
+          throw preservedError;
+        }
+        
         throw error;
       }
     },
@@ -349,17 +369,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Quick check first - if no tokens, skip loading
     const tokens = apiClient.getTokens();
     const user = apiClient.getUser();
-    
+
     if (!tokens || !user) {
       dispatch({ type: "SET_LOADING", payload: false });
       return;
     }
-    
+
     // Only restore session if we have tokens
     restoreSession();
   }, [restoreSession]);
 
-  // Auto-refresh tokens before expiry (every 10 minutes)
+  // Auto-refresh tokens before expiry (every 5 minutes)
   useEffect(() => {
     if (!state.isAuthenticated || !state.tokens) return;
 
@@ -367,17 +387,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       () => {
         // Double check authentication status before refresh
         if (!state.isAuthenticated) return;
-        
+
         const tokens = apiClient.getTokens();
-        if (tokens && apiClient.isTokenExpired(tokens)) {
-          refreshTokens().catch(console.error);
+        if (!tokens) {
+          console.warn(
+            "No tokens found during auto-refresh check, logging out..."
+          );
+          logout();
+          return;
+        }
+
+        // Check if token expires within next 10 minutes (proactive refresh)
+        const tokenExp = tokens.access_token
+          ? JSON.parse(atob(tokens.access_token.split(".")[1])).exp
+          : 0;
+        const expiresInMinutes = (tokenExp * 1000 - Date.now()) / (1000 * 60);
+
+        if (expiresInMinutes <= 10) {
+          console.log("Token expires soon, refreshing...");
+          refreshTokens().catch((error) => {
+            console.error("Auto token refresh failed:", error);
+            logout();
+          });
         }
       },
-      10 * 60 * 1000
-    ); // 10 minutes
+      5 * 60 * 1000
+    ); // 5 minutes
 
     return () => clearInterval(interval);
-  }, [state.isAuthenticated, state.tokens, refreshTokens]);
+  }, [state.isAuthenticated, state.tokens, refreshTokens, logout]);
 
   const value: AuthContextValue = {
     ...state,

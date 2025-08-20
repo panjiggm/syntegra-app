@@ -62,16 +62,16 @@ export function LoginFormAdmin({ className, onSuccess }: LoginFormAdminProps) {
       onSuccess?.();
     },
     onError: (error: any) => {
-      // console.error("Admin login error:", error);
+      if (error.response?.data) {
+        const errorData = error.response.data;
+        const errorMsg = errorData.message?.toLowerCase() || "";
 
-      if (error.response) {
-        const errorMsg = error.response?.data?.message.toLowerCase();
-        // const errors = error.response?.data?.errors;
-
+        // Handle specific validation errors from backend
         if (
-          errorMsg.includes("invalid credentials") ||
+          errorMsg.includes("credentials") ||
           errorMsg.includes("user not found") ||
-          errorMsg.includes("password incorrect") ||
+          errorMsg.includes("password") ||
+          errorMsg.includes("incorrect") ||
           errorMsg.includes("email not found")
         ) {
           setError("identifier", {
@@ -82,9 +82,8 @@ export function LoginFormAdmin({ className, onSuccess }: LoginFormAdminProps) {
             type: "manual",
             message: "Email atau password tidak valid",
           });
-
           toast.error(
-            "Login gagal: " + "Email atau password yang Anda masukkan salah"
+            "Login gagal: Email atau password yang Anda masukkan salah"
           );
         } else if (
           errorMsg.includes("account") &&
@@ -110,22 +109,22 @@ export function LoginFormAdmin({ className, onSuccess }: LoginFormAdminProps) {
             "Akses Ditolak: " +
               "Akun ini bukan akun administrator. Gunakan halaman login participant untuk akses."
           );
-        } else if (errorMsg.includes("validation")) {
-          setError("root", {
-            type: "manual",
-            message: "Data yang dimasukkan tidak valid",
-          });
         } else {
           setError("root", {
             type: "manual",
-            message: error.message || "Terjadi kesalahan saat login",
+            message: errorData.message || "Terjadi kesalahan saat login",
           });
+          toast.error(
+            "Login gagal: " +
+              (errorData.message || "Terjadi kesalahan saat login")
+          );
         }
       } else {
         setError("root", {
           type: "manual",
           message: "Terjadi kesalahan saat login. Silakan coba lagi.",
         });
+        toast.error("Terjadi kesalahan saat login. Silakan coba lagi.");
       }
     },
   });
@@ -153,7 +152,7 @@ export function LoginFormAdmin({ className, onSuccess }: LoginFormAdminProps) {
 
       toast.dismiss(loadingToast);
     } catch (error: any) {
-      console.error("Admin login error:", error);
+      console.error("Admin login error:", error.response);
 
       // Dismiss any loading toast
       toast.dismiss();

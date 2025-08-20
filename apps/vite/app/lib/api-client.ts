@@ -55,7 +55,11 @@ export class ApiClient {
         const originalRequest = error.config;
 
         // Check if error is 401 and we haven't already tried to refresh
-        if (error.response?.status === 401 && !originalRequest._retry) {
+        // BUT skip refresh for login endpoints as they should show proper error messages
+        if (error.response?.status === 401 && 
+            !originalRequest._retry &&
+            !originalRequest.url?.includes('/auth/admin/login') &&
+            !originalRequest.url?.includes('/auth/participant/login')) {
           if (this.isRefreshing) {
             // If already refreshing, queue this request
             return new Promise((resolve, reject) => {
