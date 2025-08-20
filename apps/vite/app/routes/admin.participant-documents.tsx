@@ -176,7 +176,7 @@ export default function ParticipantDocumentPage() {
           />
         </TabsContent>
 
-        <TabsContent value="participant-administration" className="mt-6">
+        <TabsContent value="participant-administration">
           <ParticipantAdministration />
         </TabsContent>
       </Tabs>
