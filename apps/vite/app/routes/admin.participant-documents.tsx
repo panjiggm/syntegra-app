@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Plus } from "lucide-react";
+import { Plus, FileType, Users } from "lucide-react";
 import { Button } from "~/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import {
@@ -133,9 +133,11 @@ export default function ParticipantDocumentPage() {
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
           <TabsTrigger value="document-types" className="px-6">
+            <FileType className="w-4 h-4 mr-2" />
             Tipe Dokumen
           </TabsTrigger>
           <TabsTrigger value="participant-administration" className="px-6">
+            <Users className="w-4 h-4 mr-2" />
             Administrasi Peserta
           </TabsTrigger>
         </TabsList>
