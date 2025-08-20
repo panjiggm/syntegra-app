@@ -9,7 +9,6 @@ export const CreateDocumentTypeRequestSchema = z.object({
   key: z.string().min(1, "Key is required").max(100, "Key must not exceed 100 characters"),
   name: z.string().min(1, "Name is required").max(255, "Name must not exceed 255 characters"),
   weight: z.number().min(0).max(100).default(1.0),
-  max_score: z.number().min(0).optional(),
 });
 
 export type CreateDocumentTypeRequest = z.infer<typeof CreateDocumentTypeRequestSchema>;
@@ -22,7 +21,6 @@ export type CreateDocumentTypeResponse = {
     key: string;
     name: string;
     weight: string;
-    max_score: string | null;
     created_at: Date;
     updated_at: Date;
   };
@@ -117,7 +115,6 @@ export async function createDocumentTypeHandler(
       key: data.key,
       name: data.name,
       weight: data.weight.toString(),
-      max_score: data.max_score?.toString() || null,
     };
 
     // Insert document type into database
@@ -144,7 +141,6 @@ export async function createDocumentTypeHandler(
         key: newDocumentType.key,
         name: newDocumentType.name,
         weight: newDocumentType.weight || "1.00",
-        max_score: newDocumentType.max_score,
         created_at: newDocumentType.created_at,
         updated_at: newDocumentType.updated_at,
       },

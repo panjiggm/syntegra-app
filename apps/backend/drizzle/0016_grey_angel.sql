@@ -1,0 +1,1 @@
+ALTER TABLE "document_types" DROP COLUMN "max_score";

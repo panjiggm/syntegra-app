@@ -9,7 +9,6 @@ export interface DocumentType {
   key: string;
   name: string;
   weight: string;
-  max_score: string | null;
   created_at: Date;
   updated_at: Date;
 }
@@ -18,21 +17,19 @@ export interface CreateDocumentTypeRequest {
   key: string;
   name: string;
   weight?: number;
-  max_score?: number;
 }
 
 export interface UpdateDocumentTypeRequest {
   key?: string;
   name?: string;
   weight?: number;
-  max_score?: number;
 }
 
 export interface GetDocumentTypesRequest {
   page?: number;
   limit?: number;
   search?: string;
-  sort_by?: "key" | "name" | "weight" | "max_score" | "created_at" | "updated_at";
+  sort_by?: "key" | "name" | "weight" | "created_at" | "updated_at";
   sort_order?: "asc" | "desc";
   created_from?: string;
   created_to?: string;
@@ -195,10 +192,6 @@ export function useDocumentTypes() {
               toast.error("Error pada bobot", {
                 description: fieldError.message,
               });
-            } else if (fieldError.field === "max_score") {
-              toast.error("Error pada skor maksimal", {
-                description: fieldError.message,
-              });
             } else {
               toast.error(`Error pada field ${fieldError.field}`, {
                 description: fieldError.message,
@@ -284,10 +277,6 @@ export function useDocumentTypes() {
               });
             } else if (fieldError.field === "weight") {
               toast.error("Error pada bobot", {
-                description: fieldError.message,
-              });
-            } else if (fieldError.field === "max_score") {
-              toast.error("Error pada skor maksimal", {
                 description: fieldError.message,
               });
             } else {

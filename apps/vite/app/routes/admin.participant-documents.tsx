@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -31,39 +31,39 @@ import {
   type GetDocumentTypesRequest,
 } from "~/hooks/use-document-types";
 
-const documentTypeSchema = z.object({
-  key: z
-    .string()
-    .min(1, "Key harus diisi")
-    .max(100, "Key maksimal 100 karakter")
-    .regex(/^[a-z0-9_-]+$/, "Key hanya boleh berisi huruf kecil, angka, underscore, dan dash"),
-  name: z
-    .string()
-    .min(1, "Nama harus diisi")
-    .max(255, "Nama maksimal 255 karakter"),
-  weight: z
-    .number()
-    .min(0, "Bobot minimal 0")
-    .max(100, "Bobot maksimal 100")
-    .optional(),
-  max_score: z
-    .number()
-    .min(0, "Skor maksimal minimal 0")
-    .optional(),
-});
+// Helper function to generate key from name
+const generateKeyFromName = (name: string): string => {
+  return name
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, "") // Remove special chars except spaces
+    .replace(/\s+/g, "-") // Replace spaces with dashes
+    .replace(/^-+|-+$/g, ""); // Remove leading/trailing dashes
+};
 
-type DocumentTypeFormData = z.infer<typeof documentTypeSchema>;
+// Helper function to calculate total weight
+const calculateTotalWeight = (
+  documentTypes: DocumentType[],
+  excludeId?: string
+): number => {
+  return documentTypes
+    .filter((docType) => docType.id !== excludeId)
+    .reduce((total, docType) => total + parseFloat(docType.weight || "0"), 0);
+};
 
 export default function ParticipantDocumentPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [editingDocumentType, setEditingDocumentType] = useState<DocumentType | null>(null);
+  const [editingDocumentType, setEditingDocumentType] =
+    useState<DocumentType | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [deletingDocumentType, setDeletingDocumentType] = useState<DocumentType | null>(null);
+  const [deletingDocumentType, setDeletingDocumentType] =
+    useState<DocumentType | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const [sortBy, setSortBy] = useState<GetDocumentTypesRequest["sort_by"]>("created_at");
-  const [sortOrder, setSortOrder] = useState<GetDocumentTypesRequest["sort_order"]>("desc");
+  const [sortBy, setSortBy] =
+    useState<GetDocumentTypesRequest["sort_by"]>("created_at");
+  const [sortOrder, setSortOrder] =
+    useState<GetDocumentTypesRequest["sort_order"]>("desc");
 
   const {
     useGetDocumentTypes,
@@ -80,38 +80,20 @@ export default function ParticipantDocumentPage() {
     sort_order: sortOrder,
   };
 
-  const { data: documentTypesResponse, isLoading } = useGetDocumentTypes(queryParams);
+  const { data: documentTypesResponse, isLoading } =
+    useGetDocumentTypes(queryParams);
   const createMutation = useCreateDocumentType();
   const updateMutation = useUpdateDocumentType();
   const deleteMutation = useDeleteDocumentType();
 
-  const createForm = useForm<DocumentTypeFormData>({
-    resolver: zodResolver(documentTypeSchema),
-    defaultValues: {
-      key: "",
-      name: "",
-      weight: 1,
-      max_score: undefined,
-    },
-  });
-
-  const editForm = useForm<DocumentTypeFormData>({
-    resolver: zodResolver(documentTypeSchema),
-    defaultValues: {
-      key: "",
-      name: "",
-      weight: 1,
-      max_score: undefined,
-    },
-  });
-
-  const handleCreateSubmit = async (data: DocumentTypeFormData) => {
+  const handleCreateSubmit = async (data: CreateDocumentTypeFormData) => {
     try {
+      const generatedKey = generateKeyFromName(data.name);
+
       const payload: CreateDocumentTypeRequest = {
-        key: data.key,
+        key: generatedKey,
         name: data.name,
         weight: data.weight,
-        max_score: data.max_score,
       };
 
       await createMutation.mutateAsync(payload);
@@ -122,15 +104,16 @@ export default function ParticipantDocumentPage() {
     }
   };
 
-  const handleEditSubmit = async (data: DocumentTypeFormData) => {
+  const handleEditSubmit = async (data: CreateDocumentTypeFormData) => {
     if (!editingDocumentType) return;
 
     try {
+      const generatedKey = generateKeyFromName(data.name);
+
       const payload: UpdateDocumentTypeRequest = {
-        key: data.key,
+        key: generatedKey,
         name: data.name,
         weight: data.weight,
-        max_score: data.max_score,
       };
 
       await updateMutation.mutateAsync({
@@ -148,10 +131,8 @@ export default function ParticipantDocumentPage() {
   const handleEdit = (documentType: DocumentType) => {
     setEditingDocumentType(documentType);
     editForm.reset({
-      key: documentType.key,
       name: documentType.name,
       weight: parseFloat(documentType.weight),
-      max_score: documentType.max_score ? parseFloat(documentType.max_score) : undefined,
     });
     setIsEditDialogOpen(true);
   };
@@ -190,6 +171,84 @@ export default function ParticipantDocumentPage() {
   const documentTypes = documentTypesResponse?.data || [];
   const meta = documentTypesResponse?.meta;
 
+  // Calculate total weight and remaining weight for validation
+  const totalWeight = useMemo(
+    () => calculateTotalWeight(documentTypes),
+    [documentTypes]
+  );
+  const remainingWeightForCreate = useMemo(
+    () => Math.max(0, 100 - totalWeight),
+    [totalWeight]
+  );
+  const remainingWeightForEdit = useMemo(() => {
+    if (!editingDocumentType) return 0;
+    const totalWithoutCurrent = calculateTotalWeight(
+      documentTypes,
+      editingDocumentType.id
+    );
+    return Math.max(0, 100 - totalWithoutCurrent);
+  }, [documentTypes, editingDocumentType]);
+
+  // Create dynamic schemas based on remaining weight
+  const createDocumentTypeSchemaWithLimit = useMemo(
+    () =>
+      z.object({
+        name: z
+          .string()
+          .min(1, "Nama harus diisi")
+          .max(255, "Nama maksimal 255 karakter"),
+        weight: z
+          .number()
+          .min(0, "Bobot minimal 0")
+          .max(
+            remainingWeightForCreate,
+            `Bobot maksimal ${remainingWeightForCreate} (sisa bobot yang tersedia)`
+          )
+          .optional(),
+      }),
+    [remainingWeightForCreate]
+  );
+
+  const editDocumentTypeSchemaWithLimit = useMemo(
+    () =>
+      z.object({
+        name: z
+          .string()
+          .min(1, "Nama harus diisi")
+          .max(255, "Nama maksimal 255 karakter"),
+        weight: z
+          .number()
+          .min(0, "Bobot minimal 0")
+          .max(
+            remainingWeightForEdit,
+            `Bobot maksimal ${remainingWeightForEdit} (sisa bobot yang tersedia)`
+          )
+          .optional(),
+      }),
+    [remainingWeightForEdit]
+  );
+
+  // Define form data types
+  type CreateDocumentTypeFormData = z.infer<
+    typeof createDocumentTypeSchemaWithLimit
+  >;
+
+  const createForm = useForm<CreateDocumentTypeFormData>({
+    resolver: zodResolver(createDocumentTypeSchemaWithLimit),
+    defaultValues: {
+      name: "",
+      weight: 1,
+    },
+  });
+
+  const editForm = useForm<CreateDocumentTypeFormData>({
+    resolver: zodResolver(editDocumentTypeSchemaWithLimit),
+    defaultValues: {
+      name: "",
+      weight: 1,
+    },
+  });
+
   return (
     <div className="container mx-auto py-6 space-y-6">
       {/* Header */}
@@ -202,9 +261,11 @@ export default function ParticipantDocumentPage() {
         </div>
         <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
           <DialogTrigger asChild>
-            <Button>
+            <Button disabled={totalWeight >= 100}>
               <Plus className="w-4 h-4 mr-2" />
-              Tambah Tipe Dokumen
+              {totalWeight >= 100
+                ? "Total Bobot Sudah Penuh"
+                : "Tambah Tipe Dokumen"}
             </Button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-[425px]">
@@ -212,27 +273,24 @@ export default function ParticipantDocumentPage() {
               <DialogTitle>Tambah Tipe Dokumen</DialogTitle>
               <DialogDescription>
                 Buat tipe dokumen baru untuk administrasi peserta
+                <br />
+                <span
+                  className={`text-sm ${totalWeight > 80 ? "text-orange-600" : "text-muted-foreground"}`}
+                >
+                  Total bobot saat ini: {totalWeight}/100. Sisa:{" "}
+                  {remainingWeightForCreate}
+                </span>
               </DialogDescription>
             </DialogHeader>
-            <form onSubmit={createForm.handleSubmit(handleCreateSubmit)} className="space-y-4">
-              <div>
-                <Label htmlFor="create-key">Key</Label>
-                <Input
-                  id="create-key"
-                  placeholder="cv, ijazah, ktp"
-                  {...createForm.register("key")}
-                />
-                {createForm.formState.errors.key && (
-                  <p className="text-sm text-red-500 mt-1">
-                    {createForm.formState.errors.key.message}
-                  </p>
-                )}
-              </div>
-              <div>
-                <Label htmlFor="create-name">Nama</Label>
+            <form
+              onSubmit={createForm.handleSubmit(handleCreateSubmit)}
+              className="space-y-4 mt-4"
+            >
+              <div className="space-y-2">
+                <Label htmlFor="create-name">Nama Dokumen</Label>
                 <Input
                   id="create-name"
-                  placeholder="Curriculum Vitae"
+                  placeholder="Contoh: Curriculum Vitae, Kartu Tanda Penduduk"
                   {...createForm.register("name")}
                 />
                 {createForm.formState.errors.name && (
@@ -241,38 +299,30 @@ export default function ParticipantDocumentPage() {
                   </p>
                 )}
               </div>
-              <div>
+              <div className="space-y-2">
                 <Label htmlFor="create-weight">Bobot</Label>
                 <Input
                   id="create-weight"
                   type="number"
                   step="0.01"
-                  placeholder="1.00"
+                  placeholder="1"
                   {...createForm.register("weight", { valueAsNumber: true })}
                 />
+                <p className="text-xs text-muted-foreground">
+                  Maksimal {remainingWeightForCreate} (sisa bobot yang tersedia)
+                </p>
                 {createForm.formState.errors.weight && (
                   <p className="text-sm text-red-500 mt-1">
                     {createForm.formState.errors.weight.message}
                   </p>
                 )}
               </div>
-              <div>
-                <Label htmlFor="create-max-score">Skor Maksimal</Label>
-                <Input
-                  id="create-max-score"
-                  type="number"
-                  step="0.01"
-                  placeholder="100.00"
-                  {...createForm.register("max_score", { valueAsNumber: true })}
-                />
-                {createForm.formState.errors.max_score && (
-                  <p className="text-sm text-red-500 mt-1">
-                    {createForm.formState.errors.max_score.message}
-                  </p>
-                )}
-              </div>
               <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setIsCreateDialogOpen(false)}
+                >
                   Batal
                 </Button>
                 <Button type="submit" disabled={createMutation.isPending}>
@@ -303,30 +353,25 @@ export default function ParticipantDocumentPage() {
           <TableHeader>
             <TableRow>
               <TableHead className="w-12">#</TableHead>
-              <TableHead 
-                className="cursor-pointer hover:bg-muted/50"
-                onClick={() => handleSort("key")}
-              >
-                Key {sortBy === "key" && (sortOrder === "asc" ? "‘" : "“")}
-              </TableHead>
-              <TableHead 
+              <TableHead
                 className="cursor-pointer hover:bg-muted/50"
                 onClick={() => handleSort("name")}
               >
-                Nama {sortBy === "name" && (sortOrder === "asc" ? "‘" : "“")}
+                Tipe Dokumen{" "}
+                {sortBy === "name" && (sortOrder === "asc" ? "ï¿½" : "ï¿½")}
               </TableHead>
-              <TableHead 
+              <TableHead
                 className="cursor-pointer hover:bg-muted/50"
                 onClick={() => handleSort("weight")}
               >
-                Bobot {sortBy === "weight" && (sortOrder === "asc" ? "‘" : "“")}
+                Bobot {sortBy === "weight" && (sortOrder === "asc" ? "ï¿½" : "ï¿½")}
               </TableHead>
-              <TableHead>Skor Maksimal</TableHead>
-              <TableHead 
+              <TableHead
                 className="cursor-pointer hover:bg-muted/50"
                 onClick={() => handleSort("created_at")}
               >
-                Dibuat {sortBy === "created_at" && (sortOrder === "asc" ? "‘" : "“")}
+                Dibuat{" "}
+                {sortBy === "created_at" && (sortOrder === "asc" ? "ï¿½" : "ï¿½")}
               </TableHead>
               <TableHead className="w-32">Aksi</TableHead>
             </TableRow>
@@ -334,13 +379,13 @@ export default function ParticipantDocumentPage() {
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-8">
+                <TableCell colSpan={6} className="text-center py-8">
                   Memuat data...
                 </TableCell>
               </TableRow>
             ) : documentTypes.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-8">
+                <TableCell colSpan={6} className="text-center py-8">
                   <div className="flex flex-col items-center space-y-2">
                     <FileType className="w-8 h-8 text-gray-400" />
                     <p className="text-gray-500">Belum ada tipe dokumen</p>
@@ -348,45 +393,60 @@ export default function ParticipantDocumentPage() {
                 </TableCell>
               </TableRow>
             ) : (
-              documentTypes.map((documentType, index) => (
-                <TableRow key={documentType.id}>
-                  <TableCell className="text-gray-500">
-                    {((currentPage - 1) * 10) + index + 1}
+              <>
+                {documentTypes.map((documentType, index) => (
+                  <TableRow key={documentType.id}>
+                    <TableCell className="text-gray-500">
+                      {(currentPage - 1) * 10 + index + 1}
+                    </TableCell>
+                    <TableCell>{documentType.name}</TableCell>
+                    <TableCell>{documentType.weight}</TableCell>
+                    <TableCell className="text-sm text-gray-500">
+                      {formatDate(documentType.created_at)}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center space-x-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleEdit(documentType)}
+                        >
+                          <Edit className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setDeletingDocumentType(documentType);
+                            setDeleteDialogOpen(true);
+                          }}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+
+                {/* Total Weight Row */}
+                <TableRow className="bg-muted/50 font-medium">
+                  <TableCell></TableCell>
+                  <TableCell>Total Bobot</TableCell>
+                  <TableCell
+                    className={
+                      totalWeight === 100
+                        ? "text-green-600"
+                        : totalWeight > 100
+                          ? "text-red-600"
+                          : ""
+                    }
+                  >
+                    <strong>{totalWeight}</strong>/100
                   </TableCell>
-                  <TableCell className="font-mono font-medium">
-                    {documentType.key}
-                  </TableCell>
-                  <TableCell>{documentType.name}</TableCell>
-                  <TableCell>{documentType.weight}</TableCell>
-                  <TableCell>
-                    {documentType.max_score || "-"}
-                  </TableCell>
-                  <TableCell className="text-sm text-gray-500">
-                    {formatDate(documentType.created_at)}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center space-x-1">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleEdit(documentType)}
-                      >
-                        <Edit className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          setDeletingDocumentType(documentType);
-                          setDeleteDialogOpen(true);
-                        }}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
+                  <TableCell></TableCell>
+                  <TableCell></TableCell>
                 </TableRow>
-              ))
+              </>
             )}
           </TableBody>
         </Table>
@@ -396,7 +456,8 @@ export default function ParticipantDocumentPage() {
       {meta && meta.total_pages > 1 && (
         <div className="flex items-center justify-between">
           <p className="text-sm text-gray-500">
-            Menampilkan {((currentPage - 1) * 10) + 1} - {Math.min(currentPage * 10, meta.total)} dari {meta.total} data
+            Menampilkan {(currentPage - 1) * 10 + 1} -{" "}
+            {Math.min(currentPage * 10, meta.total)} dari {meta.total} data
           </p>
           <div className="flex items-center space-x-2">
             <Button
@@ -429,27 +490,22 @@ export default function ParticipantDocumentPage() {
             <DialogTitle>Edit Tipe Dokumen</DialogTitle>
             <DialogDescription>
               Ubah informasi tipe dokumen
+              <br />
+              <span className="text-sm text-muted-foreground">
+                Total bobot saat ini: {totalWeight}/100. Sisa untuk item ini:{" "}
+                {remainingWeightForEdit}
+              </span>
             </DialogDescription>
           </DialogHeader>
-          <form onSubmit={editForm.handleSubmit(handleEditSubmit)} className="space-y-4">
-            <div>
-              <Label htmlFor="edit-key">Key</Label>
-              <Input
-                id="edit-key"
-                placeholder="cv, ijazah, ktp"
-                {...editForm.register("key")}
-              />
-              {editForm.formState.errors.key && (
-                <p className="text-sm text-red-500 mt-1">
-                  {editForm.formState.errors.key.message}
-                </p>
-              )}
-            </div>
-            <div>
-              <Label htmlFor="edit-name">Nama</Label>
+          <form
+            onSubmit={editForm.handleSubmit(handleEditSubmit)}
+            className="space-y-4 mt-4"
+          >
+            <div className="space-y-2">
+              <Label htmlFor="edit-name">Nama Dokumen</Label>
               <Input
                 id="edit-name"
-                placeholder="Curriculum Vitae"
+                placeholder="Contoh: Curriculum Vitae, Kartu Tanda Penduduk"
                 {...editForm.register("name")}
               />
               {editForm.formState.errors.name && (
@@ -458,38 +514,30 @@ export default function ParticipantDocumentPage() {
                 </p>
               )}
             </div>
-            <div>
+            <div className="space-y-2">
               <Label htmlFor="edit-weight">Bobot</Label>
               <Input
                 id="edit-weight"
                 type="number"
                 step="0.01"
-                placeholder="1.00"
+                placeholder="1"
                 {...editForm.register("weight", { valueAsNumber: true })}
               />
+              <p className="text-xs text-muted-foreground">
+                Maksimal {remainingWeightForEdit} (sisa bobot yang tersedia)
+              </p>
               {editForm.formState.errors.weight && (
                 <p className="text-sm text-red-500 mt-1">
                   {editForm.formState.errors.weight.message}
                 </p>
               )}
             </div>
-            <div>
-              <Label htmlFor="edit-max-score">Skor Maksimal</Label>
-              <Input
-                id="edit-max-score"
-                type="number"
-                step="0.01"
-                placeholder="100.00"
-                {...editForm.register("max_score", { valueAsNumber: true })}
-              />
-              {editForm.formState.errors.max_score && (
-                <p className="text-sm text-red-500 mt-1">
-                  {editForm.formState.errors.max_score.message}
-                </p>
-              )}
-            </div>
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsEditDialogOpen(false)}
+              >
                 Batal
               </Button>
               <Button type="submit" disabled={updateMutation.isPending}>
@@ -506,12 +554,16 @@ export default function ParticipantDocumentPage() {
           <DialogHeader>
             <DialogTitle>Hapus Tipe Dokumen</DialogTitle>
             <DialogDescription>
-              Apakah Anda yakin ingin menghapus tipe dokumen "{deletingDocumentType?.name}"?
-              Tindakan ini tidak dapat dibatalkan.
+              Apakah Anda yakin ingin menghapus tipe dokumen "
+              {deletingDocumentType?.name}"? Tindakan ini tidak dapat
+              dibatalkan.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setDeleteDialogOpen(false)}
+            >
               Batal
             </Button>
             <Button

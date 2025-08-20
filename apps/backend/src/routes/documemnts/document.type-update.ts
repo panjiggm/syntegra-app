@@ -9,7 +9,6 @@ export const UpdateDocumentTypeRequestSchema = z.object({
   key: z.string().min(1, "Key is required").max(100, "Key must not exceed 100 characters").optional(),
   name: z.string().min(1, "Name is required").max(255, "Name must not exceed 255 characters").optional(),
   weight: z.number().min(0).max(100).optional(),
-  max_score: z.number().min(0).optional().nullable(),
 });
 
 export const UpdateDocumentTypeByIdRequestSchema = z.object({
@@ -26,7 +25,6 @@ export type UpdateDocumentTypeResponse = {
     key: string;
     name: string;
     weight: string;
-    max_score: string | null;
     created_at: Date;
     updated_at: Date;
   };
@@ -120,7 +118,6 @@ export async function updateDocumentTypeHandler(
         key: documentTypes.key,
         name: documentTypes.name,
         weight: documentTypes.weight,
-        max_score: documentTypes.max_score,
         created_at: documentTypes.created_at,
         updated_at: documentTypes.updated_at,
       })
@@ -190,9 +187,6 @@ export async function updateDocumentTypeHandler(
     if (data.key !== undefined) updateData.key = data.key;
     if (data.name !== undefined) updateData.name = data.name;
     if (data.weight !== undefined) updateData.weight = data.weight.toString();
-    if (data.max_score !== undefined) {
-      updateData.max_score = data.max_score?.toString() || null;
-    }
 
     // Update document type in database
     const [updatedDocumentType] = await db
@@ -219,7 +213,6 @@ export async function updateDocumentTypeHandler(
         key: updatedDocumentType.key,
         name: updatedDocumentType.name,
         weight: updatedDocumentType.weight || "1.00",
-        max_score: updatedDocumentType.max_score,
         created_at: updatedDocumentType.created_at,
         updated_at: updatedDocumentType.updated_at,
       },

@@ -208,7 +208,9 @@ export const tests = pgTable(
     module_type: moduleTypeEnum("module_type").notNull(),
     category: categoryEnum("category").notNull(),
     time_limit: integer("time_limit").notNull(), // in minutes
-    default_question_time_limit: integer("default_question_time_limit").default(60), // in seconds
+    default_question_time_limit: integer("default_question_time_limit").default(
+      60
+    ), // in seconds
     icon: varchar("icon", { length: 10 }), // emoji
     card_color: varchar("card_color", { length: 100 }), // e.g., "from-green-500 to-emerald-600"
     test_prerequisites: json("test_prerequisites").$type<string[]>(), // array of test IDs
@@ -529,17 +531,29 @@ export const userPerformanceStats = pgTable(
     total_tests_taken: integer("total_tests_taken").default(0),
     total_tests_completed: integer("total_tests_completed").default(0),
     average_raw_score: numeric("average_raw_score", { precision: 8, scale: 2 }),
-    average_scaled_score: numeric("average_scaled_score", { precision: 8, scale: 2 }),
+    average_scaled_score: numeric("average_scaled_score", {
+      precision: 8,
+      scale: 2,
+    }),
     highest_raw_score: numeric("highest_raw_score", { precision: 8, scale: 2 }),
     lowest_raw_score: numeric("lowest_raw_score", { precision: 8, scale: 2 }),
-    highest_scaled_score: numeric("highest_scaled_score", { precision: 8, scale: 2 }),
-    lowest_scaled_score: numeric("lowest_scaled_score", { precision: 8, scale: 2 }),
+    highest_scaled_score: numeric("highest_scaled_score", {
+      precision: 8,
+      scale: 2,
+    }),
+    lowest_scaled_score: numeric("lowest_scaled_score", {
+      precision: 8,
+      scale: 2,
+    }),
     total_time_spent: integer("total_time_spent").default(0), // in seconds
     average_time_per_test: integer("average_time_per_test").default(0), // in seconds
     completion_rate: numeric("completion_rate", { precision: 5, scale: 2 }), // percentage
     consistency_score: numeric("consistency_score", { precision: 5, scale: 2 }),
     performance_rank: integer("performance_rank"), // rank among all users
-    performance_percentile: numeric("performance_percentile", { precision: 5, scale: 2 }),
+    performance_percentile: numeric("performance_percentile", {
+      precision: 5,
+      scale: 2,
+    }),
     last_test_date: timestamp("last_test_date"),
     calculation_date: timestamp("calculation_date").defaultNow().notNull(),
     created_at: timestamp("created_at").defaultNow().notNull(),
@@ -548,10 +562,18 @@ export const userPerformanceStats = pgTable(
   (table) => ({
     userIdUnique: uniqueIndex("user_performance_unique").on(table.user_id),
     userIdIdx: index("user_performance_user_idx").on(table.user_id),
-    averageRawScoreIdx: index("user_performance_avg_raw_score_idx").on(table.average_raw_score),
-    averageScaledScoreIdx: index("user_performance_avg_scaled_score_idx").on(table.average_scaled_score),
-    performanceRankIdx: index("user_performance_rank_idx").on(table.performance_rank),
-    calculationDateIdx: index("user_performance_calculation_date_idx").on(table.calculation_date),
+    averageRawScoreIdx: index("user_performance_avg_raw_score_idx").on(
+      table.average_raw_score
+    ),
+    averageScaledScoreIdx: index("user_performance_avg_scaled_score_idx").on(
+      table.average_scaled_score
+    ),
+    performanceRankIdx: index("user_performance_rank_idx").on(
+      table.performance_rank
+    ),
+    calculationDateIdx: index("user_performance_calculation_date_idx").on(
+      table.calculation_date
+    ),
   })
 );
 
@@ -643,7 +665,6 @@ export const documentTypes = pgTable(
     key: varchar("key", { length: 100 }).notNull(),
     name: varchar("name", { length: 255 }).notNull(),
     weight: numeric("weight", { precision: 5, scale: 2 }).default("1.00"),
-    max_score: numeric("max_score", { precision: 8, scale: 2 }),
     created_at: timestamp("created_at").defaultNow().notNull(),
     updated_at: timestamp("updated_at").defaultNow().notNull(),
   },
@@ -879,27 +900,33 @@ export const sessionParticipantsRelations = relations(
   })
 );
 
-export const userPerformanceStatsRelations = relations(userPerformanceStats, ({ one }) => ({
-  user: one(users, {
-    fields: [userPerformanceStats.user_id],
-    references: [users.id],
-  }),
-}));
+export const userPerformanceStatsRelations = relations(
+  userPerformanceStats,
+  ({ one }) => ({
+    user: one(users, {
+      fields: [userPerformanceStats.user_id],
+      references: [users.id],
+    }),
+  })
+);
 
 export const documentTypesRelations = relations(documentTypes, ({ many }) => ({
   administrationDocuments: many(administrationDocuments),
 }));
 
-export const administrationDocumentsRelations = relations(administrationDocuments, ({ one }) => ({
-  user: one(users, {
-    fields: [administrationDocuments.user_id],
-    references: [users.id],
-  }),
-  documentType: one(documentTypes, {
-    fields: [administrationDocuments.document_type_id],
-    references: [documentTypes.id],
-  }),
-}));
+export const administrationDocumentsRelations = relations(
+  administrationDocuments,
+  ({ one }) => ({
+    user: one(users, {
+      fields: [administrationDocuments.user_id],
+      references: [users.id],
+    }),
+    documentType: one(documentTypes, {
+      fields: [administrationDocuments.document_type_id],
+      references: [documentTypes.id],
+    }),
+  })
+);
 
 // ==================== TYPES ====================
 
@@ -935,5 +962,7 @@ export type UserPerformanceStats = typeof userPerformanceStats.$inferSelect;
 export type NewUserPerformanceStats = typeof userPerformanceStats.$inferInsert;
 export type DocumentType = typeof documentTypes.$inferSelect;
 export type NewDocumentType = typeof documentTypes.$inferInsert;
-export type AdministrationDocument = typeof administrationDocuments.$inferSelect;
-export type NewAdministrationDocument = typeof administrationDocuments.$inferInsert;
+export type AdministrationDocument =
+  typeof administrationDocuments.$inferSelect;
+export type NewAdministrationDocument =
+  typeof administrationDocuments.$inferInsert;

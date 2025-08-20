@@ -9,7 +9,7 @@ export const GetDocumentTypesRequestSchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(100).default(10),
   search: z.string().optional(),
-  sort_by: z.enum(["key", "name", "weight", "max_score", "created_at", "updated_at"]).default("created_at"),
+  sort_by: z.enum(["key", "name", "weight", "created_at", "updated_at"]).default("created_at"),
   sort_order: z.enum(["asc", "desc"]).default("desc"),
   created_from: z.string().optional(),
   created_to: z.string().optional(),
@@ -34,7 +34,6 @@ export type GetDocumentTypesResponse = {
     key: string;
     name: string;
     weight: string;
-    max_score: string | null;
     created_at: Date;
     updated_at: Date;
   }>;
@@ -164,7 +163,6 @@ export async function listDocumentTypesHandler(
       key: documentTypes.key,
       name: documentTypes.name,
       weight: documentTypes.weight,
-      max_score: documentTypes.max_score,
       created_at: documentTypes.created_at,
       updated_at: documentTypes.updated_at,
     };
@@ -181,7 +179,6 @@ export async function listDocumentTypesHandler(
         key: documentTypes.key,
         name: documentTypes.name,
         weight: documentTypes.weight,
-        max_score: documentTypes.max_score,
         created_at: documentTypes.created_at,
         updated_at: documentTypes.updated_at,
       })
@@ -210,7 +207,6 @@ export async function listDocumentTypesHandler(
         key: docType.key,
         name: docType.name,
         weight: docType.weight || "1.00",
-        max_score: docType.max_score,
         created_at: docType.created_at,
         updated_at: docType.updated_at,
       })),
